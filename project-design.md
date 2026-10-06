@@ -6,7 +6,7 @@
 This document has three parts:
 
 - **Part I · Project details.** What the platform is, supplementary vocabulary, the reasoning behind key decisions and rejected alternatives, technology choices, and conventions for maintaining the record.
-- **Part II · Capability catalogue.** The full catalogue: overview, key terms, architecture, worked engine examples, dataset lifecycle, decision log D1–D40, open items S1–S24 and every capability line. Diagrams are not reproduced; each figure is replaced by a description of what it shows, and the drawings are in the illustrated catalogue.
+- **Part II · Capability catalogue.** The full catalogue: overview, key terms, architecture, worked engine examples, dataset lifecycle, decision log D1–D41, open items S1–S24 and every capability line. Diagrams are not reproduced; each figure is replaced by a description of what it shows, and the drawings are in the illustrated catalogue.
 - **Part III · What remains to be discussed.** Proposals not yet confirmed, conditions and deferred follow-ups attached to decisions, open items, the pre-development triage, and the remaining design agenda.
 
 ---
@@ -17,7 +17,7 @@ This document has three parts:
 
 A cloud-based, **open-core**, **domain-agnostic** web platform for assembling, scheduling, executing and monitoring multi-stage data and computation pipelines, with **reproducibility as a first-class, verifiable product capability**.
 
-- **Authoring.** Pipelines are built on a visual canvas and compiled to a custom intermediate representation (IR), which is the single source of truth. Definitions round-trip to text (YAML or Python) in git.
+- **Authoring.** Pipelines are built on a visual canvas and compiled to a custom intermediate representation (IR), which is the single source of truth. Definitions round-trip to YAML in git, which is authoritative for git-connected projects; a Python SDK generating IR follows (D41).
 - **Execution.** Containerised execution units run on Kubernetes, HPC clusters (Slurm, through outbound agents), cloud batch, or a single-machine container deployment. Relational work is pushed down to the customer's warehouse where the data lives.
 - **Deployment model.** Bring-your-own-compute is the primary model: execution runs on the customer's own infrastructure and the vendor hosts only the interface and control planes (D22). Hybrid and self-hosted are the first-class topologies; fully managed serves trials and small teams.
 - **Processing engines.** Built-in tabular nodes are defined as Ibis expressions and run on DuckDB in-process or are pushed down to Postgres or Snowflake, with Polars used only by justified exception and for code nodes; non-tabular work runs in Python or container-command runtimes and scales by fan-out (D25, D27). The planner checks each unit's estimated working set against backend capacity rather than relying on declared dataset sizes (D34).
@@ -96,6 +96,8 @@ These explain why decisions went the way they did, so that they are not reopened
 32. **Data-engineering practice first** (D36). Reproducibility is the differentiator, but most organisations do not need it, and imposing its constraints would push them away. Whatever costs storage, compute or freedom of practice for its sake is opt-in.
 33. **Cursors derived, not stored** (D37). A separate per-task state store was rejected: it is a second source of truth whose update is not atomic with the data, so a failure between the two loses or duplicates rows. Deriving the cursor from the position record committed with the data makes it advance if and only if the data commits.
 34. **The agent as single egress** (D40). Letting unit runtimes talk to the control plane directly was rejected: credentials are minted and classification is enforced in the customer environment, which needs one controlled exit point. Agents do not stop attempts at ordinary lease expiry, because a control-plane outage must not fail running work; side effects are instead guarded by a lease check and task-run idempotency keys, and a long hard limit bounds wasted compute.
+35. **Git authoritative, YAML canonical** (D41). Python as the round-trip format was rejected because free-form code cannot be regenerated from a canvas edit without destroying the author's code; a one-way Python SDK keeps that practice available. Hashing the normalised semantic model rather than the text keeps comments, formatting and migrations from invalidating caches.
+36. **A restricted expression language** (D41). User-written conditions are evaluated by the control plane, which never runs user code (D21). Python or Jinja there would let a condition reach files, the network or other tenants, or never terminate; running each condition in a container instead would cost a start-up per decision and hide the plan until run time. CEL always terminates, has no side effects and is typed, so it is safe to evaluate and checkable before a run; logic beyond it runs in a Python code node that emits typed values.
 
 ## 4. Technology choices so far
 
@@ -110,6 +112,8 @@ These explain why decisions went the way they did, so that they are not reopened
 | Table formats | Iceberg and Delta, used as the commit mechanism underneath where applicable | Chosen |
 | Later engines | Spark, Flink, Ray, all against customer-operated clusters | Deferred |
 | Standards | OpenLineage (S21), EDAM format ontology (D18) | Candidates |
+| IR text form | Strict YAML subset, round-tripping with the canvas; Python SDK generating IR later (D41) | Chosen |
+| Expression language | CEL for conditions, collections, loop termination and parameters (D41); implementation to suit the control-plane language | Chosen |
 | Canvas | React Flow or Vue Flow | Undecided |
 | Not yet chosen | Control-plane implementation language(s), API style, authentication and identity stack, observability stack, frontend framework, image builder and registry tooling | Undecided |
 
@@ -135,10 +139,10 @@ What the platform must let a user do, stated as capabilities rather than compone
 - **Platform:** web-based workflow orchestration, containerised execution
 - **Out of scope:** deep learning / visual network design
 - **Audience:** project team
-- **Decisions:** 40 recorded · three partly decided
-- **Open items:** 18 open · 6 resolved (S1–S24)
+- **Decisions:** 41 recorded · three partly decided
+- **Open items:** 17 open · 7 resolved (S1–S24)
 - **Issued:** 6 October 2026
-- **This revision (v0.10):** sets the first development slice (D29); enforces tenant and project isolation from the start (D30); records the execution state model (D31); defines the execution unit as a container holding engine segments (D32); makes fusion fully automatic with a replaceable policy and separates it from composition (D33); makes Ibis on DuckDB the engine for every built-in node, with Polars by exception (D27); replaces declared size limits with a capacity check in the plan (D34); makes copying of external sources an explicit author choice, independent of whether the source is versioned (D35); puts standard data-engineering practice first and makes reproducibility opt-in (D36); derives incremental cursors from committed metadata (D37); meets point-in-time retrieval without changing the dataset model (D38); excludes online model serving (D39); hides unreadable entities by default (D30); sets the protocol between the control and data planes, with the agent as the single egress (D40); amends D1, D4, D7, D8, D11, D13, D17, D21, D22, D23, D25 and D27 and CORE 7.3 accordingly
+- **This revision (v0.10):** sets the first development slice (D29); enforces tenant and project isolation from the start (D30); records the execution state model (D31); defines the execution unit as a container holding engine segments (D32); makes fusion fully automatic with a replaceable policy and separates it from composition (D33); makes Ibis on DuckDB the engine for every built-in node, with Polars by exception (D27); replaces declared size limits with a capacity check in the plan (D34); makes copying of external sources an explicit author choice, independent of whether the source is versioned (D35); puts standard data-engineering practice first and makes reproducibility opt-in (D36); derives incremental cursors from committed metadata (D37); meets point-in-time retrieval without changing the dataset model (D38); excludes online model serving (D39); hides unreadable entities by default (D30); sets the protocol between the control and data planes, with the agent as the single egress (D40); sets the YAML text form, git-authoritative round-tripping, text-independent hashing, repository layout, output-schema modes, port types and CEL as the expression language, with run conditions on upstream outcomes (D41); amends D1, D2, D4, D7, D8, D11, D13, D17, D21, D22, D23, D25 and D27 and CORE 7.3 accordingly
 - **Previous revision (v0.9):** defers placement constraints while keeping three seams (D26); confirms Snowflake as the first-release warehouse, stops the planner moving data into warehouses and adds a repartition step (D25); adopts Ibis for relational nodes (D27); sets warehouse connection policy and plan pinning (D28); makes bring-your-own-compute the primary deployment model (D22); incorporates the Dataset Lifecycle note and worked engine examples; and brings older wording into line with recorded decisions
 
 ---
@@ -168,7 +172,7 @@ The platform is **domain-agnostic by design**. A single substrate — scheduling
 
 - **Four sections, not three.** The three disciplines sit on top of a shared substrate — scheduling, execution, provenance, artifacts. That substrate is section **CORE**. A capability required by more than one discipline belongs in that section; otherwise it is implemented three times.
 - **Two markers carry meaning.** `[shapes the core]` means the item imposes a requirement on the scheduler or domain model and is expensive to retrofit — these are the ones to settle first. `[cross-discipline]` means the same capability is demanded from more than one direction. `[deferred]` marks a line a decision has pushed out of the initial scope, and `[new in v0.x]` records the revision that added a line. Revision v0.10 adds no capability lines; it revises the notes of existing ones.
-- **Decisions are referenced as D1–D40, open items as S1–S24.** The decision log records what has been settled and what remains open; the open items carry forward unresolved questions of behaviour at scale, of the data lifecycle and of authoring and execution. Catalog notes reference both where they affect a line.
+- **Decisions are referenced as D1–D41, open items as S1–S24.** The decision log records what has been settled and what remains open; the open items carry forward unresolved questions of behaviour at scale, of the data lifecycle and of authoring and execution. Catalog notes reference both where they affect a line.
 - **Most items are wrapping, not inventing.** Nearly everything under DS and MLE exists in sklearn, Polars, Optuna, SHAP, MLflow. The product is the palette and the reproducibility guarantees around them, not reimplementations. Items requiring original implementation are identified in the notes.
 - **IDs are stable.** Items are referenced by ID in review and correspondence — `DE 1.3`, `CORE 2.6` — so that this document remains the single reference.
 
@@ -587,6 +591,7 @@ Workflows are control-flow graphs, not strictly DAGs. Conditionals, loops and ad
 
 - **Structured.** Only structured constructs are permitted — if/else, map, and bounded loops with a maximum iteration count — and no arbitrary back-edges, so definitions remain statically analysable.
 - **Unrolled trace.** Each loop iteration unrolls into distinct task runs at execution, so the run trace is always acyclic and provenance and caching operate on it unchanged.
+- **Run conditions.** Amended in v0.10 by D41: each node also carries a run rule over the outcomes of its upstream nodes — all succeeded by default, all finished, any failed and similar — optionally combined with a condition. Conditions, collections and loop termination are CEL expressions evaluated by the control plane (D41).
 
 *References:* CORE 2.10 · DS 3.6 · MLE 5.5
 
@@ -1191,6 +1196,33 @@ The data plane is driven by pull-based agents connecting outward to the control 
 
 *References:* D15 · D21 · D22 · D23 · D26 · D28 · D29 · D30 · D31 · D34 · S4 · CORE 2.11 · CORE 2.12 · CORE 2.18 · CORE 4.7 · CORE 7.3 · CORE 7.6 · CORE 7.7
 
+#### D41 · IR text form, round-trip and structure
+
+**Status:** Decided
+
+The text form of the IR, how it round-trips between canvas and git, how it is hashed and versioned, how a project's repository is laid out, port types, and the expression language used for control flow and parameters. Added in v0.10.
+
+- **Text syntax.** The canonical text form is a strict subset of YAML, without anchors, aliases or custom tags, which do not survive a structured write-back. A Python SDK that generates IR in one direction follows the first slice; workflows defined through it appear read-only on the canvas, so teams that author pipelines in Python keep that practice (D36) without breaking round-tripping.
+- **Authority.** For a project connected to git, git is authoritative. Canvas saves are commits on a draft branch; publishing to the branch the platform deploys from is a direct commit or a pull request, set per project. Projects without git use versions held by the platform (CORE 1.5). An edit made on an older base is merged three ways on the semantic model, not the text, and real conflicts are shown to the author as a diff to resolve.
+- **Merge-friendly files.** One workflow per file, deterministic key order, and stable node identifiers separate from display names. How fully comments and formatting are preserved on write-back depends on the YAML tooling of the control-plane language, settled with the technology stack.
+- **Hashing.** Cache keys are computed over a normalised semantic model, never the text, so comments, ordering and formatting never change a key. A separate key-schema version ensures that an IR migration which does not change meaning leaves keys unchanged; a change to how keys are computed causes at most a one-time wave of misses (D8).
+- **Non-semantic layer.** Canvas layout is a sidecar file committed beside each workflow, keyed by node identifier, with rounded coordinates and deterministic order, and never affects keys; where it is missing the canvas lays the workflow out automatically. Inline composites belong to this layer, not to the IR. A referenced workflow is a `uses` node pinned to a version (D31); the canvas offers upgrades but never follows the latest version.
+- **Environment bindings.** Definitions refer only to logical names for connections, storage targets, secret references (D40) and agent-pool overrides; a bindings file per environment maps them to concrete values (MLE 6.2). A change of binding affects cache keys only through the resolved identity of inputs and source versions, never through the logical name.
+- **Repository layout.** `project.yaml` holds project configuration, including the reproducibility setting (D36); `workflows/<name>.yaml` holds one workflow with its schedule and logical interval (D13), beside its layout sidecar; `datasets/<path>.yaml` declares a dataset — schema or contract, partitioning, classification, retention and freshness, and for a source its storage choice (D35) and change-detection strategy (D37); `code/` holds code-node files referenced by path, whose content hash is part of the node's semantic fields, so code is reviewed, linted and tested as ordinary files (MLE 6.1); `environments/<env>.yaml` holds bindings.
+- **Output schemas.** Each node type declares one of three modes: **static**; **derived**, computed at authoring time from input schemas and parameters — for Ibis nodes from the expression's own schema; or **dynamic**, depending on the data, such as a pivot over discovered values. A dynamic node may declare expected columns; otherwise its downstream schema is shown as pending until a sample run (DS 1.4), and the last observed schema is kept for authoring. Enforced contracts are checked at publication; authoring never refuses a graph because a schema is pending (D36). Column lineage through dynamic columns is resolved after the run. This resolves S24.
+- **Versioning.** Three axes are kept apart: the IR document schema, migrated on read with a window of older versions supported, and written back only by an explicit commit, never by silently rewriting the repository; node-type versions, written `type@version` and upgraded explicitly, with a bulk upgrade that shows its effect; and the unit specification (D40), which shields agents from both.
+- **Port types.** A port type is a format type (D18), such as `tabular` or `genomics/bam@1`; for tabular data an optional schema in Arrow logical types, since the engines exchange Arrow; and an open map of namespaced annotations, preserved even when not recognised, which leaves room for split roles (DS 2.8) without a schema change. Compatibility between connected ports is checked at authoring time (CORE 1.2).
+- **Expression language.** Conditions, map collections, loop termination, parameter interpolation and derived values written by users are expressions in CEL (Common Expression Language), evaluated by the control plane. CEL is not Turing-complete: an expression always terminates at a cost bounded by its size and inputs, has no side effects and cannot reach files, the network or other tenants, so the control plane can evaluate it without running user code (D21). It is typed, so the validator knows every reference and the result type before a run (D2, CORE 1.2). Arbitrary code such as Python or Jinja templates was rejected for these positions: evaluated in the control plane it would break D21, and evaluated in the data plane every decision would cost a container start and the plan could not be known in advance. Whether a CEL implementation of sufficient maturity exists for the control-plane language, and for the canvas, is checked with the technology stack.
+- **Syntax.** One delimiter, `${{ … }}`. A value consisting of a single expression keeps its type, so `${{ params.regions }}` is a list; an expression embedded in a string is formatted as text.
+- **Scope.** Expressions may reference `params`, typed by the workflow's parameter schema; `interval`, its start, end and timezone (D13); declared value outputs of upstream nodes, `outputs.<node>.<value>`; and `run` metadata, in operational fields only. They never reference secrets, which remain a separate typed field (D40). The function library covers dates and times on the interval, strings and lists, and has no wall clock and no randomness, so resolved values are deterministic (D7, D8, D14).
+- **Value outputs.** A node type may declare value outputs: small typed values such as a row count, a metric or a list of keys or paths. They travel to the control plane as state-bearing messages, filtered by classification in the agent (D40); bulk data never feeds an expression, and work over large collections uses partitions and fan-out (CORE 2.3, D13).
+- **Escape hatch.** Logic too complex for an expression is written in a Python code node, which runs in the data plane and emits typed value outputs that expressions then read.
+- **Run conditions on upstream outcomes.** Each node has a run rule over the outcomes of its upstream nodes (D31): all succeeded, the default; all finished whatever their outcome; any failed; and similar. A rule may be combined with a CEL condition, which supports clean-up, alerting and fallback branches. Amends D2.
+- **Canvas.** An `if` is a branching node with labelled then and else edges; a map and a loop are frames enclosing their body, with the collection or termination rule in the frame header. Conditions are built with a rule builder that generates the expression, with an expression mode offering autocomplete and inline type errors; any parameter field may switch between a fixed value and an expression.
+- **Comparison.** Dataiku DSS separates a data-only Flow from linear scenarios whose step conditions are written in its own restricted formula language, and offers loops only through Python scenarios; the structured constructs here keep control flow in the workflow graph.
+
+*References:* D3 · D8 · D13 · D18 · D19 · D31 · D35 · D36 · D37 · D40 · S24 · CORE 1.2 · CORE 1.4 · CORE 1.5 · CORE 1.6 · MLE 6.1 · MLE 6.2
+
 ---
 
 ## Open items
@@ -1441,11 +1473,11 @@ A declared region on a dataset, constraining where it is stored and where the un
 
 #### S24 · Dynamic output schemas
 
-**Status:** Open
+**Status:** Resolved · D41
 
 Nodes whose output columns depend on the data — a pivot or one-hot encoding over values not known in advance — break design-time schema propagation through the IR, on which validation, the canvas, contracts and column-level lineage all rely.
 
-- **To settle.** Whether such nodes must declare their output columns in advance, may be marked as resolved at run time with downstream schemas shown as pending until a first run, or both; and how validation, contracts and column-level lineage treat a schema known only after execution.
+- **Outcome.** Static, derived and dynamic output-schema modes; dynamic nodes may declare expected columns, otherwise downstream schemas are pending until a sample run; contracts are checked at publication and authoring never refuses. See D41.
 
 *References:* D10 · D25 · CORE 1.2 · DE 5.8
 
@@ -1471,7 +1503,7 @@ The substrate all three disciplines run on. Everything here is discipline-agnost
   - *Note:* Composition keeps a visual graph legible beyond roughly 30 nodes. A referenced workflow is inlined into the parent run, pinned to a version, with each task run recording its origin (D31). Composition does not determine fusion (D33).
 - **CORE 1.5** — Version a workflow definition, diff two versions visually, and roll back.
 - **CORE 1.6** — Round-trip between the visual graph and a text definition that can be committed to git. `[shapes the core]`
-  - *Note:* Required by the engineering audience. Round-trip fidelity, rather than one-way export, is the meaningful capability, and it constrains the IR design substantially.
+  - *Note:* Required by the engineering audience. Round-trip fidelity, rather than one-way export, is the meaningful capability, and it constrains the IR design substantially. Decided (D41): a strict YAML subset, git authoritative, canvas saves as commits on a draft branch, three-way merge on the semantic model, and a layout sidecar.
 - **CORE 1.7** — Publish, share, fork, and re-run a workflow template from a catalog.
 - **CORE 1.8** — Drop in a custom code node — Python, SQL, or shell — with its own dependency spec.
   - *Note:* The required escape hatch: visual tools without one are abandoned at the first unsupported operation. Code nodes are offered as SQL and Ibis, both eligible for pushdown (D27), Polars and pandas, in-process, and container commands for command-line tools, all on equal terms (D25).
@@ -1504,7 +1536,7 @@ The substrate all three disciplines run on. Everything here is discipline-agnost
 - **CORE 2.9** — Target a different execution backend per run or per task — local container, Kubernetes, HPC scheduler, cloud batch. `[shapes the core]`
   - *Note:* Decided (D3): the custom IR compiles down to backends. This is the anti-corruption layer; each backend reports failure, resource limits, and cancellation differently, and all of it must be normalised into one vocabulary.
 - **CORE 2.10** — Branch conditionally, skip a subgraph, and iterate until a condition holds. `[shapes the core]`
-  - *Note:* Decided (D2): workflows are control-flow graphs, not strict DAGs. Only structured constructs are permitted, and iterations unroll into an acyclic run trace (D2).
+  - *Note:* Decided (D2): workflows are control-flow graphs, not strict DAGs. Only structured constructs are permitted, and iterations unroll into an acyclic run trace (D2). Revised in v0.10: conditions, collections and loop termination are CEL expressions, and nodes carry run rules over upstream outcomes (D41).
 - **CORE 2.11** — Survive infrastructure loss: a run continues correctly after a scheduler restart or a worker node disappearing. `[shapes the core]`
   - *Note:* Implies leases with heartbeats and a reconciliation loop rather than fire-and-forget event handling.
 - **CORE 2.12** — Declare that a node has external side effects — writes to an outside system, sends a message, triggers a deployment — so it is never served from cache and is suppressed or redirected during verification runs. `[shapes the core]` `[new in v0.2]`
@@ -1856,14 +1888,14 @@ Moving a model from experiment to a scheduled, trusted, replaceable and reversib
 
 - **MLE 6.1** — Lint a workflow, unit-test custom nodes, and run the pipeline against sample data in CI on every change. `[cross-discipline]`
 - **MLE 6.2** — Promote a workflow across development, staging, and production with environment-specific configuration and connections. `[shapes the core]`
-  - *Note:* Environment promotion requires the definition to be separable from its bindings, which is a further constraint on the IR.
+  - *Note:* Environment promotion requires the definition to be separable from its bindings, which is a further constraint on the IR. Decided (D41): definitions use logical names, mapped by a bindings file per environment.
 - **MLE 6.3** — Specify a task's environment reproducibly through a dependency lockfile resolved to an image digest. `[cross-discipline]`
 
 ---
 
 ## Catalogue footer
 
-Initial scope. Deep learning and visual neural-network design are excluded by decision; should they be reintroduced, the recommended approach is a plugin that emits a training container rather than a second meaning for the term “node”. Items are capability statements rather than a backlog; the first development slice is set by D29, and further priority and phasing are to follow. The log records forty decisions (D1–D40) from the scoping sessions; unresolved questions are carried as open items.
+Initial scope. Deep learning and visual neural-network design are excluded by decision; should they be reintroduced, the recommended approach is a plugin that emits a training container rather than a second meaning for the term “node”. Items are capability statements rather than a backlog; the first development slice is set by D29, and further priority and phasing are to follow. The log records forty-one decisions (D1–D41) from the scoping sessions; unresolved questions are carried as open items.
 
 ---
 
@@ -1918,10 +1950,11 @@ The narrowed Ibis spike proposed here in an earlier draft of v0.10 has been conf
 | D34 | The estimation method for working sets; capacity as the selection step between engines at one location, applied when Spark or another such engine is added. |
 | D38 | The point-in-time join node, designed with the palette; whether extraction stamps a row-level ingestion timestamp by default. |
 | D40 | Heartbeat interval, lease duration, restart grace period, hard limit for stale attempts and renewal batching, with scheduler capacity (S4); the transport, with the technology stack. |
+| D41 | YAML tooling that preserves comments on write-back, and CEL implementations for the control-plane language and the canvas, with the technology stack; the Python SDK after the first slice. |
 
 ## 3. Open items
 
-Questions anticipated by the design but not yet resolved. S9–S14 are resolved (see the decision log).
+Questions anticipated by the design but not yet resolved. S9–S14 and S24 are resolved (see the decision log).
 
 **Behaviour at scale**
 
@@ -1948,21 +1981,21 @@ Questions anticipated by the design but not yet resolved. S9–S14 are resolved 
 
 **Authoring and execution**
 
-- **S24 · Dynamic output schemas.** Whether such nodes must declare their output columns in advance, may be marked as resolved at run time with downstream schemas shown as pending until a first run, or both; and how validation, contracts and column-level lineage treat a schema known only after execution.
+- **S24 · Dynamic output schemas.** *Resolved by D41:* static, derived and dynamic output-schema modes, with pending schemas until a sample run.
 
 ## 4. Pre-development triage
 
 Which questions must be settled before development begins, and which can wait until the work reaches them. An item blocks the start of development only if the first code would build it into something expensive to change later: a persisted schema, the wire protocol that runs inside customer environments, or the IR format that users commit to git. An item whose later correction only costs performance, such as extra cache misses, or is purely additive, waits.
 
-**Settled in the first round (v0.10).** First development slice (D29); isolation enforced from the start (D30); execution state model (D31); execution unit structure (D32); automatic fusion (D33); node-level cache keys (D8); Ibis on DuckDB for every built-in node (D27); capacity checks in place of declared sizes (D34); explicit storage choice for external sources (D35); data-engineering practice first (D36); incremental extraction state (D37); point-in-time retrieval (D38); online serving excluded (D39); default visibility (D30); protocol between the control and data planes (D40). The licence is deferred until the repository is made public (D5, D29).
+**Settled in the first round (v0.10).** First development slice (D29); isolation enforced from the start (D30); execution state model (D31); execution unit structure (D32); automatic fusion (D33); node-level cache keys (D8); Ibis on DuckDB for every built-in node (D27); capacity checks in place of declared sizes (D34); explicit storage choice for external sources (D35); data-engineering practice first (D36); incremental extraction state (D37); point-in-time retrieval (D38); online serving excluded (D39); default visibility (D30); protocol between the control and data planes (D40); IR text form, round-trip and structure (D41). The licence is deferred until the repository is made public (D5, D29).
 
 **Still to settle before development.**
 
 1. *Settled in D40*, except timings, which go with item 4, and the transport, which goes with item 5.
-2. **Core IR schema.** Schema versions and migrations; enforcement of the semantic/operational split; the node-type contract (runtime, execution modes, supported dialects, declared grouping keys, memory class and order dependence); a port type system with room for split semantics (DS 2.8); schemas known only after a run (S24); separation of definitions from environment bindings (MLE 6.2); version pinning of referenced workflows; and the canonical text syntax, YAML or Python, since round-tripping is in the first slice. *(D3, D29, D31, CORE 1.2, CORE 1.4, CORE 1.6, S24, MLE 6.2)*
+2. **Core IR schema.** *Settled in D41.*
 3. **Dataset and read-position persistence.** How snapshots, partition versions, manifests and files are stored and related, and how the range of positions consumed is represented. *(D4, D12 Seams 4 and 5, D13, D15, D23, CORE 5.9, CORE 6.7, CORE 6.9)*
 4. **Scheduler capacity and queue model.** Target fan-out per run, concurrent task runs and lease interval (S4); fair-share queues across tenants and projects, with backfills in a lower priority class; up-front or batched creation of task runs under maps. *(S4, D20, D31, CORE 3.6)*
-5. **Minimum technology stack.** Control-plane language, API style, Postgres migration tooling, confirmation of Python for the unit runtime, and the frontend and canvas framework, since the canvas is in the first slice. *(Part I, section 4)*
+5. **Minimum technology stack.** Control-plane language, API style, Postgres migration tooling, confirmation of Python for the unit runtime, and the frontend and canvas framework, since the canvas is in the first slice. It also settles the agent transport (D40), and checks the YAML tooling for comment preservation on write-back and the maturity of CEL implementations for the control plane and the canvas (D41). *(Part I, section 4)*
 6. **Isolation mechanism and role model.** *(D30)*
 
 **Decided seams the first schema must include.** Tenant identifier on every entity (D5); immutable dataset identifier (D19); schema version in the IR (D3); separate semantic and operational fields (D8); phase separate from outcome (D12 Seam 1, D31); failure classes on attempts, checkpoint slots on task runs and the reused outcome (D31); memory class on node types (D34); execution-mode field on node types (D12 Seam 3); read positions consumed (D12 Seam 4); metrics as time series (D12 Seam 10); backend lifecycle interface (D12 Seam 9); attempt-scoped staging with fencing tokens on commits (D15); backend and region of every attempt and artifact (D26 Seam 1); eligibility filter on cache hits (D26 Seam 2); placement and its reason recorded by the planner (D26 Seam 3); query and job tagging (D28); byte and row counts per partition on every manifest, and capacity ceilings per backend (D34); extension interfaces for authentication, policy, audit and AI (D5).
@@ -2001,4 +2034,4 @@ In a suggested order. Each topic is expected to produce decisions, capability li
 13. **Business model and open-core line** (D5), revisited in light of bring-your-own-compute.
 14. **Non-functional requirements.** Scale targets (S4, S5), SLAs, availability.
 15. **Roadmap and phasing.** Beyond the first development slice (D29): v1, then v2, including whether and when a hosted control plane is operated.
-16. **Open items.** S1–S8 and S15–S24.
+16. **Open items.** S1–S8 and S15–S23.
