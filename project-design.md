@@ -6,7 +6,7 @@
 This document has three parts:
 
 - **Part I · Project details.** What the platform is, supplementary vocabulary, the reasoning behind key decisions and rejected alternatives, technology choices, and conventions for maintaining the record.
-- **Part II · Capability catalogue.** The full catalogue: overview, key terms, architecture, worked engine examples, dataset lifecycle, decision log D1–D41, open items S1–S24 and every capability line. Diagrams are not reproduced; each figure is replaced by a description of what it shows, and the drawings are in the illustrated catalogue.
+- **Part II · Capability catalogue.** The full catalogue: overview, key terms, architecture, worked engine examples, dataset lifecycle, decision log D1–D43, open items S1–S24 and every capability line. Diagrams are not reproduced; each figure is replaced by a description of what it shows, and the drawings are in the illustrated catalogue.
 - **Part III · What remains to be discussed.** Proposals not yet confirmed, conditions and deferred follow-ups attached to decisions, open items, the pre-development triage, and the remaining design agenda.
 
 ---
@@ -22,7 +22,7 @@ A cloud-based, **open-core**, **domain-agnostic** web platform for assembling, s
 - **Deployment model.** Bring-your-own-compute is the primary model: execution runs on the customer's own infrastructure and the vendor hosts only the interface and control planes (D22). Hybrid and self-hosted are the first-class topologies; fully managed serves trials and small teams.
 - **Processing engines.** Built-in tabular nodes are defined as Ibis expressions and run on DuckDB in-process or are pushed down to Postgres or Snowflake, with Polars used only by justified exception and for code nodes; non-tabular work runs in Python or container-command runtimes and scales by fan-out (D25, D27). The planner checks each unit's estimated working set against backend capacity rather than relying on declared dataset sizes (D34).
 - **Disciplines served.** Data engineering, data science and ML engineering, on one shared substrate (CORE). Bioinformatics and sequence analysis is the **demonstration domain**, not a specialisation.
-- **First slice.** Development begins with the tabular family only, on the single-machine container deployment and Kubernetes, with Ibis on DuckDB in-process (Polars by justified exception and for code nodes), the visual canvas and git round-tripping; execution is driven by a pull-based agent in every deployment, and tenant and project isolation is enforced throughout from the start (D29, D30). Warehouse pushdown, the other dataset families, HPC and cloud batch follow.
+- **First slice.** Development begins with the tabular family only, on the single-machine container deployment and Kubernetes, with Ibis on DuckDB in-process (Polars by justified exception and for code nodes), the visual canvas and git round-tripping; execution is driven by a pull-based agent in every deployment, tenant and project isolation is enforced throughout from the start, and managed datasets on object storage are readable by external engines through projected Iceberg metadata (D29, D30, D42). Warehouse pushdown, the other dataset families, HPC and cloud batch follow.
 - **Excluded for now.** Deep learning and visual neural-network design; a native streaming runtime (batch first, then micro-batch, with streaming seams preserved); container-free local execution; online model serving; a platform-run Spark engine.
 - **Positioning.** "The n8n of data engineering, data science and MLE", with production orchestration semantics (logical intervals, backfills, fan-out, retries, fair scheduling) and verifiable reproducibility. The closest existing product is Dataiku DSS, whose bring-your-own-compute model and cross-location behaviour the design now follows.
 - **Principle.** Standard data-engineering practice comes first; reproducibility and its constraints are opt-in, never imposed (D36).
@@ -43,6 +43,7 @@ Terms used throughout that are not given their own card in the catalogue's Key t
 | Partition dependency function | How output partitions depend on input partitions: identity, time window, all, latest, specific values, or discovered at run time by a merge node. |
 | Dataset family | A group of formats that behave alike on the platform (tabular, semi-structured, text and documents, images, genomics, ML artifacts). |
 | Format type, plugin, binding | The platform defines a format type (for example `genomics/bam` v1); plugins implement types; each dataset is bound to one pinned implementation. |
+| Data commit | The atomic act by which the control plane makes an attempt's staged outputs current; defined in the catalogue's Key terms. Distinct from a git commit, a database transaction and a table-format commit. |
 | Materialisation request | A declarative request to make a dataset current through a given time, for which the reconciler plans the minimum work. |
 | Engine segment | Consecutive in-process nodes on the same engine, chained so that one optimiser sees them all. The level between node and execution unit (D32). |
 | Phase and outcome | Every run, task run and attempt carries a lifecycle phase (pending, active, suspended, ended) and, separately, an outcome that is empty until the phase is ended (D31). |
@@ -98,6 +99,8 @@ These explain why decisions went the way they did, so that they are not reopened
 34. **The agent as single egress** (D40). Letting unit runtimes talk to the control plane directly was rejected: credentials are minted and classification is enforced in the customer environment, which needs one controlled exit point. Agents do not stop attempts at ordinary lease expiry, because a control-plane outage must not fail running work; side effects are instead guarded by a lease check and task-run idempotency keys, and a long hard limit bounds wasted compute.
 35. **Git authoritative, YAML canonical** (D41). Python as the round-trip format was rejected because free-form code cannot be regenerated from a canvas edit without destroying the author's code; a one-way Python SDK keeps that practice available. Hashing the normalised semantic model rather than the text keeps comments, formatting and migrations from invalidating caches.
 36. **A restricted expression language** (D41). User-written conditions are evaluated by the control plane, which never runs user code (D21). Python or Jinja there would let a condition reach files, the network or other tenants, or never terminate; running each condition in a container instead would cost a start-up per decision and hide the plan until run time. CEL always terminates, has no side effects and is typed, so it is safe to evaluate and checkable before a run; logic beyond it runs in a Python code node that emits typed values.
+37. **Snapshots and recorded identifiers rather than cutoffs** (D42). A sequence number or timestamp is assigned before its transaction commits, so a later commit can become visible before an earlier-stamped one; any cutoff by such a value is safe only below a watermark. Run inputs are therefore resolved from a database snapshot and recorded as version identifiers, and only as-of-time queries use a cutoff, below an approximate watermark that can later be made exact.
+38. **The platform as the queue** (D43). Delegating ordering to the backend was rejected: backends see the platform as one consumer, know nothing of its classes, leases or projects, differ between deployments and, when over-submitted, hide queued work. Fair share uses dominant resources rather than attempt counts because fused units differ in size by orders of magnitude, and its cost grows with active consumers, not task runs. D20's promise that backfills never delay current pipelines was weakened because, without preemption, a running backfill attempt can delay later production work; preemption is available per pool.
 
 ## 4. Technology choices so far
 
@@ -109,7 +112,7 @@ These explain why decisions went the way they did, so that they are not reopened
 | In-process engines | DuckDB through Ibis for every built-in node (spills to disk); Polars for code nodes and justified exceptions; exchanging Arrow | Chosen |
 | Relational node definitions | Ibis, compiling through SQLGlot | Chosen subject to the D27 spike |
 | Warehouses (v1) | Postgres and Snowflake | Chosen |
-| Table formats | Iceberg and Delta, used as the commit mechanism underneath where applicable | Chosen |
+| Table formats | Iceberg and Delta, used as the commit mechanism underneath where applicable; Iceberg metadata projected for managed datasets on object storage, from the first slice (D42) | Chosen |
 | Later engines | Spark, Flink, Ray, all against customer-operated clusters | Deferred |
 | Standards | OpenLineage (S21), EDAM format ontology (D18) | Candidates |
 | IR text form | Strict YAML subset, round-tripping with the canvas; Python SDK generating IR later (D41) | Chosen |
@@ -139,10 +142,10 @@ What the platform must let a user do, stated as capabilities rather than compone
 - **Platform:** web-based workflow orchestration, containerised execution
 - **Out of scope:** deep learning / visual network design
 - **Audience:** project team
-- **Decisions:** 41 recorded · three partly decided
-- **Open items:** 17 open · 7 resolved (S1–S24)
-- **Issued:** 6 October 2026
-- **This revision (v0.10):** sets the first development slice (D29); enforces tenant and project isolation from the start (D30); records the execution state model (D31); defines the execution unit as a container holding engine segments (D32); makes fusion fully automatic with a replaceable policy and separates it from composition (D33); makes Ibis on DuckDB the engine for every built-in node, with Polars by exception (D27); replaces declared size limits with a capacity check in the plan (D34); makes copying of external sources an explicit author choice, independent of whether the source is versioned (D35); puts standard data-engineering practice first and makes reproducibility opt-in (D36); derives incremental cursors from committed metadata (D37); meets point-in-time retrieval without changing the dataset model (D38); excludes online model serving (D39); hides unreadable entities by default (D30); sets the protocol between the control and data planes, with the agent as the single egress (D40); sets the YAML text form, git-authoritative round-tripping, text-independent hashing, repository layout, output-schema modes, port types and CEL as the expression language, with run conditions on upstream outcomes (D41); amends D1, D2, D4, D7, D8, D11, D13, D17, D21, D22, D23, D25 and D27 and CORE 7.3 accordingly
+- **Decisions:** 43 recorded · three partly decided
+- **Open items:** 16 open · 8 resolved (S1–S24)
+- **Issued:** 8 October 2026
+- **This revision (v0.10):** defines the data commit in the Key terms; sets the first development slice (D29); enforces tenant and project isolation from the start (D30); records the execution state model (D31); defines the execution unit as a container holding engine segments (D32); makes fusion fully automatic with a replaceable policy and separates it from composition (D33); makes Ibis on DuckDB the engine for every built-in node, with Polars by exception (D27); replaces declared size limits with a capacity check in the plan (D34); makes copying of external sources an explicit author choice, independent of whether the source is versioned (D35); puts standard data-engineering practice first and makes reproducibility opt-in (D36); derives incremental cursors from committed metadata (D37); meets point-in-time retrieval without changing the dataset model (D38); excludes online model serving (D39); hides unreadable entities by default (D30); sets the protocol between the control and data planes, with the agent as the single egress (D40); sets the YAML text form, git-authoritative round-tripping, text-independent hashing, repository layout, output-schema modes, port types and CEL as the expression language, with run conditions on upstream outcomes (D41); sets catalogue persistence: partition validity intervals, per-dataset commit ordering, read records, the commit transaction and its outbox, the control-plane boundary, and Iceberg metadata projected for external engines (D42); sets scheduling: the platform as the queue, per-pool dominant-resource fair share, priority classes, partition write leases, windowed maps and protocol timings (D43); amends D1, D2, D4, D7, D8, D11, D13, D17, D20, D21, D22, D23, D25, D27 and D31 and CORE 7.3 accordingly
 - **Previous revision (v0.9):** defers placement constraints while keeping three seams (D26); confirms Snowflake as the first-release warehouse, stops the planner moving data into warehouses and adds a repartition step (D25); adopts Ibis for relational nodes (D27); sets warehouse connection policy and plan pinning (D28); makes bring-your-own-compute the primary deployment model (D22); incorporates the Dataset Lifecycle note and worked engine examples; and brings older wording into line with recorded decisions
 
 ---
@@ -172,7 +175,7 @@ The platform is **domain-agnostic by design**. A single substrate — scheduling
 
 - **Four sections, not three.** The three disciplines sit on top of a shared substrate — scheduling, execution, provenance, artifacts. That substrate is section **CORE**. A capability required by more than one discipline belongs in that section; otherwise it is implemented three times.
 - **Two markers carry meaning.** `[shapes the core]` means the item imposes a requirement on the scheduler or domain model and is expensive to retrofit — these are the ones to settle first. `[cross-discipline]` means the same capability is demanded from more than one direction. `[deferred]` marks a line a decision has pushed out of the initial scope, and `[new in v0.x]` records the revision that added a line. Revision v0.10 adds no capability lines; it revises the notes of existing ones.
-- **Decisions are referenced as D1–D41, open items as S1–S24.** The decision log records what has been settled and what remains open; the open items carry forward unresolved questions of behaviour at scale, of the data lifecycle and of authoring and execution. Catalog notes reference both where they affect a line.
+- **Decisions are referenced as D1–D43, open items as S1–S24.** The decision log records what has been settled and what remains open; the open items carry forward unresolved questions of behaviour at scale, of the data lifecycle and of authoring and execution. Catalog notes reference both where they affect a line.
 - **Most items are wrapping, not inventing.** Nearly everything under DS and MLE exists in sklearn, Polars, Optuna, SHAP, MLflow. The product is the palette and the reproducibility guarantees around them, not reimplementations. Items requiring original implementation are identified in the notes.
 - **IDs are stable.** Items are referenced by ID in review and correspondence — `DE 1.3`, `CORE 2.6` — so that this document remains the single reference.
 
@@ -186,9 +189,9 @@ Vocabulary the rest of the document depends on. Each core concept is given a def
 
 The platform's **canonical, machine-readable definition of a workflow**: its nodes, their typed inputs and outputs, the edges and control-flow constructs between them, parameters, resource requests, pinned image digests, and retry, caching and side-effect declarations. The term comes from compilers, where the IR sits between the language people write and the code machines run.
 
-The IR is **the single source of truth**. The canvas, the git-committed text form and imported templates are all views of it; backend submissions are all generated from it. Validation, cache keys, provenance records, version diffs and reproducibility checks all operate on the IR — never on canvas state or on a backend's own format. It is custom to this platform (D3) and carries its own schema version.
+The IR is **the single source of truth**. The canvas, the git-committed text form and imported templates are all views of it; backend submissions are all generated from it. Validation, cache keys, provenance records, version diffs and reproducibility checks all operate on the IR — never on canvas state or on a backend's own format. It is custom to this platform (D3) and carries its own schema version. For a project connected to git, the YAML file in git is the authoritative stored form of the IR; the canvas reads and writes it, and keys are computed over its normalised semantic model, not its text (D41).
 
-> *Diagram:* Authored in: Visual canvas, YAML / Python in git, Template import → **IR** (validated · versioned · hashed) → Compiled to: Kubernetes, HPC (Slurm), Local containers, Export: Argo / Airflow
+> *Diagram:* Authored in: Visual canvas, YAML in git (a Python SDK generating IR follows, D41), Template import → **IR** (validated · versioned · hashed) → Compiled to: Kubernetes, HPC (Slurm), Local containers, Export: Argo / Airflow
 
 **Semantic fields — what the node computes**
 
@@ -344,6 +347,10 @@ The workflow definition can prove a **ceiling** — network access caps a run at
 - **Artifact.** Any stored output of an execution unit, often temporary, stored at an identity-addressed path and described by a manifest in the catalogue (D23).
 - **Dataset.** A named, versioned, long-lived data asset with an owner and consumers, independent of the run that wrote it (D4). Every dataset version is an artifact or, for an external dataset, a reference; most artifacts never become dataset versions.
 - **Logical interval.** The slice of time a run is *for* (e.g. 2026-09-19), as opposed to when it happened to execute. Makes reruns and backfills deterministic.
+- **Data commit.** The single atomic act by which the control plane makes the staged outputs of one attempt current in the catalogue (D15, D21). An attempt writes its outputs to an attempt-scoped staging location, where they are durable but invisible; the agent then sends a commit request carrying the attempt's fencing token, the staged manifests, the read records and any quality-gate results (D40). The control plane rejects the request if the attempt has been superseded; otherwise, in one database transaction, it records the manifests, the new partition versions and dataset version, the read records and cursor frontier, moves the dataset's head to the new version and writes an outbox event. Afterwards, runs that resolve their inputs see the new version. A commit is all-or-nothing, happens at most once per attempt, and is performed only by the control plane; by default it makes one dataset's new version current, and a publication group makes several current together.
+  - *Also commits:* an append to an open partition and marking it complete; releasing a quarantined version (D31); registering an unbound run-scoped artifact. A fenced write to a task run's checkpoint slot is a **checkpoint commit**, which makes a checkpoint current but creates no dataset version.
+  - *Not commits:* writing to staging; a failed quality gate, which records a quarantined version but makes nothing current; a task run or run succeeding, which is an execution outcome (D31) — one run may make many commits, as in a backfill (D20), or none; a cache hit.
+  - *Distinct terms:* a **git commit** changes workflow definitions (D41); a **database transaction** is the mechanism by which a data commit is carried out; a **table-format commit** (Iceberg, Delta) is a step inside a data commit where the storage target is a lakehouse table (D15), whereas the Iceberg metadata projected for datasets on object storage is written after the data commit and is not part of it (D42). Used alone, "commit" means a data commit.
 
 ---
 
@@ -766,6 +773,7 @@ A run resolves the versions of all its inputs once, when it starts, records them
 - **Completeness.** Snapshot isolation guarantees a consistent read, not consistent business state. Where inputs must be complete for an interval, partition completion markers (CORE 3.10) and the consumer's stale-input policy (D16) apply.
 - **Reruns.** Two distinct actions: **re-execute as recorded** reads the originally resolved versions; **run again on current data** resolves afresh. They are presented separately and never conflated.
 - **Retention.** Versions resolved by a run still in progress are protected from garbage collection until the run finishes, so a long run cannot lose its own inputs.
+- **Mechanism.** Recorded in v0.10 by D42: inputs are resolved inside one repeatable-read transaction and recorded as version identifiers, never as a cutoff.
 
 *References:* S9 · CORE 2.16 · CORE 5.10 · CORE 5.11 · CORE 6.5 · D7
 
@@ -776,7 +784,7 @@ A run resolves the versions of all its inputs once, when it starts, records them
 Publication stages new data and then makes it current with a single atomic commit. Consumers never observe a partially applied publication, and a retried attempt never publishes twice.
 
 - **Staging.** An execution unit writes new files to a location scoped to its attempt and never overwrites existing files. Quality gates evaluate the staged data; a failed gate prevents the commit and the staged data becomes a quarantined version, which an override may later release (D31).
-- **Commit point.** For managed datasets the platform's metadata catalog is the commit point: one transaction records the new snapshot manifest, and readers resolve files through the catalog rather than by listing storage paths. Where a managed dataset uses a table format such as Iceberg or Delta, that format's own commit is used underneath. This applies uniformly to tabular and non-tabular data.
+- **Commit point.** For managed datasets the platform's metadata catalog is the commit point: one transaction records the new snapshot manifest, and readers resolve files through the catalog rather than by listing storage paths. Where a managed dataset uses a table format such as Iceberg or Delta, that format's own commit is used underneath. This applies uniformly to tabular and non-tabular data. Iceberg metadata projected for external engines is derived from the commit afterwards and never acts as a commit point (D42).
 - **External targets.** Publication to an external warehouse uses the target's own transaction, or a staging table followed by a swap. Where the target cannot commit several partitions atomically, partitions are committed individually and the version is reported as **partially published** rather than concealed.
 - **Fencing.** Every commit carries the identity of the attempt that produced it. A late commit from an attempt that was presumed lost and has since been retried is rejected. Orphaned staging files are garbage-collected.
 - **Open partitions.** Each append to an open partition is its own atomic commit, and marking the partition complete is a further commit (CORE 3.10).
@@ -862,7 +870,7 @@ A backfill commits each logical interval as it completes, while downstream recon
 - **Coalescing.** While a backfill runs, the reconciler holds downstream work and plans it once — when the backfill completes, or at batch boundaries for long backfills — over the union of changed partitions. Without this, a lateness window causes each downstream partition to be rebuilt several times.
 - **Restatement.** A backfill that recomputes existing partitions with changed logic may be declared atomic: every interval is staged and a single snapshot is committed at the end, so consumers never observe a mixture of old and new logic. Gap-filling backfills do not need this.
 - **History.** Commits made by one backfill carry its identifier, so version history presents the backfill as a single collapsible entry.
-- **Priority.** Backfills run below scheduled runs under fair scheduling (CORE 3.6), so a long backfill never delays current pipelines. Writes to the same partition are serialised, so a backfill and a scheduled run cannot collide.
+- **Priority.** Backfills run below scheduled runs under fair scheduling (CORE 3.6), so a long backfill never delays current pipelines. Writes to the same partition are serialised, so a backfill and a scheduled run cannot collide. Amended in v0.10 by D43: backfills are admitted only to idle capacity and production work never queues behind waiting backfill work, but a running backfill attempt is not stopped by default, so production work may wait for it to finish unless the pool enables preemption; serialisation of writes is by partition write leases taken at admission.
 
 *References:* S14 · D13 · D15 · CORE 3.4 · CORE 3.6 · CORE 3.12 · CORE 3.13
 
@@ -906,7 +914,7 @@ Artifacts are stored at identity-addressed paths, and the artifact itself is a m
 - **Immutability.** Files are never overwritten; any change produces a new artifact.
 - **Deduplication.** Optional and asynchronous: where byte digests match, a later manifest may reference an earlier artifact's files and the duplicate is removed.
 - **Collection.** Garbage collection marks everything referenced by a retained, cached, pinned or provenance-protected manifest, and removes the rest. Provenance protection beyond ordinary retention applies only where the reproducibility setting is on (D36).
-- **Layers.** A dataset snapshot references partition versions, which reference artifact manifests, which reference files. Where the storage target is an Iceberg or Delta table, that table's own metadata serves as the manifest.
+- **Layers.** A dataset snapshot references partition versions, which reference artifact manifests, which reference files. Amended in v0.10 by D42: a snapshot selects partition versions by validity interval rather than listing them. Where the storage target is an Iceberg or Delta table, that table's own metadata serves as the manifest.
 
 *References:* D4 · D8 · D15 · D17 · CORE 6.2
 
@@ -1010,6 +1018,7 @@ Development begins with a deliberately narrow slice of the catalogue: the tabula
 
 - **Data.** The tabular family only (D17). File groups, linked items, sharded collections and splittability (CORE 6.16 – 6.19) are therefore not required in the first slice. The other five families follow through the same family interface.
 - **Backends.** The single-machine container deployment (CORE 2.17) and Kubernetes. HPC agents and cloud batch follow.
+- **External readability.** Iceberg metadata is projected for managed datasets on object storage, so external engines can read them as tables (D42).
 - **Engines.** In-process only (D25): Ibis on DuckDB for every built-in node, with Polars by justified exception and for code nodes (D27). Built-in nodes are defined as Ibis expressions so that they need no rewriting when pushdown is introduced. Warehouse pushdown, the warehouse connection policy (D28), Spark and Flink follow.
 - **Authoring.** The canvas (CORE 1.1) and round-tripping to text in git (CORE 1.6) are both in the first slice, so the canonical text syntax is settled together with the IR specification.
 - **Agent.** The data plane is driven by a pull-based execution agent in every deployment, including single-machine and self-hosted ones; the control plane never calls a backend's API directly. Hybrid deployment then differs only in where the control plane runs, not in how work is executed (D22).
@@ -1050,7 +1059,7 @@ Execution is recorded at three levels: the **run** (one execution of a workflow 
 - **Nested workflows.** A node that references another workflow is inlined into the parent run at compile time, pinned to a version of the referenced workflow, and each resulting task run records its origin so that the interface can group them. A separate child run would resolve its inputs at a different instant and break snapshot isolation (D14).
 - **Cache hits.** A unit served from cache is recorded as a task run with the outcome reused, a reference to the task run whose output was reused, and no attempts (CORE 2.13).
 - **Pause and cancel.** Pausing stops dispatching new task runs and lets running attempts finish, after which the run is suspended until resumed; cancelling signals running attempts at their next heartbeat (CORE 2.8).
-- **Deferred.** Whether the task runs of a large map are created up front or in batches as they are dispatched is settled with scheduler capacity (S4).
+- **Deferred.** Whether the task runs of a large map are created up front or in batches as they are dispatched is settled with scheduler capacity (S4). Settled in v0.10 by D43: in windows sized to the map's parallelism, tracked by a map-group record.
 
 *References:* D2 · D7 · D12 · D13 · D14 · D15 · D16 · D24 · S4 · S8 · S15 · S18 · CORE 1.4 · CORE 2.5 · CORE 2.8 · CORE 2.11 · CORE 2.13 · CORE 2.16 · CORE 6.8 · DE 1.5 · DE 4.4 · MLE 2.3 · MLE 2.4 · MLE 3.4
 
@@ -1145,7 +1154,7 @@ Incremental extraction keeps no separate per-task state store. The cursor betwee
 - **Change detection.** A strategy declared by each connector, with a declared position type: full snapshot (no position; hard deletes found by comparing snapshots by key), watermark polling (a timestamp range; hard deletes missed), append-only key range, log-based change data capture (a log offset; deletes captured), API sync token (an opaque token; deletes usually captured) or file listing (a set of files; deletions found by comparing listings). The platform shows whether a strategy captures hard deletes and offers periodic full-snapshot reconciliation where it does not (DE 1.3).
 - **Cursor.** The end position recorded by the last successfully committed extraction run (D12 Seam 4, CORE 5.9), written in the same catalogue transaction as the commit (D15), so the cursor advances if and only if the data commits. Failed and fenced attempts commit nothing, so retries start from the same position. The record is catalogue metadata: it survives data retention and does not depend on whether the extracted bytes are kept (D35).
 - **Frontier.** A per-dataset projection of the furthest committed position, maintained in the same transaction for fast lookup and rebuildable from the position records.
-- **Overlap.** Extraction runs on a cursor-based source queue rather than run concurrently (CORE 3.7); single production (D13) already guarantees one writer.
+- **Overlap.** Extraction runs on a cursor-based source queue rather than run concurrently (CORE 3.7); single production (D13) already guarantees one writer. The queueing is implemented by the write leases of D43.
 - **Bootstrap.** A first run with no committed position performs a full load and records the position at the snapshot point, such as the log offset at snapshot start (DE 1.4).
 - **Resets.** Re-synchronising from scratch or from a given position is a parameter of one run, recorded in its provenance. Re-extracting a past interval produces a new version of that partition and does not rewind the frontier.
 - **Clock.** Upper bounds for watermark polling come from the source's clock, not the platform's.
@@ -1163,7 +1172,7 @@ Incremental extraction keeps no separate per-task state store. The cursor betwee
 Point-in-time retrieval (MLE 1.2) needs no change to the dataset model. Event time is carried by event-time metadata on datasets (D12 Seam 6). Knowledge time — when the platform learned of a value — comes from a dataset's publication history, since every snapshot has a commit time (D15), or from a row-level ingestion timestamp written at extraction, which is standard practice. Added in v0.10.
 
 - **Point-in-time join.** A palette node matches each label to the feature values whose event time and knowledge time both precede the label time.
-- **Limit.** As-of accuracy at version level reaches back only as far as retained snapshot history (D36); a row-level ingestion timestamp avoids that limit.
+- **Limit.** As-of accuracy at version level reaches back only as far as retained snapshot history (D36); a row-level ingestion timestamp avoids that limit. As-of queries are answered only for times older than the commit watermark (D42).
 
 *References:* D12 · D13 · D15 · D35 · D36 · MLE 1.2 · MLE 5.3
 
@@ -1192,7 +1201,7 @@ The data plane is driven by pull-based agents connecting outward to the control 
 - **Three contracts.** Versioned separately: the **unit specification** carried in a lease — the compiled and resolved plan for one unit (image digests, segments, input versions and locations, staging location, resources, credential scopes and secret references), not the raw IR, so agents never handle IR migrations; the **agent protocol**, negotiated at connection, with the control plane supporting a window of agent versions because customers upgrade agents on their own schedule; and the **agent–unit contract**, the local endpoint through which a unit fetches its specification, refreshes credentials, sends events, writes checkpoints (D31) and requests its commit.
 - **Message classes.** State-bearing messages — claims, renewals, state transitions, checkpoint commits, commit requests and end-of-attempt reports carrying outcome and failure class (D31) — are guaranteed, idempotent and sequence-numbered per attempt. Telemetry — logs, metrics and progress — is best effort and goes to a configurable sink, the vendor's observability service or the customer's own (CORE 4.7), with live tailing proxied through the agent; correctness never depends on it (D21). The agent applies the classification filter to previews and samples before anything leaves the customer environment (D22).
 - **Amends.** D21: the control plane leases work with credential scopes and secret references rather than scoped credentials. CORE 7.3: the control plane stores secret references centrally; values are held and resolved in the data plane.
-- **Open.** Heartbeat interval, lease duration, the grace period, the hard limit and batching of renewals, with scheduler capacity (S4); the transport, such as gRPC streaming or HTTPS long-polling, with the technology stack, including whether enterprise proxies tolerate long-lived HTTP/2 streams.
+- **Open.** The transport, such as gRPC streaming or HTTPS long-polling, with the technology stack, including whether enterprise proxies tolerate long-lived HTTP/2 streams. Timings were set in v0.10 by D43.
 
 *References:* D15 · D21 · D22 · D23 · D26 · D28 · D29 · D30 · D31 · D34 · S4 · CORE 2.11 · CORE 2.12 · CORE 2.18 · CORE 4.7 · CORE 7.3 · CORE 7.6 · CORE 7.7
 
@@ -1222,6 +1231,43 @@ The text form of the IR, how it round-trips between canvas and git, how it is ha
 - **Comparison.** Dataiku DSS separates a data-only Flow from linear scenarios whose step conditions are written in its own restricted formula language, and offers loops only through Python scenarios; the structured constructs here keep control flow in the workflow graph.
 
 *References:* D3 · D8 · D13 · D18 · D19 · D31 · D35 · D36 · D37 · D40 · S24 · CORE 1.2 · CORE 1.4 · CORE 1.5 · CORE 1.6 · MLE 6.1 · MLE 6.2
+
+#### D42 · Catalogue persistence
+
+**Status:** Decided
+
+How the catalogue stores datasets, versions, partitions, manifests, files, schemas and read positions in Postgres, what a data commit writes, and how datasets on object storage are made readable by external engines. Added in v0.10.
+
+- **Partitions by validity interval.** Each partition version records the dataset version from which it is valid and, once replaced, the version at which it stopped being valid. A commit writes only the partitions it changed and closes the rows they replace; reading a dataset as of version S selects the partition versions valid at S, which serves pinning (D14), as-of reads (D38) and restatements (D20). An append to an open partition creates a new partition version whose segments are the previous segments, by reference, plus the new one, and marking it complete is a further version, so partition versions stay immutable (D15). A publication group commits several datasets in one transaction.
+- **Ordering and visibility.** Commits to the same dataset take turns under a lock on its head row, so version numbers and commit timestamps follow true commit order within the dataset; commits to different datasets run in parallel and finish in any order. A run resolves all its inputs inside one repeatable-read transaction and records the resolved version identifiers, so no ordering value decides what it sees (D14). Commit timestamps serve as-of-time queries (D38), answered only for times older than a watermark. In the first slice the watermark is approximate: commit transactions run under a short `transaction_timeout`, as-of queries are answered only for times older than a settling window comfortably longer than that timeout and any clock skew on failover, and a commit whose timestamp has aged beyond half the window before committing rolls back and retries with a fresh one. The watermark sits behind an interface, so an exact watermark derived from the commits still in flight can replace it without changing stored data. No global sequence is kept: a sequence number or timestamp is assigned before its transaction commits, so neither may decide visibility except below a watermark.
+- **Positions and read records.** Positions are one tagged type with a kind per change-detection strategy (D37): ordered ranges of timestamps, keys or log offsets with stated inclusivity; opaque tokens, ordered by commit; and file sets, held inline when small and externally when large. A read of an internal dataset records the range of versions consumed (D12, Seam 5), which is also the cursor of an incremental transform. A read record is kept per task run per input. The cursor frontier is keyed by the source declaration and the consuming node, not by a raw dataset, which may not exist when the read is ephemeral (D35).
+- **Commit transaction.** A data commit is one database transaction containing the fencing check, the manifests and partition versions, the version row, the read records, the frontier update, the move of the head pointer and an outbox row. Everything that follows from a commit — staleness marks downstream, the degraded cascade (D16), notifications, reconciler wake-ups and external projections — is derived afterwards from the outbox by idempotent consumers, keeping the commit path minimal. A replayed commit request receives the original answer.
+- **Control-plane boundary.** The control plane holds no storage credentials (D40), so everything it needs — resolution, unit specifications, capacity statistics (D34), preview metadata and collection decisions — is in Postgres. Manifests are held inline by default; above a configurable file count the listing is written to customer storage as a manifest file read only by agents and units, while Postgres keeps the file count, bytes, rows and a digest of the listing. Garbage collection runs in two phases: the control plane marks unreferenced artifacts and an agent maintenance job deletes the files with its own credentials and confirms. Integrity checks for out-of-band modification (CORE 6.24) run as data-plane jobs.
+- **Identifiers.** Artifact identifiers are time-ordered UUIDs generated in the data plane, so units write to staging without a control-plane round trip, including during a control-plane outage (D21, D23). The tenant leads every primary key (D30). Dataset version numbers are integers per dataset, assigned under the head lock. Large append-heavy tables — task runs, attempts, read records — are designed to be partitionable by time, so archiving remains possible (S5).
+- **States and history.** A version is declared, materialising, available, superseded or expired, or quarantined and then possibly released (D31); it carries a degraded flag (D16) and, where applicable, a backfill identifier (D20). Deleting expired bytes never deletes version, read, position or frontier records; runs decay to Traceable rather than losing their history (D7, D37).
+- **Schemas.** Each distinct schema is stored once, in Arrow logical types (D41), keyed by its hash, and each version references its schema; contract evolution is checked at publication.
+- **External readability.** A managed dataset stored on object storage is a set of identity-addressed files in the customer's storage (D23), and which of them form the current version is known only to the catalogue; an external engine pointed at the files would read superseded and quarantined data. After each commit, a data-plane job driven by the outbox therefore writes Iceberg metadata pointing at the files of the current version and registers it in the customer's Iceberg catalogue, so external engines read a consistent, slightly delayed view, without copying data and without a second commit point. Making Iceberg the physical format, with two commit points to reconcile, was rejected. The projection is part of the first slice (D29). Datasets whose storage target is a warehouse or lakehouse table, and external datasets, are read natively by the customer's tools and need no projection.
+
+*References:* D7 · D12 · D13 · D14 · D15 · D16 · D20 · D21 · D23 · D30 · D31 · D34 · D35 · D37 · D38 · D40 · D41 · S5 · CORE 6.24
+
+#### D43 · Scheduling and capacity
+
+**Status:** Decided
+
+How the control plane queues, orders and admits work, the scale it is designed for, and the timings of the protocol between the planes. The priority classes and the backfill guarantee are agreed provisionally, to be revisited with operating experience. Added in v0.10.
+
+- **Scale targets.** Targets to be confirmed by load testing, with a ceiling the design must not preclude: task runs per run, 10,000 in the first slice and 1,000,000 at the ceiling; attempts running at once per control plane, 2,000 and 50,000; sustained state transitions, 500 and 10,000 per second; tenants per control plane, one when self-hosted and thousands when hosted. Scheduling overhead — from a task run being ready and admissible to being claimed — has a 95th-percentile target under two seconds. Queue wait, from ready to admissible, and start latency, from claimed to running, are reported but not targeted, since they depend on load, policy and the backend (CORE 4.3).
+- **The platform is the queue.** Work is admitted to a pool only up to what the pool can start promptly, judged from the free capacity and the backlog of submitted but unstarted units its agents report (D40) and bounded by the capacity ceilings (D34); admission backs off when starts lag. The backend scheduler decides only which node runs each container, because work queued inside the backend loses the platform's ordering and visibility, and a cluster shared with the customer's own workloads offers less than its configured capacity. Backend-native queueing, such as Kueue on Kubernetes, may later be evaluated for admission on such pools.
+- **Fair share.** Computed per pool, over dominant resources — CPU, memory and GPU — weighted and hierarchical (tenant → project → workflow), on exponentially decayed usage with a configurable half-life, using one priority queue per pool and a limited scan depth; its cost grows with the number of consumers with ready work, not with task runs. Because agent pools are bound to one tenant (D40), the tenant level takes effect only where a pool serves several tenants, as in the fully managed topologies; in hybrid and self-hosted deployments fair share operates across projects and workflows. GPU is a dimension from the start (MLE 2.2); fractional and time-sliced sharing is left to the backend. Hard quotas (CORE 7.5) are ceilings separate from fair share. A pool may map projects to backend namespaces, queues or accounts, so that the backend's own policy and accounting also apply; the platform never relies on the backend for ordering. A hosted control plane separately limits each tenant's use of its own work — admission decisions, state transitions, API requests and metadata storage — in every topology.
+- **Priority classes.** Interactive — development sample runs and canvas previews (CORE 6.6, DS 1.4), with a small reserved slice of capacity; production — scheduled runs, manual runs against production and materialisation requests (D24); backfill (D20); and optional best effort. Fair share orders work within a class; queued work gains priority as it waits, and an optional minimum share per class can be configured, so lower classes do not starve.
+- **Backfill guarantee.** Backfills are admitted only to idle capacity, production work never queues behind waiting backfill work, and running backfill attempts are not stopped by default; production work may therefore wait for a running backfill attempt to finish. A pool may enable preemption of lower-class attempts once production work has waited beyond a threshold; attempts are disposable (D21), checkpoints limit lost work (D31) and side-effecting steps are guarded by their lease check (D40). Amends D20.
+- **Exclusion while running.** At admission the scheduler takes a write lease on every partition a unit will write, and a unit whose partitions are held waits in the queue; the lease is released when the attempt commits or ends. The commit lock of D42 orders commits only, and alone would let two concurrent writers of a partition both commit. The same lease implements the per-workflow overlap policy (CORE 3.7) and the queueing of extraction runs on a cursor-based source (D37).
+- **Queue entry.** Only ready work is queued; runs waiting for inputs (D16), approvals or gate holds (D31) hold no capacity, and a retry rejoins the queue in its original class after its back-off.
+- **Maps.** A map is tracked by a map-group record with counters for total, pending, running, succeeded and failed items. Its task runs are created in windows sized to the map's parallelism, and cache lookups for its items are batched the same way, so large maps neither flood the queue nor enlarge the fair-share computation; every task run still exists in the end, for provenance. This settles the question D31 deferred. State transitions are written in batches, one transaction per agent message, to tables partitionable by time (D42).
+- **High availability.** A single active scheduler holds queue and fair-share state in memory; Postgres remains the source of truth, accumulated usage is persisted or derived from attempts so that a failover does not reset fair share, and a standby takes over through leader election. To the rest of the system a failover is a control-plane restart, to which the grace period of D40 applies.
+- **Timings.** Defaults, all configurable: a heartbeat every 10 seconds per agent, renewing all its leases; a lease of 60 seconds, tolerating about five missed heartbeats; a grace period of 60 seconds, at least one lease, after a control-plane restart; a hard limit of 10 minutes for stale attempts (D40); cancel latency up to one heartbeat interval until the transport is chosen.
+
+*References:* D9 · D16 · D20 · D21 · D24 · D31 · D34 · D37 · D40 · D42 · S4 · CORE 2.2 · CORE 2.3 · CORE 3.6 · CORE 3.7 · CORE 4.3 · CORE 6.6 · CORE 7.5 · DS 1.4 · MLE 2.2
 
 ---
 
@@ -1263,11 +1309,11 @@ Previews and node-level inspection data must be sampled and generated at write t
 
 #### S4 · Scheduler load under large fan-out
 
-**Status:** Open
+**Status:** Resolved · D43
 
 Large fan-out places load on the control plane rather than the data path: 10,000 task runs means 10,000 state records and lease renewals. Batched state transitions, leases and fair queuing are the mechanisms that absorb this.
 
-- **To settle.** The target fan-out the scheduler must sustain, the batching strategy for state writes, and lease renewal intervals. Also whether task runs under large maps are created up front or in batches (D31).
+- **Outcome.** Scale targets, batched state writes, per-agent lease renewal and windowed creation of map task runs. See D43.
 
 *References:* CORE 2.3 · CORE 2.11 · CORE 3.6
 
@@ -1522,8 +1568,9 @@ The substrate all three disciplines run on. Everything here is discipline-agnost
 
 - **CORE 2.1** — Execute a workflow and observe per-task state transitions in real time.
 - **CORE 2.2** — Run independent branches concurrently, bounded by workflow, project, and cluster limits.
+  - *Note:* Limits are applied at admission, with fair share deciding order within them (D43).
 - **CORE 2.3** — Fan a node out over a collection and gather the results back into one downstream input. `[shapes the core]` `[cross-discipline]`
-  - *Note:* Scatter/gather over 10,000 items is routine for sequencing workloads and parameter sweeps, and it determines how task state is stored and how the run aggregate is sized.
+  - *Note:* Scatter/gather over 10,000 items is routine for sequencing workloads and parameter sweeps, and it determines how task state is stored and how the run aggregate is sized. Task runs under a map are created in windows sized to its parallelism and tracked by a map-group record; the first slice targets 10,000 task runs per run (D43).
 - **CORE 2.4** — Declare per-task resources: CPU, memory, GPU, ephemeral disk, wall-clock timeout.
   - *Note:* Ephemeral disk includes DuckDB's spill space. Per-backend ceilings bound every request, and the planner checks estimated working sets against them (D34).
 - **CORE 2.5** — Define retry policy per task, distinguishing retriable infrastructure failure from terminal task failure.
@@ -1582,8 +1629,9 @@ The substrate all three disciplines run on. Everything here is discipline-agnost
   - *Note:* Intervals commit as they complete; commits carry the backfill identifier and run below scheduled work in priority (D20).
 - **CORE 3.5** — Express a dependency from one workflow onto another workflow's output, where neither owns the other. `[shapes the core]`
 - **CORE 3.6** — Share capacity fairly: one project's large fan-out must not starve every other tenant. `[shapes the core]`
-  - *Note:* Fairness is a scheduler property, not a limit setting. Retrofitting it into FIFO dispatch means rewriting the scheduler.
+  - *Note:* Fairness is a scheduler property, not a limit setting. Retrofitting it into FIFO dispatch means rewriting the scheduler. Decided (D43): per-pool dominant-resource fair share over decayed usage, with priority classes.
 - **CORE 3.7** — Constrain overlap: prevent or queue a second run of the same workflow while one is in flight.
+  - *Note:* Implemented by partition write leases taken at admission; a queued run waits for the lease (D43).
 - **CORE 3.9** — Declare how a node's output partitions depend on its input partitions — identity, a time window, all available, the latest, or specific values — or let a merge node discover the affected partitions from the data at run time. `[shapes the core]` `[new in v0.7]`
   - *Note:* Required wherever one input partition affects several output partitions, such as late-arriving records or rolling windows. Declared mappings let the plan be known in advance; discovered mappings do the minimum work but decide the plan as the run proceeds (D13).
 - **CORE 3.10** — Validate that a schedule's logical interval is compatible with the partitioning of the datasets it writes, including timezone, and require an explicit open-partition declaration when runs are finer-grained than partitions. `[new in v0.7]`
@@ -1701,6 +1749,7 @@ The substrate all three disciplines run on. Everything here is discipline-agnost
   - *Note:* Revised in v0.10: the control plane stores secret references centrally; values are held in, and resolved by the agent from, the customer's secret manager or a built-in store on the data-plane side, so the control plane never holds them (D40).
 - **CORE 7.4** — Audit who changed a definition, who ran what, and who accessed which dataset.
 - **CORE 7.5** — Enforce quotas on compute, storage, and concurrency per project.
+  - *Note:* Quotas are hard ceilings, separate from fair share (D43).
 - **CORE 7.6** — Run untrusted user-supplied containers without letting one tenant reach another's data, credentials, or network. `[shapes the core]`
   - *Note:* Decided (D5): hostile multi-tenancy belongs to the paid cloud edition; open-source deployments are operated by their owners. The executor abstraction must still let the cloud edition plug in sandboxed runtimes, because sandboxing cannot be added to a running multi-tenant cluster at acceptable cost.
 - **CORE 7.7** — Mint storage credentials inside the environment that owns the data, so that a hosted control plane never holds credentials for customer storage. `[shapes the core]` `[new in v0.7]`
@@ -1744,6 +1793,7 @@ The discipline with the most mature incumbent tooling. Migration is driven by li
 #### 3 · Storage & layout
 
 - **DE 3.1** — Write to open table formats — Iceberg, Delta — with ACID commits and time travel.
+  - *Note:* Datasets whose storage target is a lakehouse table commit through the table format (D15); managed datasets on object storage are exposed to external engines through Iceberg metadata projected after each commit, from the first slice (D42).
   - *Note:* Time travel provides dataset versioning at little additional cost, which CORE 6.1 would otherwise have to implement directly.
 - **DE 3.2** — Express layered zones (raw, cleaned, curated) as a convention the platform understands and can enforce.
 - **DE 3.3** — Declare partitioning and clustering for a target table, and write along those boundaries.
@@ -1849,7 +1899,7 @@ Moving a model from experiment to a scheduled, trusted, replaceable and reversib
 
 - **MLE 2.1** — Run large parallel sweeps and distributed training jobs under project resource caps.
 - **MLE 2.2** — Request, queue for, and share GPUs, including fractional or time-shared allocation. `[shapes the core]`
-  - *Note:* GPU scarcity makes queueing policy visible to users in a way that CPU scheduling does not. Directly related to CORE 3.6.
+  - *Note:* GPU scarcity makes queueing policy visible to users in a way that CPU scheduling does not. Directly related to CORE 3.6. GPU is a dimension of fair share from the start; fractional sharing is left to the backend (D43).
 - **MLE 2.3** — Checkpoint a long-running task and resume it after interruption rather than restarting. `[shapes the core]`
   - *Note:* A task with internal resumable state is inconsistent with the stateless-retry model. Decided (D31): rather than a distinct task kind, every task run has an optional checkpoint slot, scoped to the task run and fenced, which the next attempt receives.
 - **MLE 2.4** — Tolerate preemptible and spot capacity, resuming automatically after reclamation.
@@ -1895,7 +1945,7 @@ Moving a model from experiment to a scheduled, trusted, replaceable and reversib
 
 ## Catalogue footer
 
-Initial scope. Deep learning and visual neural-network design are excluded by decision; should they be reintroduced, the recommended approach is a plugin that emits a training container rather than a second meaning for the term “node”. Items are capability statements rather than a backlog; the first development slice is set by D29, and further priority and phasing are to follow. The log records forty-one decisions (D1–D41) from the scoping sessions; unresolved questions are carried as open items.
+Initial scope. Deep learning and visual neural-network design are excluded by decision; should they be reintroduced, the recommended approach is a plugin that emits a training container rather than a second meaning for the term “node”. Items are capability statements rather than a backlog; the first development slice is set by D29, and further priority and phasing are to follow. The log records forty-three decisions (D1–D43) from the scoping sessions; unresolved questions are carried as open items.
 
 ---
 
@@ -1945,23 +1995,25 @@ The narrowed Ibis spike proposed here in an earlier draft of v0.10 has been conf
 | D24 | Cross-project materialisation requests and automatically enforced freshness policies. |
 | D29 | After the first slice: the other five dataset families, HPC agents and cloud batch, warehouse pushdown with connection policy, and the remaining deployment topologies. Licence before the repository is made public. |
 | D30 | Enforcement mechanism (Postgres row-level security or a mandatory application scoping layer) and the role model, with the control-plane design. |
-| D31 | Up-front or batched creation of task runs under large maps, with scheduler capacity (S4). Override roles for quality-gate holds (S18). Default retention of quarantined versions (S15). |
+| D31 | Override roles for quality-gate holds (S18). Default retention of quarantined versions (S15). |
 | D33 | A cost-informed fusion policy using measured cost and change frequency from run history. |
 | D34 | The estimation method for working sets; capacity as the selection step between engines at one location, applied when Spark or another such engine is added. |
 | D38 | The point-in-time join node, designed with the palette; whether extraction stamps a row-level ingestion timestamp by default. |
-| D40 | Heartbeat interval, lease duration, restart grace period, hard limit for stale attempts and renewal batching, with scheduler capacity (S4); the transport, with the technology stack. |
+| D40 | The transport, with the technology stack. Timings were set by D43. |
 | D41 | YAML tooling that preserves comments on write-back, and CEL implementations for the control-plane language and the canvas, with the technology stack; the Python SDK after the first slice. |
+| D42 | An exact commit watermark, if a feature needs as-of queries close to the present; the file-count threshold for external manifest listings; the choice of Iceberg catalogue integrations supported in the first slice. |
+| D43 | Load testing of the scale targets; revisiting the priority classes and the backfill guarantee with operating experience; evaluating backend-native queueing such as Kueue; the default half-life of decayed usage. |
 
 ## 3. Open items
 
-Questions anticipated by the design but not yet resolved. S9–S14 and S24 are resolved (see the decision log).
+Questions anticipated by the design but not yet resolved. S4, S9–S14 and S24 are resolved (see the decision log).
 
 **Behaviour at scale**
 
 - **S1 · Retention cost of reproducibility.** Default retention periods, guidance on when an author should copy a source rather than read it ephemerally (D35), and which budget carries the cost.
 - **S2 · Verification cost at scale.** The default verification level, the policy for selecting which runs are verified, and how a partial verdict is represented.
 - **S3 · Preview and inspection generation.** Sample sizes and sampling method per artifact type, and the retention period for preview data.
-- **S4 · Scheduler load under large fan-out.** The target fan-out the scheduler must sustain, the batching strategy for state writes, and lease renewal intervals; and up-front or batched creation of task runs under large maps (D31).
+- **S4 · Scheduler load under large fan-out.** *Resolved by D43:* scale targets, batched state writes, per-agent lease renewal and windowed creation of map task runs.
 - **S5 · Metadata and log growth.** Archival thresholds and destinations, retention periods per data class, and the query paths that must remain fast against archived history.
 - **S6 · Data locality and egress** *(deferred with D26)*. Whether placement constraints are first-class in the IR or supplied by the backend abstraction, and how a conflict between placement and available capacity is resolved.
 - **S7 · Skew and stragglers.** Whether rebalancing is automatic or advisory, and what skew diagnostics are surfaced on the canvas and in run history.
@@ -1987,14 +2039,14 @@ Questions anticipated by the design but not yet resolved. S9–S14 and S24 are r
 
 Which questions must be settled before development begins, and which can wait until the work reaches them. An item blocks the start of development only if the first code would build it into something expensive to change later: a persisted schema, the wire protocol that runs inside customer environments, or the IR format that users commit to git. An item whose later correction only costs performance, such as extra cache misses, or is purely additive, waits.
 
-**Settled in the first round (v0.10).** First development slice (D29); isolation enforced from the start (D30); execution state model (D31); execution unit structure (D32); automatic fusion (D33); node-level cache keys (D8); Ibis on DuckDB for every built-in node (D27); capacity checks in place of declared sizes (D34); explicit storage choice for external sources (D35); data-engineering practice first (D36); incremental extraction state (D37); point-in-time retrieval (D38); online serving excluded (D39); default visibility (D30); protocol between the control and data planes (D40); IR text form, round-trip and structure (D41). The licence is deferred until the repository is made public (D5, D29).
+**Settled in the first round (v0.10).** First development slice (D29); isolation enforced from the start (D30); execution state model (D31); execution unit structure (D32); automatic fusion (D33); node-level cache keys (D8); Ibis on DuckDB for every built-in node (D27); capacity checks in place of declared sizes (D34); explicit storage choice for external sources (D35); data-engineering practice first (D36); incremental extraction state (D37); point-in-time retrieval (D38); online serving excluded (D39); default visibility (D30); protocol between the control and data planes (D40); IR text form, round-trip and structure (D41); catalogue persistence (D42); scheduling and capacity (D43). The licence is deferred until the repository is made public (D5, D29).
 
 **Still to settle before development.**
 
-1. *Settled in D40*, except timings, which go with item 4, and the transport, which goes with item 5.
+1. **Protocol between the control and data planes.** *Settled in D40, with timings in D43*, except the transport, which goes with item 5.
 2. **Core IR schema.** *Settled in D41.*
-3. **Dataset and read-position persistence.** How snapshots, partition versions, manifests and files are stored and related, and how the range of positions consumed is represented. *(D4, D12 Seams 4 and 5, D13, D15, D23, CORE 5.9, CORE 6.7, CORE 6.9)*
-4. **Scheduler capacity and queue model.** Target fan-out per run, concurrent task runs and lease interval (S4); fair-share queues across tenants and projects, with backfills in a lower priority class; up-front or batched creation of task runs under maps. *(S4, D20, D31, CORE 3.6)*
+3. **Dataset and read-position persistence.** *Settled in D42.*
+4. **Scheduler capacity and queue model.** *Settled in D43.*
 5. **Minimum technology stack.** Control-plane language, API style, Postgres migration tooling, confirmation of Python for the unit runtime, and the frontend and canvas framework, since the canvas is in the first slice. It also settles the agent transport (D40), and checks the YAML tooling for comment preservation on write-back and the maturity of CEL implementations for the control plane and the canvas (D41). *(Part I, section 4)*
 6. **Isolation mechanism and role model.** *(D30)*
 
@@ -2020,7 +2072,7 @@ Which questions must be settled before development begins, and which can wait un
 In a suggested order. Each topic is expected to produce decisions, capability lines or open items in the catalogue.
 
 1. **Control plane and domain-driven design.** Bounded contexts (authoring and IR, orchestration and scheduling, dataset catalogue, provenance, execution and dispatch, identity and tenancy, plugin registry); aggregates and invariants; the scheduler, reconciler, dispatcher and planner, including placement under D25–D28 and the repartition step; lease and fencing mechanics; state-machine mechanics, building on the model recorded in D31; concurrency model; event flow.
-2. **IR specification.** Schema, versioning and migrations; the text syntax (YAML or a Python SDK); round-trip fidelity; split semantics for leakage prevention (DS 2.8); environment bindings for promotion (MLE 6.2); the node-type contract, including declared runtime, execution modes, supported dialects, declared grouping keys, memory class and order dependence (D27, D34).
+2. **IR specification.** The detailed specification of what D41 decided: the document schema and its migrations, the YAML subset, the three-way merge on the semantic model, the layout sidecar, the CEL environment and function library, value outputs and run rules; split semantics for leakage prevention (DS 2.8); and the node-type contract, including declared runtime, execution modes, supported dialects, declared grouping keys, memory class, order dependence, output-schema mode and value outputs (D27, D34, D41).
 3. **Execution backends.** The backend interface in detail; Kubernetes and Slurm adapters; the agent protocol as recorded in D40; image building and registries in the customer's environment (CORE 1.10, D22); job tagging on every backend (CORE 4.8).
 4. **Warehouse adapter.** The interface covering pushdown, extraction to Arrow, publication (D15), time-travel replay (D4), credential minting (D22), connection policy (D28) and query tagging; the Snowflake implementation; the conformance-matrix harness and CI accounts.
 5. **Node SDK and palette.** The built-in palette per discipline with each node assigned to an Ibis-first tier (D27); the plugin SDK; UI forms from parameter schemas.
@@ -2032,6 +2084,6 @@ In a suggested order. Each topic is expected to produce decisions, capability li
 11. **Reproducibility implementation.** Verification policy (S2), comparator plugins, run bundles (CORE 5.6).
 12. **APIs.** Public REST or gRPC, CLI, SDK.
 13. **Business model and open-core line** (D5), revisited in light of bring-your-own-compute.
-14. **Non-functional requirements.** Scale targets (S4, S5), SLAs, availability.
+14. **Non-functional requirements.** Scale targets beyond those set in D43, archiving (S5), SLAs, availability.
 15. **Roadmap and phasing.** Beyond the first development slice (D29): v1, then v2, including whether and when a hosted control plane is operated.
-16. **Open items.** S1–S8 and S15–S23.
+16. **Open items.** S1–S3, S5–S8 and S15–S23.
