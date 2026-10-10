@@ -6,7 +6,7 @@
 This document has three parts:
 
 - **Part I · Project details.** What the platform is, supplementary vocabulary, the reasoning behind key decisions and rejected alternatives, technology choices, and conventions for maintaining the record.
-- **Part II · Capability catalogue.** The full catalogue: overview, key terms, architecture, worked engine examples, dataset lifecycle, decision log D1–D46, open items S1–S24 and every capability line. Diagrams are not reproduced; each figure is replaced by a description of what it shows, and the drawings are in the illustrated catalogue.
+- **Part II · Capability catalogue.** The full catalogue: overview, key terms, architecture, worked engine examples, dataset lifecycle, decision log D1–D49, open items S1–S24 and every capability line. Diagrams are not reproduced; each figure is replaced by a description of what it shows, and the drawings are in the illustrated catalogue.
 - **Part III · What remains to be discussed.** Proposals not yet confirmed, conditions and deferred follow-ups attached to decisions, open items, the pre-development triage, and the remaining design agenda.
 
 ---
@@ -23,7 +23,7 @@ A cloud-based, **open-core**, **domain-agnostic** web platform for assembling, s
 - **Processing engines.** Built-in tabular nodes are defined as Ibis expressions and run on DuckDB in-process or are pushed down to Postgres or Snowflake, with Polars used only by justified exception and for code nodes; non-tabular work runs in Python or container-command runtimes and scales by fan-out (D25, D27). The planner checks each unit's estimated working set against backend capacity rather than relying on declared dataset sizes (D34).
 - **Disciplines served.** Data engineering, data science and ML engineering, on one shared substrate (CORE). Bioinformatics and sequence analysis is the **demonstration domain**, not a specialisation.
 - **First slice.** Development begins with the tabular family only, on the single-machine container deployment and Kubernetes, with Ibis on DuckDB in-process (Polars by justified exception and for code nodes), the visual canvas and git round-tripping; execution is driven by a pull-based agent in every deployment, tenant and project isolation is enforced throughout from the start, and managed datasets on object storage are readable by external engines through projected Iceberg metadata (D29, D30, D42). Warehouse pushdown, the other dataset families, HPC and cloud batch follow.
-- **Technology.** Go for the control plane and the execution agent, Python for unit runtimes, Postgres 17 or later, protobuf with ConnectRPC between every component, and a React single-page application with React Flow for the interface and canvas (D44).
+- **Technology.** Go for the control plane and the execution agent, Python for unit runtimes, Postgres 17 or later, protobuf with ConnectRPC between every component, and a React single-page application with React Flow for the interface and canvas (D44). Postgres is the control plane's only stateful dependency, and hot scheduling state is held in the memory of a single active leader (D47).
 - **Excluded for now.** Deep learning and visual neural-network design; a native streaming runtime (batch first, then micro-batch, with streaming seams preserved); container-free local execution; online model serving; a platform-run Spark engine.
 - **Positioning.** "The n8n of data engineering, data science and MLE", with production orchestration semantics (logical intervals, backfills, fan-out, retries, fair scheduling) and verifiable reproducibility. The closest existing product is Dataiku DSS, whose bring-your-own-compute model and cross-location behaviour the design now follows.
 - **Principle.** Standard data-engineering practice comes first; reproducibility and its constraints are opt-in, never imposed (D36).
@@ -65,6 +65,14 @@ Terms used throughout that are not given their own card in the catalogue's Key t
 | Carried state | Values and outputs a loop passes from one iteration to the next, declared on the loop frame (D46). |
 | In-unit loop | A loop whose iterations run inside one execution unit, cached and retried as a whole and resumed from its checkpoint slot (D46). |
 | Capacity domain | A set of agent pools that share physical capacity, such as one cluster; admission and fair share are computed per domain (D43). |
+| Input resolution | Choosing, once per run, the versions and positions of the inputs it reads and recording them as identifiers; external sources are resolved by source probes. "Resolve" is used for nothing else: environment names are bound, node-type and workflow versions are pinned, attempts are specified by building their unit specification, and expressions are evaluated (D47, D49). |
+| Source probe | A platform maintenance unit, run through the agent, that asks external sources for their current version or position so that a run can read them as of it (D49). |
+| Run driver | The control-plane component that advances each run through its graph at run time: it creates task runs, evaluates conditions and run rules, decides retries and ends the run (D47). |
+| Expected reuse | The units a plan expects to serve from cache, from the keys known at run start; the lookup made when each task run is created is authoritative (D47). |
+| Capacity check and admission | The capacity check is the planner's check of one unit's estimated working set against its backend's per-unit ceiling (D34, D47); admission is the scheduler's decision that a ready unit's request fits the free capacity of its capacity domain now (D43). |
+| Leader epoch | A number incremented at every change of leader; every leader-only write checks it, so a deposed leader cannot act (D47). |
+| Held attempt | An attempt whose commit awaits a quality-gate release or an approval; its staged outputs stay durable and the control plane completes the commit later (D48). |
+| Hoisting | Moving a node that depends on neither the map item, the loop index nor carried state out of its frame, so that it runs once (D47). |
 
 ## 3. Key reasoning and rejected alternatives
 
@@ -123,6 +131,15 @@ These explain why decisions went the way they did, so that they are not reopened
 51. **Loops are always bounded** (D46). What is asked for as an unbounded loop is convergence, waiting or indefinite processing, and each has a better home: a bounded loop with an explicit outcome at its limit, triggers and readiness policies that hold no compute, or the long-lived execution of D12. A loop that might never end would hide the worst case of the plan and could hold capacity, write leases and protected inputs indefinitely.
 52. **Column selectors rather than column loops** (D46). Column loops exist in node-at-a-time tools because nodes are configured for one column at a time. The engines here apply one expression across many columns in a single pass, keeping output schemas and column lineage derived at authoring time.
 53. **Single-tenant pools and capacity domains** (D43, amended in v0.10). Pools that several tenants share would put every tenant's credentials, secrets and egress filtering into one agent, a permanent exposure paid for a fully managed topology the first slice does not include. Keeping pools bound to one tenant and grouping pools that share capacity into a domain gives fairness between tenants and correct admission, and the seams kept make shared pools cheap to add if they are ever needed.
+54. **A leader-centred control plane with invariants in the database** (D47). Holding queues, fair share and lease renewals in the leader's memory (D43) requires every agent call to reach the leader. Spreading agent traffic over symmetric replicas would turn renewals into database writes, and routing every write through the leader would make it the bottleneck for every human action. Correctness does not rest on leadership being exclusive: row locks, conditional updates and unique constraints enforce the invariants, and a leader epoch with a wait of one transaction timeout stops a deposed leader's writes, so an overlap of leaders costs fairness only.
+55. **Postgres as the only stateful dependency** (D47). Redis, Kafka and RabbitMQ were considered. Redis replicates asynchronously and can lose acknowledged writes on failover, so leases and fencing could not live there; a broker cannot take part in a Postgres transaction, so the outbox would remain and a relay would be added; agents would need a second endpoint and identity; row-level security would not extend to it; and each added store is one more system for self-hosted and single-machine operators to run. Hot state is held in process memory and telemetry outside Postgres, and seams for an event relay, a change feed and a rate limiter keep a broker or cache possible.
+56. **A pure planner, run once per run** (D47). Placing nodes once, after inputs are resolved, keeps placement deterministic within a run, which plan pinning (D28) relies on; re-planning at each control-flow point was rejected. Planning everything up front is impossible for maps over value outputs, so the run driver instantiates the plan's unit templates as the run proceeds.
+57. **Expected reuse rather than a binding plan** (D47). Between planning and the creation of a unit deep in a run, a cached output may expire or be flagged, or a new one may appear, and keys that depend on value outputs or content hashes exist only at run time. Binding reuse at plan time would pin storage for runs waiting to reach their units and would still need a second lookup.
+58. **Lease renewals in memory** (D48). Persisting renewals would write a row for every running attempt at every heartbeat. Because D40 already grants every lease a grace period after a restart, a new leader can treat all active leases as renewed and lose nothing.
+59. **Write leases held by the task run** (D48). Held by the attempt, a lease would be released during a retry's back-off and let another run's writer take the partition, against the overlap policy of CORE 3.7. An atomic restatement does not hold the leases of every interval for its whole length, which would contradict the backfill guarantee of D43; it checks for conflicting commits at its final commit and re-stages those intervals.
+60. **One outbox row per handler** (D48). A relay fanning each event out into delivery rows after commit added a hop, a table and more writes than writing one row per subscribed handler in the producing transaction. One row per event shared by all handlers would let one failing handler block the others, and per-handler cursors over the outbox are the high-water mark rejected in item 37. River, pgmq and Watermill were rejected because their tables carry no tenant or row-level security (D45), and change data capture because it adds a component and logical replication on the customer's Postgres.
+61. **Source probes in the data plane** (D49). The control plane holds no credentials, runs no plugin code and, when hosted, has no route into the customer's network, so it cannot ask an external source for its version. Discovering versions when units read let two units of one run read different snapshots, left nodes reading external sources without keys before the run, and let retries read different data. A probe unit fixes them at run start; a probe inside the agent would tie connector fixes to agent upgrades, as D44 found for the projection.
+62. **Spark is not a general remedy for resource exhaustion** (D47). A group is aggregated within one task, arbitrary Python does not distribute by adding an engine, and training across machines needs units of several containers, so skewed groups, code nodes and training keep their own remedies (S7, S8, D32); Spark serves relational work that no key can divide.
 
 ## 4. Technology choices so far
 
@@ -150,6 +167,10 @@ These explain why decisions went the way they did, so that they are not reopened
 | Expression language | CEL for conditions, collections, loop termination and parameters (D41), evaluated with cel-go (D44) | Chosen |
 | Frontend | React and TypeScript, a Vite single-page application served by the control plane (D44) | Chosen |
 | Canvas | React Flow 12, with ELK for automatic layout (D44) | Chosen |
+| Leader election | A session-level Postgres advisory lock held by the leader, with an epoch checked by every leader-only write (D47) | Chosen |
+| Event delivery | A transactional outbox in Postgres with one row per event and handler, claimed with `FOR UPDATE SKIP LOCKED` and built in-house; NOTIFY only as a hint sent outside transactions (D42, D48) | Chosen |
+| Stateful dependencies | Postgres only; no cache or message broker in the control plane (D47) | Chosen |
+| Module boundaries | One Postgres schema and one Go package tree per bounded context, with import rules checked by depguard in golangci-lint (D47) | Chosen |
 | Not yet chosen | Authentication and identity stack, observability stack, image builder and registry tooling | Undecided |
 
 ## 5. Maintaining the record
@@ -158,6 +179,7 @@ These explain why decisions went the way they did, so that they are not reopened
 - **IDs are stable.** Decisions (D), open items (S) and capability lines (CORE, DE, DS, MLE) keep their IDs; retired IDs are not reused. CORE 3.8 is currently unused.
 - **Statuses.** Decided; Partly decided (direction confirmed, details open); Open. Resolved open items point to the decision that resolved them.
 - **Revisions.** Each catalogue revision marks new lines with "new in v0.x" and records a summary in the masthead. Amended decisions say what changed and in which revision.
+- **References.** A decision's references always include the decisions, open items and capability lines it cites, the decisions that amend it, and the capability lines whose notes cite it. A decision that only cites another need not appear in the other's references.
 - **Register.** The catalogue is written in a neutral, third-person register with British spelling.
 - **Exports.** A PDF export from v0.5 exists and is out of date.
 
@@ -174,10 +196,10 @@ What the platform must let a user do, stated as capabilities rather than compone
 - **Platform:** web-based workflow orchestration, containerised execution
 - **Out of scope:** deep learning and visual network design; a native streaming runtime (D6); container-free local execution (D11); online model serving (D39)
 - **Audience:** project team
-- **Decisions:** 46 recorded · one partly decided
+- **Decisions:** 49 recorded · one partly decided
 - **Open items:** 15 open · 9 resolved (S1–S24)
 - **Issued:** 9 October 2026
-- **This revision (v0.10):** defines the data commit in the Key terms; sets the first development slice (D29); enforces tenant and project isolation from the start (D30); records the execution state model (D31); defines the execution unit as a container holding engine segments (D32); makes fusion fully automatic with a replaceable policy and separates it from composition (D33); makes Ibis on DuckDB the engine for every built-in node, with Polars by exception (D27); replaces declared size limits with a capacity check in the plan (D34); makes copying of external sources an explicit author choice, independent of whether the source is versioned (D35); puts standard data-engineering practice first and makes reproducibility opt-in (D36); derives incremental cursors from committed metadata (D37); meets point-in-time retrieval without changing the dataset model (D38); excludes online model serving (D39); hides unreadable entities by default (D30); sets the protocol between the control and data planes, with the agent as the single egress (D40); sets the YAML text form, git-authoritative round-tripping, text-independent hashing, repository layout, output-schema modes, port types and CEL as the expression language, with run conditions on upstream outcomes (D41); sets catalogue persistence: partition validity intervals, per-dataset commit ordering, read records, the commit transaction and its outbox, the control-plane boundary, and Iceberg metadata projected for external engines (D42); sets scheduling: the platform as the queue, dominant-resource fair share per capacity domain, priority classes, partition write leases, windowed maps and protocol timings (D43); sets the minimum technology stack: Go for the control plane and the agent, Python for unit runtimes, PostgreSQL 17 or later, goose migrations, protobuf with ConnectRPC, the agent transport and key-based agent identity, the React frontend and canvas, YAML and CEL tooling, and the Iceberg projection with its library, storage format, catalogues and defaults (D44); settles isolation enforcement and the role model: row-level security on the tenant, a mandatory authorisation layer, fixed roles, clearance, run identity, quality-gate overrides, drafts committed explicitly, and deployment as an act of the platform with git holding history (D45); sets control-flow constructs: carried state, a loop scope in expressions, branch joins, an n-way switch, loops run inside one unit, an explicit outcome at a loop's limit and column selectors, while keeping loops bounded (D46); amends D1, D2, D4, D7, D8, D9, D11, D13, D17, D20, D21, D22, D23, D25, D27, D28, D30, D31, D33, D38, D40, D41, D42, D43, D44 and D45 and CORE 7.3 accordingly
+- **This revision (v0.10):** defines the data commit in the Key terms; sets the first development slice (D29); enforces tenant and project isolation from the start (D30); records the execution state model (D31); defines the execution unit as a container holding engine segments (D32); makes fusion fully automatic with a replaceable policy and separates it from composition (D33); makes Ibis on DuckDB the engine for every built-in node, with Polars by exception (D27); replaces declared size limits with a capacity check in the plan (D34); makes copying of external sources an explicit author choice, independent of whether the source is versioned (D35); puts standard data-engineering practice first and makes reproducibility opt-in (D36); derives incremental cursors from committed metadata (D37); meets point-in-time retrieval without changing the dataset model (D38); excludes online model serving (D39); hides unreadable entities by default (D30); sets the protocol between the control and data planes, with the agent as the single egress (D40); sets the YAML text form, git-authoritative round-tripping, text-independent hashing, repository layout, output-schema modes, port types and CEL as the expression language, with run conditions on upstream outcomes (D41); sets catalogue persistence: partition validity intervals, per-dataset commit ordering, read records, the commit transaction and its outbox, the control-plane boundary, and Iceberg metadata projected for external engines (D42); sets scheduling: the platform as the queue, dominant-resource fair share per capacity domain, priority classes, partition write leases, windowed maps and protocol timings (D43); sets the minimum technology stack: Go for the control plane and the agent, Python for unit runtimes, PostgreSQL 17 or later, goose migrations, protobuf with ConnectRPC, the agent transport and key-based agent identity, the React frontend and canvas, YAML and CEL tooling, and the Iceberg projection with its library, storage format, catalogues and defaults (D44); settles isolation enforcement and the role model: row-level security on the tenant, a mandatory authorisation layer, fixed roles, clearance, run identity, quality-gate overrides, drafts committed explicitly, and deployment as an act of the platform with git holding history (D45); sets control-flow constructs: carried state, a loop scope in expressions, branch joins, an n-way switch, loops run inside one unit, an explicit outcome at a loop's limit and column selectors, while keeping loops bounded (D46); sets the structure of the control plane: a single active leader for the agent gateway, scheduler and dispatcher, fenced by an epoch, with invariants enforced by the database, eight bounded contexts, the responsibilities of the compiler, planner, run driver and reconciler, the planner's passes, input resolution, expected reuse, hoisting, the estimation of unit resources, and Postgres as the control plane's only stateful dependency (D47); sets the execution mechanics: lease renewals held in memory, fencing tokens, write leases held by the task run, the encoding of the state machines with a held attempt outcome, and one outbox row per event and handler (D48); resolves external sources at run start through source probes (D49); amends D1, D2, D4, D7, D8, D9, D11, D13, D14, D15, D17, D18, D20, D21, D22, D23, D25, D27, D28, D30, D31, D33, D34, D35, D37, D38, D40, D41, D42, D43, D44 and D45 and CORE 7.3 accordingly
 - **Previous revision (v0.9):** defers placement constraints while keeping three seams (D26); confirms Snowflake as the first-release warehouse, stops the planner moving data into warehouses and adds a repartition step (D25); adopts Ibis for relational nodes (D27); sets warehouse connection policy and plan pinning (D28); makes bring-your-own-compute the primary deployment model (D22); incorporates the Dataset Lifecycle note and worked engine examples; and brings older wording into line with recorded decisions
 
 ---
@@ -207,7 +229,7 @@ The platform is **domain-agnostic by design**. A single substrate — scheduling
 
 - **Four sections, not three.** The three disciplines sit on top of a shared substrate — scheduling, execution, provenance, artifacts. That substrate is section **CORE**. A capability required by more than one discipline belongs in that section; otherwise it is implemented three times.
 - **Two markers carry meaning.** `[shapes the core]` means the item imposes a requirement on the scheduler or domain model and is expensive to retrofit — these are the ones to settle first. `[cross-discipline]` means the same capability is demanded from more than one direction. `[deferred]` marks a line a decision has pushed out of the initial scope, and `[new in v0.x]` records the revision that added a line. Revision v0.10 adds no capability lines; it revises the notes of existing ones.
-- **Decisions are referenced as D1–D46, open items as S1–S24.** The decision log records what has been settled and what remains open; the open items carry forward unresolved questions of behaviour at scale, of the data lifecycle and of authoring and execution. Catalogue notes reference both where they affect a line.
+- **Decisions are referenced as D1–D49, open items as S1–S24.** The decision log records what has been settled and what remains open; the open items carry forward unresolved questions of behaviour at scale, of the data lifecycle and of authoring and execution. Catalogue notes reference both where they affect a line.
 - **Most items are wrapping, not inventing.** Nearly everything under DS and MLE exists in sklearn, Polars, Optuna, SHAP, MLflow. The product is the palette and the reproducibility guarantees around them, not reimplementations. Items requiring original implementation are identified in the notes.
 - **IDs are stable.** Items are referenced by ID in review and correspondence — `DE 1.3`, `CORE 2.6` — so that this document remains the single reference.
 
@@ -395,7 +417,7 @@ The platform is divided into four planes by responsibility and trust. Storage sy
 > **The four planes.** Each plane has one responsibility and one trust level. Bulk data stays in the data plane; the control plane holds only metadata and never runs user or plugin code; observability receives append-only telemetry and is never needed for correctness.
 
 - **Interface.** Web application, API, CLI and git synchronisation. Authenticates people, turns their actions into definition changes or commands, and presents state. Holds no state of its own; scales with users.
-- **Control.** Compiler, scheduler, reconciler, dispatcher, catalogue, cache index, provenance, policy and plugin registry. The single source of truth for what exists and what has happened, held in Postgres. Scales with tasks, partitions and datasets, not data volume.
+- **Control.** Compiler, planner, run driver, reconciler, scheduler, dispatcher, catalogue, cache index, provenance, policy and plugin registry (D47). The single source of truth for what exists and what has happened, held in Postgres. Scales with tasks, partitions and datasets, not data volume.
 - **Data.** Execution units in containers on a backend. The unit runtime resolves inputs, runs fused nodes, calls format plugins, stages outputs and requests commits. Holds no state beyond a unit's life; scales with data and compute; sandboxed.
 - **Observability.** Live log tail, log archive, metrics time series, node events and alerts. High-volume and append-only, stored outside the metadata database; redacts secrets on ingestion.
 
@@ -632,7 +654,7 @@ Workflows are control-flow graphs, not strictly DAGs. Conditionals, loops and ad
 - **Unrolled trace.** Each loop iteration unrolls into distinct task runs at execution, so the run trace is always acyclic and provenance and caching operate on it unchanged. Amended in v0.10 by D46: a loop may instead run inside one unit, its iterations recorded within one task run; carried state, branch joins and an n-way switch join the structured constructs.
 - **Run conditions.** Amended in v0.10 by D41: each node also carries a run rule over the outcomes of its upstream nodes — all succeeded by default, all finished, any failed and similar — optionally combined with a condition. Conditions, collections and loop termination are CEL expressions evaluated by the control plane (D41).
 
-*References:* D41 · D46 · CORE 2.10 · DS 3.6 · MLE 5.5
+*References:* D41 · D46 · D47 · CORE 2.10 · DS 3.6 · MLE 5.5
 
 #### D3 · IR and execution engines
 
@@ -663,7 +685,7 @@ Datasets are domain objects with their own identity, versions, partitions, schem
 - **Originals.** The uploaded file is kept unchanged as the source of truth. Where it helps performance, an optimised copy such as Parquet is produced as a derived artifact, never as a replacement. Amended in v0.10 by D44: where the Iceberg projection is on, a tabular upload always has a derived Parquet copy, and the copy, not the original, is projected.
 - **Intended use.** Uploads suit reference, sample and labelled data and models. Bulk data is connected or registered in place; very large files use the CLI or SDK with the same mechanism. The cloud edition caps the size of browser uploads.
 
-*References:* D13 · D21 · D35 · D44 · CORE 6.1 · CORE 6.25 · DE 5 · MLE 1
+*References:* D13 · D21 · D35 · D44 · CORE 6.1 · CORE 6.23 · CORE 6.25 · DE 1.7 · DE 5 · MLE 1
 
 #### D5 · Distribution and tenancy
 
@@ -677,7 +699,7 @@ Open core. Core features are open source. Managed cloud infrastructure, multi-te
 - **Timing.** The licence must be chosen before the first public release or before external contributions are accepted, whichever comes first; relicensing afterwards requires every contributor's consent. The repository is currently private (D29).
 - **Direction.** SDKs, the IR specification and plugin interfaces are expected to be permissively licensed whatever is chosen for the core server, since plugin authors and integrators will not build on restrictive terms. Reproducibility features, the HPC backend and basic role-based access control are expected to remain open.
 
-*References:* D29 · D30 · CORE 7
+*References:* D29 · D30 · CORE 7 · CORE 7.6
 
 #### D6 · Streaming
 
@@ -716,8 +738,9 @@ Hybrid. Every node gets an **input-addressed** key, built from its own semantic 
 - **Byte digests.** A byte-level digest is computed for every file as it is written, at negligible cost because it is streamed alongside the write. No threshold applies.
 - **Threshold.** Canonical content hashing — which may require re-reading and sorting — applies by default to artifacts up to **1 GB**. This is an initial default to be tuned from measurements during development, and configurable per project.
 - **Overrides.** A node or dataset may opt in to canonical hashing above the threshold where downstream work is expensive enough to justify it, or opt out below it.
+- **Expected reuse.** Amended in v0.10 by D47: what will rerun is shown before the run as expected reuse, computed from the keys known at run start. The lookup made when each task run is created is authoritative, since keys that depend on value outputs or content hashes exist only then and a cached output may expire or appear in between.
 
-*References:* D33 · CORE 2.6 · CORE 2.12 · CORE 2.13 · CORE 5.8
+*References:* D33 · D47 · D49 · CORE 2.6 · CORE 2.12 · CORE 2.13 · CORE 5.8 · CORE 6.9
 
 #### D9 · Cache scope
 
@@ -730,7 +753,7 @@ A tenant is the unit of hard isolation and billing — for an enterprise, the wh
 - **Public data.** Outputs derived solely from explicitly public reference data, such as a published reference genome index, may be shared more widely.
 - **Later.** Hard isolation boundaries inside a tenant — for a regulated division, subsidiary or separate legal entity — are not required in the first release, but the model must not preclude them.
 
-*References:* D45 · CORE 2.6 · CORE 7.6
+*References:* D45 · D47 · CORE 2.6 · CORE 7.1 · CORE 7.6
 
 #### D10 · Where column-level lineage stops
 
@@ -754,7 +777,7 @@ The first release has no local, container-free execution mode. All execution run
 - **Seam.** Execution remains behind the backend interface (D12, Seam 9), so a local backend can be added later without changing the model. If one is added, its runs are capped at Traceable, or Re-executable with a recorded lockfile, and may not publish to datasets with an enforced contract. This restriction is to be reconsidered under D36 when a local backend is taken up.
 - **Images.** The platform builds images from declared dependencies, with prebuilt base images for Python, R and common scientific tools, so users rarely write Dockerfiles (CORE 1.10).
 
-*References:* D12 · D36 · CORE 2.9 · CORE 2.15 · CORE 1.10 · CORE 5.4 · DS 1.4
+*References:* D12 · D36 · CORE 2.9 · CORE 2.15 · CORE 1.10 · CORE 2.17 · CORE 5.4 · DS 1.4
 
 #### D12 · Streaming readiness
 
@@ -792,7 +815,7 @@ Partition granularity and logical intervals are user decisions; the platform app
 - **Platform role.** The platform proposes defaults at creation, which the owner confirms — a daily schedule suggests daily partitions, a small dimension table suggests none — and may later advise on granularity from observed partition sizes. It decides physical layout (file sizing, compaction, clustering), which affects performance but not the logical model.
 - **Change.** Changing a partitioning scheme is a migration performed by the owner: it produces a new version of the scheme, rewrites history, and requires every downstream dependency mapping to be revalidated. It is never a silent setting change, which is why the default proposed at creation matters.
 
-*References:* D4 · D35 · D44 · CORE 3.3 · CORE 3.9 · CORE 3.10 · CORE 6.9 · CORE 6.10 · CORE 6.11 · DE 1.7 · DE 2.7 · DE 5.7
+*References:* D4 · D35 · D44 · D47 · D48 · CORE 3.3 · CORE 3.9 · CORE 3.10 · CORE 6.9 · CORE 6.10 · CORE 6.11 · DE 1.7 · DE 2.7 · DE 5.7
 
 #### D14 · Input version resolution
 
@@ -806,8 +829,9 @@ A run resolves the versions of all its inputs once, when it starts, records them
 - **Reruns.** Two distinct actions: **re-execute as recorded** reads the originally resolved versions; **run again on current data** resolves afresh. They are presented separately and never conflated.
 - **Retention.** Versions resolved by a run still in progress are protected from garbage collection until the run finishes, so a long run cannot lose its own inputs.
 - **Mechanism.** Recorded in v0.10 by D42: inputs are resolved inside one repeatable-read transaction and recorded as version identifiers, never as a cutoff.
+- **External sources.** Amended in v0.10 by D49: the versions and positions of external sources that can be read as of a probed position are fixed at run start by a source probe and recorded with the internal inputs, so every node of the run reads the same version. Sources that cannot be pinned are recorded as read.
 
-*References:* D7 · D16 · D42 · S9 · CORE 2.16 · CORE 5.10 · CORE 5.11 · CORE 6.5
+*References:* D7 · D16 · D42 · D47 · D49 · S9 · CORE 2.16 · CORE 5.10 · CORE 5.11 · CORE 6.5
 
 #### D15 · Atomic publication
 
@@ -821,8 +845,9 @@ Publication stages new data and then makes it current with a single atomic commi
 - **Fencing.** Every commit carries the identity of the attempt that produced it. A late commit from an attempt that was presumed lost and has since been retried is rejected. Orphaned staging files are garbage-collected.
 - **Open partitions.** Each append to an open partition is its own atomic commit, and marking the partition complete is a further commit (CORE 3.10).
 - **Groups.** By default each dataset commits independently. For managed datasets, an author may declare a **publication group** — for example orders and their order lines — whose members commit together or not at all.
+- **Fencing token.** Settled in v0.10 by D48: the token is the task run and its attempt number. A commit locks the task-run row, requires the attempt to be current and not ended, and requires write leases covering every partition it writes.
 
-*References:* D13 · D14 · D31 · D42 · S10 · S12 · CORE 2.5 · CORE 6.12 · CORE 6.13
+*References:* D13 · D14 · D31 · D42 · D48 · S10 · S12 · CORE 2.5 · CORE 6.12 · CORE 6.13 · DE 3.1
 
 #### D16 · Input readiness and degraded outputs
 
@@ -837,7 +862,7 @@ Each consumer declares, per input, what happens when that input is stale, failed
 - **Degradation.** An output built on a stale, failed or absent input is published as degraded, with the reason stated — which input, which version was used, and which was expected. The marking cascades to every downstream dataset built from it, carrying the originating cause so that a consumer several steps away sees the root reason rather than only its immediate input. The marking clears when the output is rebuilt from ready inputs.
 - **Provenance.** The policy applied, the time spent waiting and the versions ultimately read are recorded in the run's provenance.
 
-*References:* D14 · D31 · S11 · CORE 3.11 · CORE 6.14 · DE 4.2 · DE 4.4
+*References:* D14 · D31 · D47 · D49 · S11 · CORE 3.11 · CORE 5.11 · CORE 6.14 · DE 4.2 · DE 4.4
 
 #### D17 · Dataset families and first-release scope
 
@@ -873,8 +898,9 @@ A data format is a **type** defined once by the platform; plugins are **implemen
 - **Conformance.** A plugin must pass the type's conformance suite to claim the type. The suite bounds how far implementations may disagree about validity and equivalence; they may still differ in performance, preview quality and additional statistics.
 - **Upgrades.** Upgrading a binding to a newer plugin version is explicit but inexpensive: a bulk action revalidates the selected datasets and reports any whose outcome would change before the switch is committed.
 - **Later.** Taking presentation capabilities (preview, profile) from a different implementation than the semantic ones (contract, validation, comparison, hashing) is excluded from the first release.
+- **Probes.** Amended in v0.10 by D49: a connector, as a node plugin, may implement an optional `probe` function that returns a source's current version or position without reading its data.
 
-*References:* D17 · CORE 1.2 · CORE 1.9 · CORE 6.20 · CORE 6.21 · CORE 6.22 · S20
+*References:* D17 · D49 · CORE 1.2 · CORE 1.9 · CORE 6.20 · CORE 6.21 · CORE 6.22 · S20
 
 #### D19 · Stable dataset identity
 
@@ -901,10 +927,11 @@ A backfill commits each logical interval as it completes, while downstream recon
 - **Per interval.** By default each interval is committed when it finishes, so progress is visible, a failure affects only its own interval, and the backfill resumes from the first incomplete interval.
 - **Coalescing.** While a backfill runs, the reconciler holds downstream work and plans it once — when the backfill completes, or at batch boundaries for long backfills — over the union of changed partitions. Without this, a lateness window causes each downstream partition to be rebuilt several times.
 - **Restatement.** A backfill that recomputes existing partitions with changed logic may be declared atomic: every interval is staged and a single snapshot is committed at the end, so consumers never observe a mixture of old and new logic. Gap-filling backfills do not need this.
+- **Restatement conflicts.** Amended in v0.10 by D48: staging units hold write leases only while they run. The final commit takes every lease at once and checks that no partition it replaces was committed after its interval was staged; conflicting intervals are re-staged before the commit.
 - **History.** Commits made by one backfill carry its identifier, so version history presents the backfill as a single collapsible entry.
 - **Priority.** Backfills run below scheduled runs under fair scheduling (CORE 3.6), so a long backfill never delays current pipelines. Writes to the same partition are serialised, so a backfill and a scheduled run cannot collide. Amended in v0.10 by D43: backfills are admitted only to idle capacity and production work never queues behind waiting backfill work, but a running backfill attempt is not stopped by default, so production work may wait for it to finish unless the pool enables preemption; serialisation of writes is by partition write leases taken at admission.
 
-*References:* D13 · D15 · D43 · S14 · CORE 3.4 · CORE 3.6 · CORE 3.12 · CORE 3.13
+*References:* D13 · D15 · D43 · D47 · D48 · S14 · CORE 3.4 · CORE 3.6 · CORE 3.12 · CORE 3.13
 
 #### D21 · Architecture planes
 
@@ -915,8 +942,9 @@ The platform is divided into four planes — interface, control, data and observ
 - **Invariants.** Bulk data never passes through the interface or control planes. Untrusted code runs only in the data plane. Any data-plane component may be terminated at any moment without loss of correctness. Correctness never depends on observability.
 - **Protocol.** The control plane leases work to the data plane with scoped credentials and a fencing token; the data plane returns heartbeats, events and commit requests; only the control plane makes a result current. Amended in v0.10 by D40: leases carry credential scopes and secret references, and the agent mints credentials and resolves secrets in the customer environment.
 - **Failures.** A control-plane outage stops new dispatch and commits but not running work; a lost data-plane node is recovered by lease expiry and retry; an observability outage affects no decision.
+- **Components.** Amended in v0.10 by D47: the control plane's components are the compiler, planner, run driver, reconciler, scheduler and dispatcher, with the catalogue, cache index, provenance, policy and plugin registry as services. Postgres is its only stateful dependency.
 
-*References:* D12 · D15 · D22 · D40 · CORE 2.11 · CORE 4.1
+*References:* D12 · D15 · D22 · D40 · D47 · D48 · D49 · CORE 2.11 · CORE 4.1
 
 #### D22 · Deployment topologies
 
@@ -933,7 +961,7 @@ Four options are supported, ordered by how much the customer controls: **fully m
 - **Compute.** A bring-your-own-compute deployment provides a container-capable backend: Kubernetes, cloud batch or an HPC cluster. A warehouse alone runs only pushdown work; in-process nodes on DuckDB or Polars, Python code nodes and command-line tools require container compute. A warehouse-native container service may later serve as a backend for customers whose only compute is a warehouse.
 - **Images.** Image builds and the image registry may run in the customer's environment, and images are referenced by digest wherever they are stored (CORE 1.10, CORE 5.1). HPC clusters commonly run images through Apptainer rather than Docker.
 
-*References:* D5 · D9 · D11 · D21 · D25 · D28 · D29 · D40 · CORE 1.10 · CORE 2.18 · CORE 2.25 · CORE 4.7 · CORE 4.8 · CORE 7.7
+*References:* D5 · D9 · D11 · D21 · D25 · D28 · D29 · D40 · D47 · D49 · CORE 1.10 · CORE 2.18 · CORE 2.25 · CORE 4.7 · CORE 4.8 · CORE 7.7
 
 #### D23 · Artifact storage layout
 
@@ -962,7 +990,7 @@ Alongside running a workflow, a user may ask for a dataset to be made current th
 - **Interface.** The catalogue offers refresh actions with explicit build modes — only this dataset; upstream where modified; all upstream; downstream — and shows stale state.
 - **Later.** Requests that cross project boundaries, where execution rights must be resolved against the producing team's policies, and freshness policies that the reconciler enforces automatically in place of schedules.
 
-*References:* D13 · D16 · D20 · CORE 3.5 · CORE 3.14 · CORE 3.15
+*References:* D13 · D16 · D20 · D47 · CORE 3.5 · CORE 3.14 · CORE 3.15
 
 #### D25 · Processing engines and runtimes
 
@@ -985,7 +1013,7 @@ The runtime is a property of the node type. Built-in relational nodes are define
 - **Non-tabular.** Semi-structured data uses SQL where DuckDB handles it and Python otherwise (XML, HL7, FHIR). Text, images and ML artifacts run in Python runtimes, with GPUs where declared. Genomics runs as container commands, often on HPC agents. These scale by fan-out over items, partitions or splits (CORE 6.18, CORE 6.19). Tabular data crosses unit boundaries as Arrow-readable files; other data crosses as artifact manifests. Amended in v0.10 by D44: managed tabular datasets on object storage are stored as Parquet.
 - **Later.** Spark as a plugin executing against customer-operated clusters; Flink if streaming is added (D6, D12), and Ray for distributed Python and ML workloads, likewise against customer-operated clusters (D22).
 
-*References:* D3 · D4 · D6 · D10 · D12 · D15 · D17 · D18 · D21 · D22 · D26 · D27 · D28 · D29 · D34 · D44 · S6 · S24 · CORE 1.8 · CORE 1.12 · CORE 2.19 · CORE 2.20 · CORE 2.26 · DE 2.1 · DE 2.2
+*References:* D3 · D4 · D6 · D10 · D12 · D15 · D17 · D18 · D21 · D22 · D26 · D27 · D28 · D29 · D34 · D44 · D47 · S6 · S24 · CORE 1.8 · CORE 1.12 · CORE 2.19 · CORE 2.20 · CORE 2.26 · DE 2.1 · DE 2.2
 
 #### D26 · Placement constraints
 
@@ -1001,7 +1029,7 @@ Placement constraints, the hard requirements and soft preferences that govern wh
 - **Transition.** Workflows built before constraints exist may depend on unrestricted data movement and fail to plan once constraints apply. A warning-only phase before enforcement was raised as the likely remedy and is not decided.
 - **Open items.** S6 and S23 remain open and are deferred with this decision.
 
-*References:* D9 · D21 · D22 · D23 · D25 · S6 · S23 · CORE 2.9 · CORE 2.19 · CORE 2.21 · CORE 2.22
+*References:* D9 · D21 · D22 · D23 · D25 · D47 · S6 · S23 · CORE 2.9 · CORE 2.19 · CORE 2.21 · CORE 2.22
 
 #### D27 · Ibis for relational node definitions
 
@@ -1021,9 +1049,10 @@ Built-in relational nodes are defined as **Ibis** expressions rather than as han
 - **Compilation.** Ibis compiles inside execution units, in Python. The planner needs only to know whether a node is eligible for pushdown and which dialects it supports, so the choice of control-plane language is not constrained; Go was chosen (D44).
 - **Rejected.** Replacing DuckDB with Ibis's Polars backend for local execution. DuckDB documents out-of-core grouping, joining, sorting and windowing, while Polars' streaming engine processes data in batches without documented spilling of operator state; Ibis on DuckDB compiles to SQL, the same path used for Postgres and Snowflake, which eases conformance; and DuckDB is Ibis's default and most complete backend. The objection that Polars is present in any case no longer applies once built-in nodes are Ibis first.
 - **Condition.** Confirmed subject to a spike. Revised in v0.10: the spike classifies each candidate built-in node into one of the four Ibis-first tiers, producing the list of Polars exceptions; runs the nodes on DuckDB, including joins, aggregations, sorts and windows larger than memory under a fixed memory limit; checks that the nodes compile for Postgres and Snowflake, with execution against those warehouses following pushdown (D29); and reviews the maintenance and release practices of the Ibis project, which becomes a core dependency. Coverage gaps are reported before the palette is designed.
+- **Spilling forms.** Added to the spike in v0.10 by D47: whether Ibis compiles fixed-column pivots and ordered aggregates on DuckDB into forms that spill. DuckDB implements every `PIVOT` through `list()`, which does not spill; where Ibis does not produce a spilling form, the palette implements such nodes as filtered aggregates or equivalents that do not sort, and only pivots over values discovered at run time keep the non-spilling memory class.
 - **Deferred.** Checking that the palette also compiles on Ibis's PySpark backend is deferred until a Spark engine is taken up (D25).
 
-*References:* D10 · D25 · D29 · D34 · D44 · CORE 1.8 · CORE 1.12 · CORE 2.19 · CORE 2.20 · DE 2.1 · DE 2.3
+*References:* D10 · D25 · D29 · D34 · D44 · D47 · CORE 1.8 · CORE 1.12 · CORE 2.19 · CORE 2.20 · DE 2.1 · DE 2.2 · DE 2.3
 
 #### D28 · Warehouse connection policy and plan pinning
 
@@ -1040,7 +1069,7 @@ The planner chooses placement automatically, within a policy set on each warehou
 - **Selection.** Connection policy enters the selection precedence of D25 at the dialect-capability step: a connection without compute rights is treated as an unavailable dialect. It does not reopen the hard-constraint step deferred by D26.
 - **Pinning.** An author may pin the plan of a workflow. Each run compares its placement with the pinned plan and keeps the pinned placement where it remains possible; a difference is reported to the author. If the pinned placement can no longer be honoured, for example because a connection has become read-only, the run stops before execution with an explanation until the author accepts a new plan.
 
-*References:* D21 · D22 · D25 · D26 · D27 · D45 · S22 · CORE 2.19 · CORE 2.23 · CORE 2.24 · CORE 4.5 · CORE 4.8
+*References:* D21 · D22 · D25 · D26 · D27 · D45 · D47 · S22 · CORE 2.19 · CORE 2.23 · CORE 2.24 · CORE 4.5 · CORE 4.8
 
 #### D29 · First development slice
 
@@ -1057,7 +1086,7 @@ Development begins with a deliberately narrow slice of the catalogue: the tabula
 - **Licence.** The repository is private. The licence is chosen before it is made public or accepts external contributions, in line with D5.
 - **Stack.** The languages, interfaces and libraries the first slice is built with are recorded in D44.
 
-*References:* D5 · D11 · D17 · D22 · D25 · D27 · D28 · D42 · D44 · CORE 1.1 · CORE 1.6 · CORE 2.9 · CORE 2.17 · CORE 2.18 · CORE 6.15
+*References:* D5 · D11 · D17 · D22 · D25 · D27 · D28 · D42 · D44 · CORE 1.1 · CORE 1.6 · CORE 2.9 · CORE 2.17 · CORE 2.18 · CORE 6.15 · DE 2.1
 
 #### D30 · Tenancy and isolation enforcement
 
@@ -1094,8 +1123,10 @@ Execution is recorded at three levels: the **run** (one execution of a workflow 
 - **Cache hits.** A unit served from cache is recorded as a task run with the outcome reused, a reference to the task run whose output was reused, and no attempts (CORE 2.13).
 - **Pause and cancel.** Pausing stops dispatching new task runs and lets running attempts finish, after which the run is suspended until resumed; cancelling signals running attempts at their next heartbeat (CORE 2.8). Amended in v0.10 by D44: the signal reaches the agent within about one round trip through its long-poll, and within one heartbeat at worst.
 - **Deferred.** Whether the task runs of a large map are created up front or in batches as they are dispatched is settled with scheduler capacity (S4). Settled in v0.10 by D43: in windows sized to the map's parallelism, tracked by a map-group record.
+- **Held attempts and sub-states.** Amended in v0.10 by D48: an attempt whose commit awaits a quality-gate release or an approval ends with the outcome held, keeping its staged outputs durable, and the control plane completes the commit later, fenced by the task run. Sub-states are fixed: a run is pending while waiting for inputs, resolving or planning, active while running, draining or cancelling, and suspended when paused; a task run is pending while blocked or ready, active while attempting or backing off, and suspended for an approval or a gate hold; an attempt is pending when offered and active while starting, running or committing.
+- **Run outcome.** Amended in v0.10 by D47: a run fails if any of its task runs failed, unless the failure was consumed by a node whose run rule fires on failure (D41). The exact rule is settled with the IR specification.
 
-*References:* D2 · D7 · D12 · D13 · D14 · D15 · D16 · D24 · D43 · D44 · D45 · D46 · S4 · S8 · S15 · S18 · CORE 1.4 · CORE 2.5 · CORE 2.8 · CORE 2.11 · CORE 2.13 · CORE 2.16 · CORE 6.8 · DE 1.5 · DE 4.4 · MLE 2.3 · MLE 2.4 · MLE 3.4
+*References:* D2 · D7 · D12 · D13 · D14 · D15 · D16 · D24 · D41 · D43 · D44 · D45 · D46 · D47 · D48 · D49 · S4 · S8 · S15 · S18 · CORE 1.4 · CORE 2.5 · CORE 2.8 · CORE 2.11 · CORE 2.13 · CORE 2.16 · CORE 6.8 · DE 1.5 · DE 4.4 · MLE 2.3 · MLE 2.4 · MLE 3.4
 
 #### D32 · Execution unit structure
 
@@ -1110,7 +1141,7 @@ An execution unit is one container running one image, with one resource request 
 - **Code nodes.** A Python code node runs in the image built from its declared dependencies (CORE 1.10). It may share a unit with built-in nodes only when that image is built on the platform's base image, as platform builds are by default.
 - **Pushdown.** When introduced, the unit's runtime submits the warehouse query and streams its result into the next segment. A fully pushed-down unit is a unit with a single warehouse segment. The model does not change.
 
-*References:* D1 · D25 · D27 · CORE 1.10 · CORE 2.14 · CORE 2.20 · DE 2.1
+*References:* D1 · D25 · D27 · D34 · D47 · CORE 1.10 · CORE 2.14 · CORE 2.20 · DE 2.1
 
 #### D33 · Automatic fusion
 
@@ -1125,7 +1156,7 @@ Fusion is fully automatic from the first slice. The planner separates **legality
 - **Determinism.** The same IR under the same policy version always yields the same units, and every plan records the policy version, which plan pinning (D28) and reproducible plans rely on. Because cache keys are chained through nodes (D8), a change of policy does not invalidate cached outputs.
 - **Development runs.** Runs on samples during development execute unfused, retaining every intermediate (CORE 6.6).
 
-*References:* D1 · D8 · D28 · D32 · D46 · CORE 1.4 · CORE 2.13 · CORE 2.14 · CORE 6.6
+*References:* D1 · D8 · D28 · D32 · D46 · D47 · CORE 1.4 · CORE 2.13 · CORE 2.14 · CORE 6.6
 
 #### D34 · Capacity and size
 
@@ -1141,8 +1172,11 @@ No maximum size is declared on datasets. Capacity is not a property of a dataset
 - **Spill disk.** DuckDB's temporary directory is placed on the unit's ephemeral volume, with its maximum size set from the unit's allocation, as memory and thread limits are (D25), so that a spilling unit fails cleanly rather than being evicted.
 - **Calibration.** Peak memory and spill volume are recorded per task run as time series (CORE 4.2, CORE 4.6) and used to refine estimates; the same measurements serve the cost-informed fusion policy (D33).
 - **Later engines.** D25's rule that location, not size, selects the engine held while the only alternative to in-process work was a warehouse, which is a different location. An engine that reads the same files as the in-process engines, such as Spark, can only be chosen by capacity. When one is added, the selection precedence becomes: explicit override, hard constraints (D26), dialect capability and connection policy (D28), data location, then capacity among the engines at that location. The planner records the reason, and plan pinning (D28) protects production workflows from unannounced moves.
+- **Estimation.** Settled in v0.10 by D47: a unit's input slice is sized from its manifests, including uncompressed sizes recorded from Parquet footers, with an expansion factor per type; sizes are propagated through its nodes from the per-node statistics of earlier runs (CORE 6.6), otherwise from conservative defaults, otherwise marked unknown; the memory class decides what the estimate constrains; estimates are calibrated from measured peak memory and spill per unit composition (CORE 4.2), at a high percentile with a margin; and declared resources act as a floor. With nothing known, the declared or default request is used and the estimate is marked unknown, neither flagged nor refused.
+- **Effective ceiling.** Amended in v0.10 by D47: the per-unit ceiling is the lower of the value a tenant Admin declares on the pool and the maximum its agents report (D40).
+- **Spark's scope.** Added in v0.10 by D47: an engine such as Spark addresses relational work that no key can divide, not resource exhaustion in general. A group is aggregated within one task, so skewed groups stay bounded by one machine (S7); Python and Polars code does not distribute by adding an engine; and training across machines needs units of several containers (D32). Skew diagnostics and memory escalation (S8) remain the remedies there.
 
-*References:* D13 · D23 · D25 · D26 · D28 · D31 · D33 · S8 · CORE 2.4 · CORE 2.26 · CORE 4.2 · CORE 4.6
+*References:* D13 · D23 · D25 · D26 · D28 · D31 · D32 · D33 · D40 · D47 · S8 · CORE 2.4 · CORE 2.19 · CORE 2.26 · CORE 4.2 · CORE 4.6 · CORE 6.2
 
 #### D35 · Ephemeral extraction
 
@@ -1158,9 +1192,10 @@ No source is copied unless its author chooses to copy it. A read from an externa
 - **Still recorded.** Every read records its provenance, the source version where one exists, and the range of positions consumed where the extraction strategy provides one, so lineage stays complete and incremental cursors work under either storage choice (DE 1.2).
 - **Deletes.** Detecting hard deletes by comparing snapshots needs the previous snapshot's keys; for an ephemeral read of an unversioned source this is available only if a compact key set is retained per run.
 - **Where copies live.** Under bring-your-own-compute, a copy is written to the customer's own storage target (D4, D22), never to vendor infrastructure; only the fully managed topology stores it with the vendor. The cost an ephemeral read avoids is therefore the customer's own storage.
+- **Probed versions.** Amended in v0.10 by D49: where a source can be read as of a probed position, its version is fixed at run start by a source probe rather than discovered when a unit reads, so every read in the run uses the same version and nodes reading it are cacheable before the run.
 - **Revised in v0.10.** An earlier draft of this decision presented referenced-by-version, copied and ephemeral as three exclusive modes and left the default open; version and storage are independent, and the storage choice is always explicit.
 
-*References:* D4 · D7 · D13 · D22 · D33 · D36 · CORE 2.13 · CORE 2.14 · CORE 2.16 · DE 1.2 · DE 1.7
+*References:* D4 · D7 · D13 · D22 · D33 · D36 · D49 · CORE 2.13 · CORE 2.14 · CORE 2.16 · DE 1.2 · DE 1.7
 
 #### D36 · Data-engineering practice first, reproducibility by choice
 
@@ -1177,7 +1212,7 @@ Standard data-engineering practice comes first; reproducibility and the constrai
 - **Guard rails.** Rules that protect correctness rather than reproducibility, such as leakage prevention (DS 2.8) and temporal splits (DS 3.1), are kept as warnings an author can override rather than refusals.
 - **Local execution.** The restriction D11 places on publishing from a future local backend is reconsidered under this principle when such a backend is taken up.
 
-*References:* D4 · D7 · D11 · D14 · D23 · D35 · CORE 5.4 · CORE 5.7 · CORE 6.5
+*References:* D4 · D7 · D11 · D14 · D23 · D35 · D49 · CORE 5.4 · CORE 5.7 · CORE 6.5 · DS 2.8 · DS 3.1
 
 #### D37 · Incremental extraction state
 
@@ -1196,8 +1231,9 @@ Incremental extraction keeps no separate per-task state store. The cursor betwee
 - **Deletes.** Snapshot-comparison strategies retain a compact key set per run, so detection survives short retention and ephemeral reads.
 - **Incremental transforms.** A node that maintains its output incrementally reads the previous version of its own output as an input, through a "latest" partition dependency (D13), resolved and recorded under D14; it needs no state store either.
 - **Comparison.** Dataiku DSS has no first-class cursor; incremental loads there are built from time-based partitions or from the maximum timestamp of the target passed as a variable.
+- **End position.** Amended in v0.10 by D49: the end position of an incremental range is fixed at run start by a source probe, from the source's clock, so the whole range is recorded before anything is read and a retry reads the same range.
 
-*References:* D12 · D13 · D14 · D15 · D31 · D35 · D43 · CORE 3.7 · CORE 5.9 · DE 1.2 · DE 1.3 · DE 1.4 · DE 1.5
+*References:* D12 · D13 · D14 · D15 · D31 · D35 · D43 · D49 · CORE 3.7 · CORE 5.9 · DE 1.2 · DE 1.3 · DE 1.4 · DE 1.5
 
 #### D38 · Point-in-time retrieval
 
@@ -1237,8 +1273,9 @@ The data plane is driven by pull-based agents connecting outward to the control 
 - **Message classes.** State-bearing messages — claims, renewals, state transitions, checkpoint commits, commit requests and end-of-attempt reports carrying outcome and failure class (D31) — are guaranteed, idempotent and sequence-numbered per attempt. Telemetry — logs, metrics and progress — is best effort and goes to a configurable sink, the vendor's observability service or the customer's own (CORE 4.7), with live tailing proxied through the agent; correctness never depends on it (D21). The agent applies the classification filter to previews and samples before anything leaves the customer environment (D22). Amended in v0.10 by D43: claims, leases and state-bearing messages carry the attempt's tenant, and the agent keys its credential caches, secret resolution, commit buffers and telemetry routing by tenant, even where it serves one tenant.
 - **Amends.** D21: the control plane leases work with credential scopes and secret references rather than scoped credentials. D22: credentials are minted, and secrets resolved, by the agent in every deployment, not only in the hybrid topology. CORE 7.3: the control plane stores secret references centrally; values are held and resolved in the data plane.
 - **Transport.** Settled in v0.10 by D44: protobuf messages over ConnectRPC, as unary calls for state-bearing messages and one long-poll per agent replica for offered work and control signals, over HTTPS, with no dependence on long-lived HTTP/2 streams. Timings were set by D43.
+- **Leases and probes.** Amended in v0.10 by D48: renewals are held in the leader's memory, an attempt is persisted before it is offered, and every renewal response carries the attempts the agent must stop. Amended in v0.10 by D49: source probes are a further kind of offered work.
 
-*References:* D15 · D21 · D22 · D23 · D26 · D28 · D29 · D30 · D31 · D34 · D43 · D44 · S4 · CORE 2.11 · CORE 2.12 · CORE 2.18 · CORE 4.7 · CORE 7.3 · CORE 7.6 · CORE 7.7
+*References:* D15 · D21 · D22 · D23 · D26 · D28 · D29 · D30 · D31 · D34 · D43 · D44 · D47 · D48 · D49 · S4 · CORE 2.11 · CORE 2.12 · CORE 2.18 · CORE 4.7 · CORE 7.3 · CORE 7.6 · CORE 7.7
 
 #### D41 · IR text form, round-trip and structure
 
@@ -1265,7 +1302,7 @@ The text form of the IR, how it round-trips between canvas and git, how it is ha
 - **Canvas.** An `if` is a branching node with labelled then and else edges; a map and a loop are frames enclosing their body, with the collection or termination rule in the frame header. Conditions are built with a rule builder that generates the expression, with an expression mode offering autocomplete and inline type errors; any parameter field may switch between a fixed value and an expression. Amended in v0.10 by D46: an n-way switch and merge nodes for alternative branches are added, and loop frames declare their carried state and execution mode.
 - **Comparison.** Dataiku DSS separates a data-only Flow from linear scenarios whose step conditions are written in its own restricted formula language, and offers loops only through Python scenarios; the structured constructs here keep control flow in the workflow graph.
 
-*References:* D2 · D3 · D7 · D8 · D13 · D14 · D18 · D19 · D21 · D31 · D35 · D36 · D37 · D40 · D44 · D45 · D46 · S24 · CORE 1.2 · CORE 1.4 · CORE 1.5 · CORE 1.6 · MLE 6.1 · MLE 6.2
+*References:* D2 · D3 · D7 · D8 · D13 · D14 · D18 · D19 · D21 · D31 · D35 · D36 · D37 · D40 · D44 · D45 · D46 · D47 · D49 · S24 · CORE 1.2 · CORE 1.4 · CORE 1.5 · CORE 1.6 · CORE 2.10 · MLE 6.1 · MLE 6.2
 
 #### D42 · Catalogue persistence
 
@@ -1283,8 +1320,9 @@ How the catalogue stores datasets, versions, partitions, manifests, files, schem
 - **Schemas.** Each distinct schema is stored once, in Arrow logical types (D41), keyed by its hash, and each version references its schema; contract evolution is checked at publication.
 - **External readability.** A managed dataset stored on object storage is a set of identity-addressed files in the customer's storage (D23), and which of them form the current version is known only to the catalogue; an external engine pointed at the files would read superseded and quarantined data. After each commit, a data-plane job driven by the outbox therefore writes Iceberg metadata pointing at the files of the current version and registers it in the customer's Iceberg catalogue, so external engines read a consistent, slightly delayed view, without copying data and without a second commit point. Making Iceberg the physical format, with two commit points to reconcile, was rejected. The projection is part of the first slice (D29). Datasets whose storage target is a warehouse or lakehouse table, and external datasets, are read natively by the customer's tools and need no projection. Amended in v0.10 by D44: the projection is a maintenance unit using PyIceberg that replays every version that became current as its own snapshot, into REST or SQL catalogues; datasets are stored as Parquet with partition keys as columns; and projection is on by default wherever a catalogue is configured, with restricted datasets held back unless their owner allows them.
 - **Amends.** D14: inputs are resolved inside one repeatable-read transaction and recorded as version identifiers. D23: a snapshot selects partition versions by validity interval rather than listing them.
+- **Outbox rows.** Amended in v0.10 by D48: a commit writes one outbox row for each handler subscribed to its event rather than one row per event, each claimed, retried and dead-lettered on its own; handlers that need order process by dataset version, never by outbox identifier.
 
-*References:* D7 · D12 · D13 · D14 · D15 · D16 · D20 · D21 · D23 · D29 · D30 · D31 · D34 · D35 · D37 · D38 · D40 · D41 · D44 · D45 · S5 · CORE 6.24
+*References:* D7 · D12 · D13 · D14 · D15 · D16 · D20 · D21 · D23 · D29 · D30 · D31 · D34 · D35 · D37 · D38 · D40 · D41 · D44 · D45 · D47 · D48 · D49 · S5 · CORE 6.24 · DE 3.1
 
 #### D43 · Scheduling and capacity
 
@@ -1306,8 +1344,10 @@ How the control plane queues, orders and admits work, the scale it is designed f
 - **Seams for shared pools.** Pools serving several tenants, which a fully managed topology with many small tenants might want to reduce agent overhead and sign-up latency, are not built. They stay cheap to add: every agent message carries its attempt's tenant (D40), agent internals are keyed by tenant, and the agent-facing authorisation check asks whether the agent may act for the attempt's tenant (D45). Only the vendor would operate such agents, so no customer upgrade would be involved.
 - **Amends.** D20: backfills are admitted only to idle capacity and may be preempted per pool. D31: the task runs of a map are created in windows sized to its parallelism. D40: agent messages carry the attempt's tenant and agent internals are keyed by tenant. D45: the agent-facing check is phrased per attempt.
 - **Revised in v0.10.** As first recorded, this decision computed fair share per pool and expected a pool to serve several tenants in the fully managed topology, contradicting D30 and D40, which bind each pool to one tenant. Capacity domains resolve the contradiction.
+- **Leadership.** Settled in v0.10 by D47: the leader holds a session-level advisory lock, and every leader-only write checks an epoch incremented at takeover. Fair-share weights are set by the tenant Admin (D45).
+- **Write leases.** Amended in v0.10 by D48: a write lease is held by the task run while it is active, including retry back-off, and released when it ends or suspends; a unit whose output partitions are discovered at run time takes a lease on the whole dataset. By default runs of a workflow may overlap, serialised per partition by these leases; preventing or queueing overlap is set per workflow (CORE 3.7).
 
-*References:* D9 · D16 · D20 · D21 · D24 · D30 · D31 · D34 · D37 · D40 · D42 · D44 · D45 · D46 · S4 · CORE 2.2 · CORE 2.3 · CORE 3.6 · CORE 3.7 · CORE 4.3 · CORE 6.6 · CORE 7.5 · DS 1.4 · MLE 2.2
+*References:* D9 · D16 · D20 · D21 · D24 · D30 · D31 · D34 · D37 · D40 · D42 · D44 · D45 · D46 · D47 · D48 · S4 · CORE 2.2 · CORE 2.3 · CORE 3.6 · CORE 3.7 · CORE 4.3 · CORE 6.6 · CORE 7.5 · DS 1.4 · MLE 2.2
 
 #### D44 · Minimum technology stack
 
@@ -1318,7 +1358,7 @@ The languages, interfaces, tooling and libraries the first slice is built with; 
 - **Languages.** The control plane and the agent are written in Go. The reference implementation of CEL is in Go, with static cost estimation and runtime cost limits (D41); a single active scheduler holds its state in memory (D43); and the agent ships as one static binary for HPC login nodes and air-gapped hosts (D22). Unit runtimes are written in Python, which Ibis, DuckDB and Polars require (D27), with one CPython version pinned per base-image release.
 - **Database.** PostgreSQL 17 or later, the first release with `transaction_timeout` (D42).
 - **Migrations.** goose, with plain SQL migrations embedded in the binary, forward-only, and run under an advisory lock at start-up or by an explicit command. Each release's schema remains compatible with the previous release's code (expand, then contract), so a hosted control plane can be upgraded in place and a self-hosted installation that skips releases applies the migrations in order.
-- **Interfaces.** Protobuf with ConnectRPC for the web application, the CLI, the agent protocol and the local agent–unit contract, as separately versioned packages for the three contracts of D40. `buf breaking`, at the WIRE_JSON level or stricter, gates every change. The Connect protocol works over HTTP/1.1 and HTTP/2, accepts JSON and is compatible with gRPC. Live state reaches the browser through server streaming, with polling as the fallback behind buffering proxies. A resource-style REST surface for the public API can be added later by Vanguard transcoding from annotations on the same definitions (Part III, section 5, item 12).
+- **Interfaces.** Protobuf with ConnectRPC for the web application, the CLI, the agent protocol and the local agent–unit contract, as separately versioned packages for the three contracts of D40. `buf breaking`, at the WIRE_JSON level or stricter, gates every change. The Connect protocol works over HTTP/1.1 and HTTP/2, accepts JSON and is compatible with gRPC. Live state reaches the browser through server streaming, with polling as the fallback behind buffering proxies. A resource-style REST surface for the public API can be added later by Vanguard transcoding from annotations on the same definitions (Part III, section 5, item 13).
 - **Agent transport.** State-bearing messages are unary, idempotent calls (D40). Each agent replica holds one long-poll, which returns offered work and control signals such as cancellation and maintenance tasks. Nothing depends on long-lived HTTP/2 streams, which enterprise proxies may not carry. Cancellation reaches an agent within about one round trip while its long-poll is open, and within one heartbeat at worst (D43).
 - **Agent identity.** Amends D40. An agent's identity is possession of its enrolled key, and mutual TLS is the default proof. Proxies that inspect TLS cannot carry client certificates and are commonly configured to bypass such sessions, so where a network inspects TLS, requests and responses are instead signed with HTTP Message Signatures (RFC 9421), with bodies covered through Content-Digest (RFC 9530). The agent pins the control plane's signing key at enrolment. Replays are handled by the existing idempotency and per-attempt sequence numbers together with server-issued nonces, never by wall-clock time. The server-side check is written as key possession from the first slice; signing is implemented when hybrid deployment is taken up.
 - **Frontend.** React and TypeScript, built with Vite as a single-page application served by the control-plane binary, so the single-machine deployment needs no separate web server. The canvas uses React Flow 12. Workflows without a layout sidecar (D41) are laid out by ELK, which handles nested frames for maps and loops; ELK's licence, EPL-2.0, is noted for the licence decision (D5).
@@ -1334,7 +1374,7 @@ The languages, interfaces, tooling and libraries the first slice is built with; 
 - **Rejected.** REST with OpenAPI for both the interface and the agent, under which compatibility across agent versions and the tagged unions of D40 and D42 would rest on CI checks and uneven code generation rather than on the schema language. A gRPC bidirectional stream for the agent, which depends on long-lived HTTP/2 streams. The projection inside the agent with iceberg-go, which would tie projection fixes to customers' agent upgrades. Projecting only the latest version in each run, which would hide intermediate versions from external time travel. Projection enabled only by administrators.
 - **Remaining.** The authentication and identity provider, the observability stack, and the image builder and registry are settled when the work reaches them (Part III, section 4).
 
-*References:* D4 · D5 · D13 · D14 · D15 · D19 · D20 · D22 · D23 · D25 · D27 · D29 · D30 · D31 · D36 · D38 · D40 · D41 · D42 · D43 · D45 · CORE 1.1 · CORE 1.6 · CORE 2.8 · CORE 2.18 · CORE 6.25 · DE 1.7 · DE 3.1 · DE 5.9
+*References:* D4 · D5 · D13 · D14 · D15 · D19 · D20 · D22 · D23 · D25 · D27 · D29 · D30 · D31 · D36 · D38 · D40 · D41 · D42 · D43 · D45 · D47 · D48 · D49 · CORE 1.1 · CORE 1.6 · CORE 2.8 · CORE 2.18 · CORE 6.25 · DE 1.7 · DE 3.1 · DE 5.9
 
 #### D45 · Isolation enforcement and role model
 
@@ -1365,8 +1405,9 @@ How the isolation required by D30 is enforced, who may do what, whose permission
 - **Amends.** D9: clearance is a level held on each membership. D28: connections are tenant resources granted to projects. D30: the mechanism and role model are settled, completing the decision. D31: quality-gate overrides are assigned. D41: drafts and explicit commits replace a commit on every save, workflow publishing is renamed deploying, deployment becomes an act of the platform that checks governed fields, and environment bindings are limited to granted resources. D42: unique constraints and foreign keys include the tenant. D44: allowing restricted data to be projected requires restricted clearance.
 - **Rejected.** Mandatory application scoping alone, under which a single unscoped query leaks across tenants (Part I, section 3, item 22). Row-level security for project permissions, which would join membership tables for every row. An object-relational mapper, which hides the SQL that partitioning, row-level security and batching depend on. Runs acting with their triggering user's permissions. A commit for every canvas save, or one work-in-progress commit amended on every save. Version control of the platform's own in place of git, which would rebuild review, continuous integration and code history that engineers already have. The platform as the authority with git as a mirror, as in Dataiku DSS and n8n, under which a refused import leaves git ahead of the platform. Accepting changes merged in git under their git author, which would let anyone with merge rights lower a classification or rebind a connection.
 - **Revised in v0.10.** As first recorded, this decision accepted changes merged in git under their git author. Deployment is now an act of the platform, and governed fields are checked however a change arrives.
+- **Quotas and weights.** Amended in v0.10 by D47: tenant Admins set project quotas, fair-share weights and per-unit ceilings on pools; a Maintainer may set lower limits within the project, such as per-workflow concurrency.
 
-*References:* D4 · D5 · D7 · D9 · D14 · D15 · D28 · D30 · D31 · D36 · D40 · D41 · D42 · D43 · D44 · S18 · S20 · CORE 1.5 · CORE 1.6 · CORE 6.6 · CORE 7.1 · CORE 7.4 · DE 5.9 · DS 1.4 · MLE 3.4 · MLE 6.1
+*References:* D4 · D5 · D7 · D9 · D14 · D15 · D28 · D30 · D31 · D36 · D40 · D41 · D42 · D43 · D44 · D47 · D48 · S18 · S20 · CORE 1.5 · CORE 1.6 · CORE 6.6 · CORE 7.1 · CORE 7.4 · DE 5.9 · DS 1.4 · MLE 3.4 · MLE 6.1
 
 #### D46 · Control-flow constructs
 
@@ -1387,7 +1428,83 @@ The control-flow constructs the IR offers beyond those of D2 and D41, how loops 
 - **Limits.** Pruning trials while they run, which needs concurrent trials to share intermediate scores (such as Optuna's `report` and `should_prune` with a median or Hyperband pruner), is not expressible between isolated units; a code node running the whole study is the documented route. Training that spans several machines is a matter of the unit model (D32), not of control flow, and is followed up with the execution backends (MLE 2.1).
 - **Amends.** D2: switch, branch joins, carried state and in-unit loops join the structured constructs, and an in-unit loop's iterations run within one task run. D31: an in-unit loop records its iterations within one task run and resumes through the checkpoint slot. D33: a loop run inside one unit is an exception to the rule that no control flow sits between fused nodes. D41: the expression scope gains `loop`, and the canvas gains switch and merge nodes.
 
-*References:* D2 · D6 · D8 · D10 · D12 · D14 · D16 · D31 · D32 · D33 · D34 · D41 · D43 · S5 · CORE 2.10 · CORE 2.14 · CORE 3.2 · DS 3.6 · MLE 2.1
+*References:* D2 · D6 · D8 · D10 · D12 · D14 · D16 · D31 · D32 · D33 · D34 · D41 · D43 · D47 · S5 · CORE 2.10 · CORE 2.14 · CORE 3.2 · DS 3.6 · MLE 2.1
+
+#### D47 · Control-plane structure
+
+**Status:** Decided
+
+How the control plane is organised: where its components run, how leadership is held and fenced, its bounded contexts and aggregates, the transactions that span them, what each component is responsible for, how the planner works, how runs advance and how the reconciler finds work. Added in v0.10.
+
+- **Topology.** One active leader runs the agent gateway, the scheduler, the dispatcher and the advancement of runs that follows agent reports. Every other component runs on every replica and claims its work from Postgres: the API, planning, reconciler loops, triggers, outbox handlers, watching the deploy branch and collection marking. Replicas other than the leader report the agent endpoint as not ready and answer agent calls with a retryable error, so agents reach the leader; forwarding agent calls to the leader remains possible. Holding queues and lease renewals in memory (D43) requires every agent call to reach the leader.
+- **Leadership.** The leader holds a session-level advisory lock on a dedicated connection made directly to Postgres, not through a transaction-pooling proxy; the lock is released when that session ends, in every deployment. Each takeover increments an epoch row. Every leader-only transaction — admission, write leases, declaring an attempt lost, creating a retry — checks the epoch, and a new leader makes no leader-only write until `transaction_timeout` and a margin have passed, so the transactions of a deposed leader have finished or been ended before it acts.
+- **Invariants in the database.** Correctness never depends on leadership being exclusive. Row locks, conditional updates and unique constraints enforce the invariants below, so an overlap of two leaders costs fairness, not correctness.
+- **Bounded contexts.** Eight: **identity and tenancy** (tenants, principals, memberships and clearance, teams, service accounts, role bindings, projects, tenant resources and their grants, audit); **authoring** (definitions, drafts, platform-held versions, git synchronisation, deployments, environment bindings and the compiler); **plugin registry** (format types, implementations, node types, allowed implementations, images); **catalogue** (datasets, versions, partition versions, manifests, schemas, positions, frontiers, read records, the cache index, projection state and collection marks); **planning** (the planner, which owns no tables); **orchestration** (triggers, materialisation requests, backfills, runs and their plans, task runs and their attempts, map groups, the run driver and the reconciler); **dispatch** (agent pools, capacity domains, agents and enrolment, queues, admission, fair share, leases, write leases and the agent gateway); and **provenance** (a read model over the catalogue and orchestration: lineage, tiers, verification and comparator verdicts). Each context has its own Postgres schema and Go package tree; other contexts use its Go interface and never read its tables, and import rules are checked in CI by depguard in golangci-lint. A transaction crosses contexts only in the cases named below.
+- **Aggregates and invariants.** The dataset head: a single producer (D13), dense increasing version numbers, one current version, and no quarantined version current unless released (D31). Partition versions: immutable and closed only by the commit transaction under the head lock (D42). The run: resolved inputs and plan immutable once recorded, outcome set once. The task run with its attempts: at most one live attempt, enforced by a partial unique index, dense attempt numbers, and commits only from the current attempt (D48). The write lease: one holder per partition, enforced by a unique index, with dataset-wide leases checked by the epoch-fenced scheduler. The scheduled run: one per workflow, trigger and logical interval, enforced by a unique constraint, so a repeated firing is harmless.
+- **Transactions across aggregates.** Three by design: the data commit, including publication groups (D42); the batch from one agent message (D43); and run start, which records the run, its plan and its first task runs. Locks are taken in one order: the epoch check, which takes no lock; task-run rows in ascending identifier order; write-lease rows; dataset head rows in ascending identifier order; then the outbox insert. The consistent order prevents deadlocks and serialises a late commit against the retry that supersedes it.
+- **Compiler.** In authoring, on any replica, for each version of a definition: it parses and migrates the IR (D41), pins node-type and workflow versions, inlines `uses` nodes and flattens composites (D31, D33), type-checks ports and CEL expressions with a static cost estimate (D41, D44), checks that control flow is structured (D2, D46), expands column selectors and derives output schemas, checks intervals against partitioning (D13), checks the single producer at deployment, computes each node's semantic fingerprint (D8) and hoists invariant nodes. Compiled workflows are stored by semantic hash. It never reads data or catalogue versions and never decides placement.
+- **Hoisting.** A node inside a map or loop frame that depends on neither the map item, the loop index nor carried state is moved out of the frame and runs once. Its output is then read by several units and must be stored, and the plan shows the move. Deduplicating identical keys when task runs are created was rejected, since task runs would have to wait on each other.
+- **Planner.** A pure function in its own context, run on any replica once per run after input resolution; its caller supplies every input. Its passes run in order, without iteration: bind environment names to resources granted to the project and check access under the run's project identity (D41, D45); place each node by the precedence of D25 — explicit override, hard constraints (empty until D26), dialect capability and connection policy (D28), then data location; estimate each node's slice and output (D34); insert repartition steps where a slice fails the capacity check and the node declares a grouping key (D25, CORE 2.26); fuse by legality and then policy, the ceiling acting as a guard that only splits, forming units and their segments (D32, D33); size each unit, setting its request from declared resources (CORE 2.4) and the estimated working set and checking it against the per-unit ceiling, which is the capacity check of D34, and flag units that still exceed it; assign each unit to a pool and so to a capacity domain (D40, D43); compute input-addressed keys where their ingredients are known and show expected reuse (D8); and compare with a pinned plan (D28), recording reasons and the version of every pass. Repartitioning is decided per node before fusion and fusion can only split, so no pass revisits an earlier one. Placement never changes during a run. Re-planning at each control-flow point was rejected because it makes placement non-deterministic within a run and breaks plan pinning; planning everything at run start cannot handle maps over value outputs.
+- **Estimation.** Answers the follow-up of D34. A unit's input slice is sized from its manifests, including uncompressed sizes recorded from Parquet footers, with an expansion factor per type for the in-memory form. Sizes are propagated through the unit's nodes from the per-node statistics of earlier runs (CORE 6.6), otherwise from conservative defaults, otherwise marked unknown. The memory class decides what the estimate constrains: a small fixed amount for streaming nodes, a moderate memory request and ephemeral disk for spill for spilling nodes, and memory that must hold the state for non-spilling nodes. Estimates are calibrated from measured peak memory and spill (CORE 4.2), kept per unit composition and applied at a high percentile with a margin. CPU is compressible and comes from declared resources or an engine default; GPU is declared. Declared resources act as a floor. With nothing known, the declared or default request is used and the estimate is marked unknown, neither flagged nor refused.
+- **Ceilings, quotas and weights.** The effective per-unit ceiling is the lower of the value a tenant Admin declares on the pool and the maximum its agents report (D34, D40). Tenant Admins set project quotas (CORE 7.5) and fair-share weights (D43); a Maintainer may set lower limits within the project, such as per-workflow concurrency (CORE 2.2). Authors set only the resources their nodes declare and the parallelism of their maps and backfills.
+- **Input resolution.** Resolving means only choosing the versions and positions a run reads. For each internal dataset input, the run driver, through the catalogue and in one repeatable-read transaction (D42), applies the node's partition dependency function to the run's interval (D13), chooses the version — pinned, coherent along lineage, or current (D14), excluding quarantined versions unless released and using the last valid version where the readiness policy proceeds (D16) — and records the partition versions valid at it as identifiers; external sources are resolved by source probes (D49). Other acts are named separately: environment names are bound (D41), node-type and workflow versions pinned, attempts specified by building their unit specification (D40), expressions evaluated, and secrets resolved by the agent.
+- **Run driver.** In orchestration; on the leader for advancement after agent reports, and on any replica for commands, through conditional updates. It resolves the run's inputs; creates task runs from the plan's unit templates as the run reaches them — branches taken, map windows over value outputs (D41, D43), unrolled iterations with their carried state (D46) and partitions discovered at run time (D13); evaluates conditions and run rules; propagates skips; resolves merges; applies loop termination; makes the authoritative cache lookup; marks task runs ready; decides retries by failure class (D31); suspends and resumes for approvals and gate holds; drains on pause; on cancel ends pending work and asks the dispatcher to signal running attempts; and ends the run. It never orders work, talks to agents or performs a commit.
+- **Advancement.** A successor's readiness is updated in the transaction that records the upstream outcome, by decrementing its count of pending upstream task runs under its row lock; skips propagate with their reason and merge nodes join (D46). Large fan-in and run end never update one row per item: map-group counters and each run's outstanding count are held in the leader's memory, written in batches and recounted at takeover. Every action triggered by an event has a level-triggered sweep behind it, which finds runs whose task runs have all ended, completed map groups, attempts offered but never claimed, and expired holds.
+- **Run outcome.** A run fails if any of its task runs failed, unless the failure was consumed by a node whose run rule fires on failure (D41); the exact rule is settled with the IR specification. Failing on any failure, and deciding by leaf nodes, were rejected.
+- **Cache lookups.** The planner computes input-addressed keys from everything known at run start, including probed external versions (D49), and shows **expected reuse**, binding nothing. The lookup the run driver makes when it creates each task run is authoritative: it completes the key from this run's value outputs and committed content hashes and queries the cache index through the eligibility filter (D9, D26), a query in the control plane that involves no agent. A hit records the outcome reused with a reference to the task run reused (D31) and protects the reused artifact for the rest of the run. A difference from expected reuse is not a pinned-plan difference. Binding reuse at plan time was rejected: it would pin storage for runs waiting to reach their units, and keys known only at run time would still need a second lookup.
+- **Reconciler.** Orchestration's level-triggered loops: schedules and triggers, creating runs idempotently (CORE 3.1, CORE 3.2); runs waiting for inputs (D16); materialisation requests (D24); backfills, their coalescing (D20) and the final commit of a restatement (D48); and the backstop sweeps. Each target has a work row with its next check time, claimed on any replica with `FOR UPDATE SKIP LOCKED`; events bring the next check forward, and a periodic resync covers anything missed. Watching the deploy branch, collection marking, projection scheduling and probe scheduling use the same work-row mechanism in their own contexts. Purely event-driven handlers were rejected, since one lost or poisoned event would stall a dataset silently.
+- **Scheduler and dispatcher.** In dispatch, on the leader only. The scheduler orders and admits ready work: queues per capacity domain, fair share, quotas, write leases and preemption (D43); it never chooses a pool or decides a retry. The dispatcher handles agents and attempts: enrolment and key identity (D40, D44), capability reports and protocol negotiation, attempt creation and the unit specification, offers, claims and leases (D48), cancellation and preemption signals, state-bearing messages, and commit requests, for which it checks the fencing token and write leases and calls the catalogue's commit in the same transaction. It also offers maintenance tasks and probes (D49).
+- **Clocks.** Durable timestamps and due times come from the database clock; lease timing uses the leader's monotonic clock.
+- **One stateful dependency.** Postgres is the control plane's only stateful dependency. Hot state is held in the leader's memory and rebuilt from Postgres, and telemetry is kept outside it (D21). A cache or message broker was considered and rejected: Redis replicates asynchronously and can lose acknowledged writes on failover, so leases and fencing could not live there; a broker cannot take part in a Postgres transaction, so the outbox would remain and a relay would be added; agents would need a second endpoint and identity (D44); row-level security would not extend to it (D45); and each added store is one more for self-hosted and single-machine operators to run (D22, CORE 2.17). Three seams are kept, each implemented in-process first: an event relay, so that producers only ever write the outbox; a change feed for live interface updates; and a rate limiter for per-tenant limits on a hosted control plane. A hosted control plane scales by cells, each with its own database and a set of tenants (Part III, section 5).
+- **Spark's scope.** Recorded against D34: an engine such as Spark addresses relational work that no key can divide, not resource exhaustion in general. A group is aggregated within one task, so skewed groups stay bounded by one machine (S7); Python and Polars code does not distribute by adding an engine; and training across machines needs units of several containers (D32).
+- **Amends.** D8: the plan shows expected reuse, and the lookup at task-run creation is authoritative. D21: the control plane's components gain the planner and the run driver, and Postgres is its only stateful dependency. D27: the spike also checks spilling forms of pivots and ordered aggregates. D31: the run outcome rule. D34: the estimation method, the effective ceiling and Spark's scope. D43: the leader election mechanism and epoch, and fair-share weights set by the tenant Admin. D45: tenant Admins set quotas, weights and ceilings, and Maintainers set lower limits.
+
+*References:* D2 · D8 · D9 · D13 · D14 · D16 · D20 · D21 · D22 · D24 · D25 · D26 · D27 · D28 · D31 · D32 · D33 · D34 · D40 · D41 · D42 · D43 · D44 · D45 · D46 · D48 · D49 · S7 · CORE 2.2 · CORE 2.3 · CORE 2.4 · CORE 2.6 · CORE 2.11 · CORE 2.17 · CORE 2.26 · CORE 3.1 · CORE 3.2 · CORE 3.6 · CORE 4.2 · CORE 6.6 · CORE 7.5
+
+#### D48 · Execution mechanics
+
+**Status:** Decided
+
+How leases are renewed and ended, how commits are fenced, how write leases are held, how the state machines of D31 are encoded, and how events reach their handlers. Added in v0.10.
+
+- **Lease renewals.** The leader holds each lease's last renewal in memory, timed by its monotonic clock; Postgres records only the grant, as the attempt row, and the end. A new leader treats every active attempt as renewed at takeover, which is the grace period of D40, so nothing is lost by not persisting renewals. Persisting them would write a row for every running attempt at every heartbeat.
+- **Offers and claims.** An attempt row is committed before the attempt is offered on any long-poll, so a failover never loses an attempt an agent is running. An offer not claimed within a timeout is offered again, and a claim is a conditional update on the attempt that only one replica can win.
+- **Stop set.** A heartbeat lists the attempts the agent is renewing; the response lists those the control plane no longer recognises — lost, fenced, cancelled or superseded — and the agent stops them, so orphaned containers stop within one heartbeat rather than at the hard limit.
+- **Lost attempts.** When a lease expires, the leader records the attempt's end with the outcome lost in an epoch-fenced transaction (D47), and the run driver applies the platform retry budget (D31).
+- **Sequence numbers.** A state-bearing message numbered at or below the last one applied receives the recorded answer; the next number is applied; anything further ahead is refused and resent (D40).
+- **Fencing token.** The task run and its attempt number. A commit, or a checkpoint commit, locks the task-run row and requires the attempt to be current and not ended. Staging is scoped to the attempt (D15), so object storage needs no fencing.
+- **Write leases.** A write lease is held by the task run while it is active, including retry back-off, and released when it ends or suspends; a resumed task run takes its leases again at admission. A commit requires leases covering every partition it writes. A unit whose output partitions are discovered at run time (D13) takes a lease on the whole dataset; each append to an open partition, and marking it complete, takes that partition's lease. Holding the lease by the attempt was rejected: during a retry's back-off another run's writer could take the partition, against the overlap policy of CORE 3.7.
+- **Overlap.** By default runs of a workflow may overlap, including runs for the same interval, serialised per partition by write leases; preventing or queueing overlap is set per workflow (CORE 3.7).
+- **Atomic restatements.** Staging units hold write leases only while they run. The final commit takes every lease at once and checks that no partition it replaces was committed after its interval was staged; conflicting intervals are re-staged and then committed. Holding every interval's lease for the whole restatement was rejected because it contradicts the backfill guarantee of D43, and committing over newer data regardless because it would silently overwrite that data (D20).
+- **State encoding.** Phase, sub-state and outcome are columns. Check constraints keep the outcome empty until the phase is ended and each sub-state within its phase; every transition is a conditional update on the expected state; and the transition table is defined once in Go, which generates validation, documentation and tests. History is kept as timestamp columns for each key transition, with each attempt its own row and user actions audited, which gives queue time against run time (CORE 4.3). A generic transition log was rejected because it would double the writes at the transition rates of D43, and event sourcing because rebuilding a run of a million task runs from events offers nothing the rows do not.
+- **Sub-states.** A run is pending while waiting for inputs, resolving or planning; active while running, draining or cancelling; and suspended when paused. A task run is pending while blocked or ready; active while attempting or backing off; and suspended for an approval or a gate hold. An attempt is pending when offered and active while starting, running or committing.
+- **Held attempts.** An attempt whose commit awaits a quality-gate release or an approval ends with the outcome **held**. Its staged manifest stays durable, and the control plane completes the commit later, on release or approval, fenced by the task run (D15, D31). A failure class for failed gates was rejected because approvals are not failures.
+- **Outbox rows.** A transaction that produces an event writes one outbox row for each handler subscribed to it, looked up in a registry compiled into the binary; conditional subscriptions write a row only where a handler applies, such as projection for a projected dataset. A row carries the tenant, event type, handler, aggregate identifier, ordering key, aggregate version, payload, state, attempt count, next attempt time and last error. The table is keyed by tenant, under forced row-level security and partitioned by time (D45).
+- **Delivery.** Workers on any replica claim due rows with `FOR UPDATE SKIP LOCKED`. Where a handler declares an ordering key, one row per key is in flight at a time, lowest aggregate version first, never by outbox identifier, which is assigned before commit (D42). A handler runs in a transaction scoped to the row's tenant and completes its row in the same transaction, so effects in Postgres happen once and external effects rely on idempotency keys. Failures retry with back-off and jitter; a row that exhausts its attempts becomes a dead letter, which raises an alert and can be re-driven. Rows are removed by dropping time partitions, and lag, the age of the oldest undelivered row and dead letters are exported as metrics. The claim, retry and dead-letter code is shared with the reconciler's work rows and probe scheduling (D47, D49).
+- **Wake-ups.** In-process where producer and consumer share a process; otherwise by NOTIFY, sent after commit, outside the transaction and batched; polling remains the guarantee. NOTIFY is never sent from commit or transition transactions: a transaction that has issued NOTIFY takes a database-wide lock at commit, which serialises such commits, as reported for the PostgreSQL versions the platform supports (D44). The leader is one consumer of events that make work ready, so approvals and releases recorded on other replicas reach its queue. Telemetry stays outside the outbox (D21).
+- **Rejected for event delivery.** One row per event shared by all handlers, under which a failing handler blocks the others; a relay fanning events out into delivery rows after commit, which adds a hop, a table and writes; per-handler status on one row, or per-handler cursors over the outbox, which bring contention or the high-water mark ruled out by D42; River, pgmq and Watermill, whose tables carry no tenant or row-level security (D45), River also inserting in batches with `COPY FROM` and running a second leader election; and change data capture from the write-ahead log, which needs logical replication and another component.
+- **Amends.** D15: the fencing token is the task run and attempt number, and a commit requires covering write leases. D20: an atomic restatement checks for conflicting commits at its final commit and re-stages those intervals. D31: attempts gain the outcome held, and sub-states are fixed. D40: renewals are held in memory, attempts are persisted before they are offered, and renewal responses carry a stop set. D42: a commit writes one outbox row per subscribed handler. D43: write leases are held by the task run, a dataset-wide lease covers partitions discovered at run time, and overlap is allowed by default.
+
+*References:* D13 · D15 · D20 · D21 · D31 · D40 · D42 · D43 · D44 · D45 · D47 · D49 · CORE 2.11 · CORE 3.7 · CORE 4.3 · DE 4.4 · MLE 3.4
+
+#### D49 · Source probes
+
+**Status:** Decided
+
+External sources are resolved at run start by source probes run in the data plane, so that a run reads each external source at one version and nodes reading it have keys before the run. Added in v0.10.
+
+- **Why in the data plane.** The control plane holds no credentials (D40), runs no plugin code (D21) and, when hosted, has no route into the customer's network (D22), so it cannot ask an external source for its version. A probe runs where credentials are minted and returns only metadata.
+- **Probe.** A platform maintenance unit that calls an optional `probe` function on each connector (D18), returning the source's current version or position without reading its data. As a unit it reaches every deployment through the image the control plane selects, without waiting for agent upgrades, and reuses leases, credentials and retries (D44). Probes are batched across runs per pool and offered to the pool that the project's environment bindings associate with the source's connection (D41).
+- **At input resolution.** The run stays in its resolving sub-state, requests probes for its external inputs and waits; it then resolves its internal inputs in one repeatable-read transaction and records both together (D14, D47). Probes run in parallel, so their results are close in time but not atomic across systems. If a probe fails, the infrastructure retry budget applies (D31); if it keeps failing, the source counts as not ready and the input's readiness policy decides (D16).
+- **What can be pinned.** A probe helps only where the unit can read as of the position it returns: an Iceberg snapshot, read by snapshot identifier; versioned objects in S3, read by version identifier; a Snowflake table, read with `AT (TIMESTAMP => …)` within its Time Travel retention; a set of immutable files; a log offset for change data capture; and the upper bound of watermark polling, from the source's clock (D37). Operational databases without time travel, API sync tokens and unversioned tables cannot be pinned; they are recorded as read, capped at Traceable and not cacheable (D35).
+- **Reads.** The unit specification carries each probed position, and units read as of it (D40); the read record keeps the position used (D42). If the position has expired before the unit reads, for example beyond a warehouse's time-travel retention, the attempt fails with that reason.
+- **Default.** On wherever a source can be read as of the probed position; an author may opt a source out. This passes the test of D36: probes serve consistency within a run, deterministic retries and caching, at the cost of one small unit per run rather than storage.
+- **Sensing.** The reconciler runs probes periodically for external sources that drive triggers (CORE 3.2, DE 1.6) or carry a freshness expectation (DE 4.2), and each external source declaration keeps its last probed position.
+- **What it gives.** Every unit of a run reads an external source at one version (D14); nodes reading external sources have input-addressed keys before the run, so expected reuse covers them (D8, D47); retries read the same version or range; and an incremental range is recorded whole before it is read (D37).
+- **Rejected.** Discovering versions only when units read, which let two units of one run read different snapshots, left such nodes without keys before the run and let retries read different data. Probing inside the agent, which would duplicate connector logic in Go and tie its fixes to customers' agent upgrades, as D44 found for the projection; native probes for a few built-in source kinds remain possible if measured latency calls for them.
+- **Amends.** D14: the snapshot covers external sources that can be read as of a probed position. D18: connectors gain an optional `probe` function. D35: the version of such a source is fixed at run start rather than discovered at read time. D37: the end position of an incremental range is fixed at resolution. D40: probes are a further kind of offered work.
+
+*References:* D8 · D14 · D16 · D18 · D21 · D22 · D31 · D35 · D36 · D37 · D40 · D41 · D42 · D44 · D47 · D48 · CORE 1.9 · CORE 3.2 · CORE 5.9 · CORE 5.10 · DE 1.2 · DE 1.6 · DE 4.2
 
 ---
 
@@ -1675,7 +1792,7 @@ The substrate all three disciplines run on. Everything here is discipline-agnost
 - **CORE 1.8** — Drop in a custom code node — Python, SQL, or shell — with its own dependency spec.
   - *Note:* The required escape hatch: visual tools without one are abandoned at the first unsupported operation. Code nodes are offered as SQL and Ibis, both eligible for pushdown (D27), Polars and pandas, in-process, and container commands for command-line tools, all on equal terms (D25).
 - **CORE 1.9** — Register a third-party plugin node: declared interface, container image, parameter schema, UI form.
-  - *Note:* Node ports declare data types, never format plugins, so a node works with any dataset of the declared type. Connectors to source and target systems are node plugins (D18).
+  - *Note:* Node ports declare data types, never format plugins, so a node works with any dataset of the declared type. Connectors to source and target systems are node plugins (D18). A connector may implement an optional probe returning a source's current version or position (D49).
 - **CORE 1.10** — Declare a node's dependencies as packages and let the platform build, cache and pin the container image, instead of writing Dockerfiles. `[new in v0.3]`
   - *Note:* Prebuilt base images for Python, R and common scientific tools keep builds fast. The resolved lockfile and resulting image digest become part of the run record (D11). Builds and the registry may run in the customer's environment (D22).
 - **CORE 1.11** — Declare the execution modes a node type supports, and refuse a graph that uses a node in a mode it does not implement. `[new in v0.5]`
@@ -1689,15 +1806,15 @@ The substrate all three disciplines run on. Everything here is discipline-agnost
 
 - **CORE 2.1** — Execute a workflow and observe per-task state transitions in real time.
 - **CORE 2.2** — Run independent branches concurrently, bounded by workflow, project, and cluster limits.
-  - *Note:* Limits are applied at admission, with fair share deciding order within them (D43).
+  - *Note:* Limits are applied at admission, with fair share deciding order within them (D43). A Maintainer may set limits below the project's quota (D47).
 - **CORE 2.3** — Fan a node out over a collection and gather the results back into one downstream input. `[shapes the core]` `[cross-discipline]`
-  - *Note:* Scatter/gather over 10,000 items is routine for sequencing workloads and parameter sweeps, and it determines how task state is stored and how the run aggregate is sized. Task runs under a map are created in windows sized to its parallelism and tracked by a map-group record; the first slice targets 10,000 task runs per run (D43).
+  - *Note:* Scatter/gather over 10,000 items is routine for sequencing workloads and parameter sweeps, and it determines how task state is stored and how the run aggregate is sized. Task runs under a map are created in windows sized to its parallelism and tracked by a map-group record; the first slice targets 10,000 task runs per run (D43). Nodes in a map's body that do not depend on its item are hoisted out and run once (D47).
 - **CORE 2.4** — Declare per-task resources: CPU, memory, GPU, ephemeral disk, wall-clock timeout.
-  - *Note:* Ephemeral disk includes DuckDB's spill space. Per-backend ceilings bound every request, and the planner checks estimated working sets against them (D34).
+  - *Note:* Ephemeral disk includes DuckDB's spill space. Per-backend ceilings bound every request, and the planner checks estimated working sets against them (D34). Requests are estimated from statistics and history, with declared resources as a floor (D47).
 - **CORE 2.5** — Define retry policy per task, distinguishing retriable infrastructure failure from terminal task failure.
   - *Note:* Commits carry the attempt identity as a fencing token, so a superseded attempt cannot publish after its retry (D15). Each failed attempt records a failure class; infrastructure failures draw on a platform retry budget separate from the author's policy, and a fenced attempt is not a failure (D31).
 - **CORE 2.6** — Skip re-execution when a task's inputs, parameters, code, and image are unchanged. `[shapes the core]` `[cross-discipline]`
-  - *Note:* Highest-value feature for iterative work: change one parameter and only that node and its descendants rerun. Also provides resume-after-failure (CORE 2.7) and shared prefixes in sweeps for free. Keys are hybrid: input-addressed for every node, chained through nodes rather than units, plus content-addressed early cutoff for small artifacts (D8). Reuse is within a project by default, across projects of a tenant by opt-in, and never across tenants (D9). Verification runs always bypass the cache.
+  - *Note:* Highest-value feature for iterative work: change one parameter and only that node and its descendants rerun. Also provides resume-after-failure (CORE 2.7) and shared prefixes in sweeps for free. Keys are hybrid: input-addressed for every node, chained through nodes rather than units, plus content-addressed early cutoff for small artifacts (D8). Reuse is within a project by default, across projects of a tenant by opt-in, and never across tenants (D9). Verification runs always bypass the cache. The plan shows expected reuse; the lookup made when each task run is created is authoritative (D47).
 - **CORE 2.7** — Resume a failed run from the point of failure, and re-run a single node together with its descendants.
 - **CORE 2.8** — Pause, resume, and cancel a run, with graceful drain of in-flight tasks.
   - *Note:* Pausing stops dispatch and lets running attempts finish, after which the run is suspended; cancelling signals running attempts at their next heartbeat (D31), which reaches the agent within about one round trip through its long-poll (D44).
@@ -1706,7 +1823,7 @@ The substrate all three disciplines run on. Everything here is discipline-agnost
 - **CORE 2.10** — Branch conditionally, skip a subgraph, and iterate until a condition holds. `[shapes the core]`
   - *Note:* Decided (D2): workflows are control-flow graphs, not strict DAGs. Only structured constructs are permitted, and iterations unroll into an acyclic run trace (D2). Revised in v0.10: conditions, collections and loop termination are CEL expressions, and nodes carry run rules over upstream outcomes (D41). Revised in v0.10 by D46: loops may carry state between iterations and run inside one unit, an n-way switch and branch joins are added, and reaching a loop's limit is an explicit outcome.
 - **CORE 2.11** — Survive infrastructure loss: a run continues correctly after a scheduler restart or a worker node disappearing. `[shapes the core]`
-  - *Note:* Implies leases with heartbeats and a reconciliation loop rather than fire-and-forget event handling.
+  - *Note:* Implies leases with heartbeats and a reconciliation loop rather than fire-and-forget event handling. Decided (D47, D48): a single leader fenced by an epoch, invariants enforced by the database, lease renewals held in memory and treated as renewed after a takeover, and a level-triggered sweep behind every event.
 - **CORE 2.12** — Declare that a node has external side effects — writes to an outside system, sends a message, triggers a deployment — so it is never served from cache and is suppressed or redirected during verification runs. `[shapes the core]` `[new in v0.2]`
   - *Note:* Without this, a cached "load to warehouse" silently never reloads, and a verification run re-sends the email.
 - **CORE 2.13** — Control caching directly: force-rerun a node and its descendants, disable caching per node or per run, set a time-to-live on nodes reading external sources, and pin a cache boundary inside a fused chain or mark a node to run as its own unit. `[new in v0.2]`
@@ -1744,15 +1861,16 @@ The substrate all three disciplines run on. Everything here is discipline-agnost
 
 - **CORE 3.1** — Schedule a workflow on a cron or interval, with timezone and DST handling.
 - **CORE 3.2** — Trigger on an event: webhook, file arrival, dataset update, upstream workflow completion.
+  - *Note:* Changes to external sources are detected by source probes that the reconciler runs periodically (D49).
 - **CORE 3.3** — Treat a run as covering a logical interval, not merely a wall-clock moment. `[shapes the core]`
   - *Note:* "The run for 2026-09-19" must be reproducible tomorrow. Without this, backfills and partition reruns are not expressible at all.
 - **CORE 3.4** — Backfill a historical date range with bounded concurrency and per-interval status. `[shapes the core]`
   - *Note:* Intervals commit as they complete; commits carry the backfill identifier and run below scheduled work in priority (D20).
 - **CORE 3.5** — Express a dependency from one workflow onto another workflow's output, where neither owns the other. `[shapes the core]`
 - **CORE 3.6** — Share capacity fairly: one project's large fan-out must not starve every other tenant. `[shapes the core]`
-  - *Note:* Fairness is a scheduler property, not a limit setting. Retrofitting it into FIFO dispatch means rewriting the scheduler. Decided (D43): dominant-resource fair share per capacity domain over decayed usage, with priority classes.
+  - *Note:* Fairness is a scheduler property, not a limit setting. Retrofitting it into FIFO dispatch means rewriting the scheduler. Decided (D43): dominant-resource fair share per capacity domain over decayed usage, with priority classes. Weights are set by the tenant Admin (D47).
 - **CORE 3.7** — Constrain overlap: prevent or queue a second run of the same workflow while one is in flight.
-  - *Note:* Implemented by partition write leases taken at admission; a queued run waits for the lease (D43).
+  - *Note:* Implemented by partition write leases taken at admission; a queued run waits for the lease (D43). By default runs overlap, serialised per partition, and a write lease is held by the task run across its retries (D48).
 - **CORE 3.9** — Declare how a node's output partitions depend on its input partitions — identity, a time window, all available, the latest, or specific values — or let a merge node discover the affected partitions from the data at run time. `[shapes the core]` `[new in v0.7]`
   - *Note:* Required wherever one input partition affects several output partitions, such as late-arriving records or rolling windows. Declared mappings let the plan be known in advance; discovered mappings do the minimum work but decide the plan as the run proceeds (D13).
 - **CORE 3.10** — Validate that a schedule's logical interval is compatible with the partitioning of the datasets it writes, including timezone, and require an explicit open-partition declaration when runs are finer-grained than partitions. `[new in v0.7]`
@@ -1802,9 +1920,9 @@ The substrate all three disciplines run on. Everything here is discipline-agnost
 - **CORE 5.8** — Register comparators and canonicalisers per artifact type through the plugin mechanism, with configurable default tolerances that are recorded alongside every verdict. `[new in v0.3]`
   - *Note:* Built-ins cover tables, metrics, JSON, text and common model types; domain plugins ship their own (e.g. BAM, VCF). Comparison is layered for large artifacts — byte hash, then summary statistics, then full comparison — and the verdict records which level was reached.
 - **CORE 5.9** — Record the range of positions consumed from every source — a snapshot identifier, object version or timestamp range — rather than only the identity of the input. `[shapes the core]` `[new in v0.5]`
-  - *Note:* Required by incremental extraction (DE 1.2) and by partition-level rerun; the same record generalises to offset and window lineage if streaming is added (D12, Seam 4).
+  - *Note:* Required by incremental extraction (DE 1.2) and by partition-level rerun; the same record generalises to offset and window lineage if streaming is added (D12, Seam 4). Positions in external sources are fixed at run start by source probes where the source allows (D49).
 - **CORE 5.10** — Resolve and record the versions of all inputs once at run start, read them under snapshot isolation for the whole run, and allow any input to be pinned to a specific version. `[shapes the core]` `[new in v0.7]`
-  - *Note:* Every node in a run sees the same input versions regardless of when it starts (D14).
+  - *Note:* Every node in a run sees the same input versions regardless of when it starts (D14). This includes external sources that can be read as of a probed position (D49).
 - **CORE 5.11** — Declare coherent reads for a workflow, with per-input override, so that inputs are resolved to versions consistent along lineage. `[new in v0.7]`
   - *Note:* Prevents joining a derived dataset with a newer version of its own upstream. Where no coherent set exists, the run fails with an explanation or follows its stale-input policy (D14, D16).
 
@@ -1871,7 +1989,7 @@ The substrate all three disciplines run on. Everything here is discipline-agnost
 - **CORE 7.4** — Audit who changed a definition, who ran what, and who accessed which dataset.
   - *Note:* Authorisation decisions on changes and data access are audited, as are commits made on an author's behalf (D45).
 - **CORE 7.5** — Enforce quotas on compute, storage, and concurrency per project.
-  - *Note:* Quotas are hard ceilings, separate from fair share (D43).
+  - *Note:* Quotas are hard ceilings, separate from fair share (D43). They are set by the tenant Admin (D47).
 - **CORE 7.6** — Run untrusted user-supplied containers without letting one tenant reach another's data, credentials, or network. `[shapes the core]`
   - *Note:* Decided (D5): hostile multi-tenancy belongs to the paid cloud edition; open-source deployments are operated by their owners. The executor abstraction must still let the cloud edition plug in sandboxed runtimes, because sandboxing cannot be added to a running multi-tenant cluster at acceptable cost.
 - **CORE 7.7** — Mint storage credentials inside the environment that owns the data, so that a hosted control plane never holds credentials for customer storage. `[shapes the core]` `[new in v0.7]`
@@ -1885,13 +2003,14 @@ The discipline with the most mature incumbent tooling. Migration is driven by li
 - **DE 1.1** — Connect to operational databases, warehouses, object storage, SaaS APIs, message queues, SFTP, and flat files.
   - *Note:* Connector coverage is an unbounded long tail. A connector SDK is a higher priority than a large first-party connector set.
 - **DE 1.2** — Extract incrementally, persisting watermark or cursor state between runs. `[shapes the core]`
-  - *Note:* A task that retains its position between runs is stateful, which a pure DAG does not accommodate. Decided (D37): no separate state store; the cursor is the end position recorded by the last committed extraction run.
+  - *Note:* A task that retains its position between runs is stateful, which a pure DAG does not accommodate. Decided (D37): no separate state store; the cursor is the end position recorded by the last committed extraction run. The end position of each range is fixed at run start by a source probe (D49).
 - **DE 1.3** — Capture change from a source: log-based CDC where available, query-based polling otherwise.
   - *Note:* Each connector declares its change-detection strategy; the platform shows whether it captures hard deletes and offers periodic full-snapshot reconciliation where it does not (D37).
 - **DE 1.4** — Bootstrap a full historical load and hand over cleanly to incremental extraction.
 - **DE 1.5** — Respect source rate limits, paginate, and resume a partially completed extraction.
   - *Note:* Resumption uses the task run's checkpoint slot (D31).
 - **DE 1.6** — Sense file arrival by path pattern and trigger downstream work on it.
+  - *Note:* Sensed by source probes that the reconciler runs periodically (D49).
 - **DE 1.7** — Where data from a mutable source is copied (D35), partition the copy by ingestion time, treat each raw partition as the authoritative snapshot of what was extracted, and rerun downstream work from the raw partition rather than by re-querying the source. `[shapes the core]` `[new in v0.7]`
   - *Note:* Re-querying a mutable table returns its current state, not the state at the original extraction. Re-extraction is therefore an explicit act producing a new version of the raw partition. Downstream curated datasets are partitioned by event time with a declared lateness window (D13). Whether a source is copied is the author's explicit choice, with no default (D35). An ephemeral read is repeated at run time, may be fused into downstream transformations, and caps dependent runs at Traceable when the source is unversioned (D4, D35). The raw copy carries its ingestion time as a column (D44).
 
@@ -1925,10 +2044,10 @@ The discipline with the most mature incumbent tooling. Migration is driven by li
 
 - **DE 4.1** — Declare tests on data — uniqueness, not-null, referential integrity, accepted values, custom assertions — that can fail a run. `[cross-discipline]`
 - **DE 4.2** — Monitor dataset freshness and row-volume anomalies against expectation.
-  - *Note:* The freshness expectation is declared by the dataset owner, with a default derived from the production schedule where none is given. A breach is reported against the dataset itself, independently of whether a scheduled run occurred (CORE 6.8, DE 5.8).
+  - *Note:* The freshness expectation is declared by the dataset owner, with a default derived from the production schedule where none is given. A breach is reported against the dataset itself, independently of whether a scheduled run occurred (CORE 6.8, DE 5.8). For external sources, freshness is observed by source probes (D49).
 - **DE 4.3** — Detect distribution drift on columns between runs. `[cross-discipline]`
 - **DE 4.4** — Halt propagation downstream when a quality gate fails, so bad data does not reach consumers. `[shapes the core]`
-  - *Note:* Requires the scheduler to distinguish failure from suspension on an upstream quality gate, and to hold rather than retry. Holds are bounded by a configurable timeout, after which the run ends as failed (D31).
+  - *Note:* Requires the scheduler to distinguish failure from suspension on an upstream quality gate, and to hold rather than retry. Holds are bounded by a configurable timeout, after which the run ends as failed (D31). The attempt whose gate fails ends held, with its staged outputs kept (D48).
 - **DE 4.5** — Quarantine rejected records to a dead-letter location and reprocess them once fixed.
 - **DE 4.6** — Reconcile source and destination counts or checksums after a load.
 
@@ -2036,7 +2155,7 @@ Moving a model from experiment to a scheduled, trusted, replaceable and reversib
   - *Note:* Models are a specialised dataset type, so registration is publication and model lineage is dataset lineage (D17).
 - **MLE 3.3** — Generate a model card from the run — intended use, training data, evaluation, fairness results, limitations.
 - **MLE 3.4** — Require approval, and passing evaluation gates, before a model version can be promoted. `[shapes the core]`
-  - *Note:* A workflow that pauses for human input is a distinct, long-lived execution state resumed externally. Decided (D31): an approval node's task run is suspended without a lease and resumed through the API; gated publication uses the same state.
+  - *Note:* A workflow that pauses for human input is a distinct, long-lived execution state resumed externally. Decided (D31): an approval node's task run is suspended without a lease and resumed through the API; gated publication uses the same state. A gated commit leaves its attempt held until approval (D48).
 - **MLE 3.5** — Package a model for deployment: framework-native, ONNX, or a self-contained container image.
 
 #### 4 · Inference & release
@@ -2068,7 +2187,7 @@ Moving a model from experiment to a scheduled, trusted, replaceable and reversib
 
 ## Catalogue footer
 
-Initial scope. Deep learning and visual neural-network design are excluded by decision; should they be reintroduced, the recommended approach is a plugin that emits a training container rather than a second meaning for the term “node”. Items are capability statements rather than a backlog; the first development slice is set by D29, and further priority and phasing are to follow. The log records forty-six decisions (D1–D46) from the scoping sessions; unresolved questions are carried as open items.
+Initial scope. Deep learning and visual neural-network design are excluded by decision; should they be reintroduced, the recommended approach is a plugin that emits a training container rather than a second meaning for the term “node”. Items are capability statements rather than a backlog; the first development slice is set by D29, and further priority and phasing are to follow. The log records forty-nine decisions (D1–D49) from the scoping sessions; unresolved questions are carried as open items.
 
 ---
 
@@ -2085,11 +2204,12 @@ Initial scope. Deep learning and visual neural-network design are excluded by de
 3. **Details recorded in D28 to review.**
    - When a pinned plan can no longer be honoured, the run stops before execution until the author accepts a new plan. The alternative is falling back to the new plan with a warning.
    - How a credit budget is enforced is attached to S22 and not yet defined.
+   - Unit grouping under a pinned plan: compared with the pinned plan and reported, but not enforced, since regrouping changes no cache keys (D8, D33). Agreed in v0.10 as the direction; recorded in D28 when its review is taken up.
 4. **Repartition key (D25, CORE 2.26).** The planner takes the key from the grouping a node declares. The alternative is that authors place repartition steps themselves.
 
 Items 1 and 3 concern warehouses and fall outside the first development slice (D29); they are settled when pushdown is taken up.
 
-5. *Withdrawn.* A first-slice topology decision is unnecessary: with the pull-based agent in every deployment (D29) and isolation enforced from the start (D30), topologies differ only in where the control plane runs, provided the protocol is designed to hybrid requirements from the outset (see section 4, item 1). Whether and when a hosted control plane is operated is a roadmap question (section 5, item 15). Fully managed would still add sandboxing between tenants (CORE 7.6), metering and billing.
+5. *Withdrawn.* A first-slice topology decision is unnecessary: with the pull-based agent in every deployment (D29) and isolation enforced from the start (D30), topologies differ only in where the control plane runs, provided the protocol is designed to hybrid requirements from the outset (see section 4, item 1). Whether and when a hosted control plane is operated is a roadmap question (section 5, item 16). Fully managed would still add sandboxing between tenants (CORE 7.6), metering and billing.
 6. *Confirmed and recorded in D37* (incremental extraction state).
 7. *Confirmed and recorded in D38* (point-in-time retrieval).
 8. *Confirmed and recorded in D39* (online model serving excluded).
@@ -2102,7 +2222,7 @@ The narrowed Ibis spike proposed here in an earlier draft of v0.10 has been conf
 
 | Source | Follow-up |
 |---|---|
-| D27 | **Spike (condition for full confirmation):** classify each candidate built-in node into the four Ibis-first tiers and so derive the Polars exceptions; run the nodes on DuckDB, including operations larger than memory under a fixed memory limit; check that they compile for Postgres and Snowflake; and review the Ibis project's maintenance and release practices. |
+| D27 | **Spike (condition for full confirmation):** classify each candidate built-in node into the four Ibis-first tiers and so derive the Polars exceptions; run the nodes on DuckDB, including operations larger than memory under a fixed memory limit; check that they compile for Postgres and Snowflake; and review the Ibis project's maintenance and release practices; and, added by D47, whether fixed-column pivots and ordered aggregates compile on DuckDB into forms that spill. |
 | D27 | PySpark compile check, deferred until a Spark engine is taken up. |
 | D26 | Placement constraints and residency: the IR block, dataset-level rules, constraint resolution, capacity conflicts, and the transition for existing workflows (a warning-only phase was suggested). The "Considered" ideas await a decision. |
 | D5 | Licence, open/paid line, and bring-your-own AI keys. The licence must be chosen before the first public release or first external contribution. With bring-your-own-compute as the primary model, managed infrastructure is no longer the main paid offering, so the commercial line should be revisited when this is taken up. The licences of dependencies are reviewed with it, including ELK's EPL-2.0 (D44). |
@@ -2120,15 +2240,18 @@ The narrowed Ibis spike proposed here in an earlier draft of v0.10 has been conf
 | D31 | Default retention of quarantined versions (S15). |
 | D32 | Units spanning several containers scheduled together, for training across machines (MLE 2.1), or Ray against customer-operated clusters (D25). |
 | D33 | A cost-informed fusion policy using measured cost and change frequency from run history. |
-| D34 | The estimation method for working sets; capacity as the selection step between engines at one location, applied when Spark or another such engine is added. |
+| D34 | Capacity as the selection step between engines at one location, applied when Spark or another such engine is added. The estimation method was set by D47; its expansion factors, percentile and margin are tuned from measurements. |
 | D38 | The point-in-time join node, designed with the palette; whether extraction stamps a row-level ingestion timestamp by default on datasets not partitioned by ingestion time, where D44 already requires one. |
 | D40 | Signed requests and responses (RFC 9421) as the alternative proof of agent identity, implemented when hybrid deployment is taken up (D44). |
 | D41 | Comment preservation on write-back, deferred by D44; how the canvas checks CEL expressions, with the visual builder (D44); the Python SDK after the first slice. |
 | D42 | An exact commit watermark, if a feature needs as-of queries close to the present; the file-count threshold for external manifest listings; native Glue, Hive Metastore and file-only catalogues after the first slice (D44). |
-| D43 | Load testing of the scale targets; revisiting the priority classes and the backfill guarantee with operating experience; evaluating backend-native queueing such as Kueue; the default half-life of decayed usage; how pools are assigned to capacity domains, by declaration or from the backend identity agents report; pools serving several tenants in the fully managed topology, only if per-tenant agent overhead or sign-up latency proves material. |
-| D44 | **Interoperability spike (condition):** projected tables read correctly by DuckDB, Spark, Trino and PyIceberg, including partition values, time zones, name mapping and type mapping, then kept as a CI suite; iceberg-go as the fallback if it fails. A resource-style REST public surface through Vanguard, with the API work (section 5, item 12). The EPL-2.0 licence of ELK, reviewed with D5. |
+| D43 | Load testing of the scale targets; revisiting the priority classes and the backfill guarantee with operating experience; evaluating backend-native queueing such as Kueue; the default half-life of decayed usage; how pools are assigned to capacity domains, by declaration or from the backend identity agents report; pools serving several tenants in the fully managed topology, only if per-tenant agent overhead or sign-up latency proves material; whether a run waiting for its inputs counts as in flight when a workflow's overlap policy is to queue (CORE 3.7). |
+| D44 | **Interoperability spike (condition):** projected tables read correctly by DuckDB, Spark, Trino and PyIceberg, including partition values, time zones, name mapping and type mapping, then kept as a CI suite; iceberg-go as the fallback if it fails. A resource-style REST public surface through Vanguard, with the API work (section 5, item 13). The EPL-2.0 licence of ELK, reviewed with D5. |
 | D45 | A project-level row-security backstop, if wanted; custom roles and attribute-based policy behind the policy extension (D5); syncing teams from identity-provider groups, with the authentication provider; the break-glass procedure for support access, before a hosted control plane is operated; the rule mapping git authors to principals, with the authentication provider; integrations with each git host, of which pull requests need the host's API; how deployment maps to environments (MLE 6.2), by a deploy branch per environment or one branch with bindings per environment; whether the per-workflow override of the reproducibility setting (D36) is a governed field. |
 | D46 | The exact syntax of carried state, the loop scope, branch joins and the switch, with the IR specification; a graph construct for pruning concurrent trials, if the code-node route proves insufficient. |
+| D47 | Load testing of the leader-centred topology against the targets of D43; putting a broker or cache behind the event-relay, change-feed or rate-limiter seams only if load tests miss those targets through churn in queue tables, if interface fan-out outgrows notification hints, or if hosted rate limiting needs exact shared counters; cells for a hosted control plane (section 5, item 15); the exact run outcome rule and how a fused unit's request combines the needs of its segments, with the IR specification (section 5, item 3); catching up scheduled intervals missed while the control plane was down. |
+| D48 | Defaults for the offer timeout, the delivery attempts before a dead letter and their back-off; how many times a restatement re-stages conflicting intervals before reporting them. |
+| D49 | Native probes in the agent for built-in source kinds, if measured probe latency matters; how the pool for a probe is chosen when a source's connection is bound to several pools. |
 
 ## 3. Open items
 
@@ -2165,7 +2288,7 @@ Questions anticipated by the design but not yet resolved. S4, S9–S14, S18 and 
 
 Which questions must be settled before development begins, and which can wait until the work reaches them. An item blocks the start of development only if the first code would build it into something expensive to change later: a persisted schema, the wire protocol that runs inside customer environments, or the IR format that users commit to git. An item whose later correction only costs performance, such as extra cache misses, or is purely additive, waits.
 
-**Settled in the first round (v0.10).** First development slice (D29); isolation enforced from the start (D30); execution state model (D31); execution unit structure (D32); automatic fusion (D33); node-level cache keys (D8); Ibis on DuckDB for every built-in node (D27); capacity checks in place of declared sizes (D34); explicit storage choice for external sources (D35); data-engineering practice first (D36); incremental extraction state (D37); point-in-time retrieval (D38); online serving excluded (D39); default visibility (D30); protocol between the control and data planes (D40); IR text form, round-trip and structure (D41); catalogue persistence (D42); scheduling and capacity (D43); minimum technology stack (D44); isolation mechanism and role model (D45); control-flow constructs (D46). The licence is deferred until the repository is made public (D5, D29).
+**Settled in the first round (v0.10).** First development slice (D29); isolation enforced from the start (D30); execution state model (D31); execution unit structure (D32); automatic fusion (D33); node-level cache keys (D8); Ibis on DuckDB for every built-in node (D27); capacity checks in place of declared sizes (D34); explicit storage choice for external sources (D35); data-engineering practice first (D36); incremental extraction state (D37); point-in-time retrieval (D38); online serving excluded (D39); default visibility (D30); protocol between the control and data planes (D40); IR text form, round-trip and structure (D41); catalogue persistence (D42); scheduling and capacity (D43); minimum technology stack (D44); isolation mechanism and role model (D45); control-flow constructs (D46); control-plane structure (D47); execution mechanics (D48); source probes (D49). The licence is deferred until the repository is made public (D5, D29).
 
 **Still to settle before development.** All six items are now settled; what remains is settled when the work reaches it (below).
 
@@ -2176,7 +2299,7 @@ Which questions must be settled before development begins, and which can wait un
 5. **Minimum technology stack.** *Settled in D44*, except the authentication and identity provider, the observability stack and the image builder and registry, which are settled when the work reaches them (below). *(Part I, section 4)*
 6. **Isolation mechanism and role model.** *Settled in D45*, completing D30.
 
-**Decided seams the first schema must include.** Tenant identifier on every entity (D5); immutable dataset identifier (D19); schema version in the IR (D3); separate semantic and operational fields (D8); phase separate from outcome (D12 Seam 1, D31); failure classes on attempts, checkpoint slots on task runs and the reused outcome (D31); memory class on node types (D34); execution-mode field on node types (D12 Seam 3); read positions consumed (D12 Seam 4); metrics as time series (D12 Seam 10); backend lifecycle interface (D12 Seam 9); attempt-scoped staging with fencing tokens on commits (D15); backend and region of every attempt and artifact (D26 Seam 1); eligibility filter on cache hits (D26 Seam 2); placement and its reason recorded by the planner (D26 Seam 3); query and job tagging (D28); byte and row counts per partition on every manifest, and capacity ceilings per backend (D34); commentable IR collections keyed by stable identifier, partition keys stored as columns in managed tabular data, and agent identity checked as possession of the enrolled key (D44); row-level security enabled and forced on every table, the tenant in every unique constraint and foreign key, owner, application and system database roles, a permission annotation on every API method, clearance on memberships, and drafts held apart from committed definitions (D45); an execution-mode field and declared carried state on loop frames, and the loop scope in expressions (D46); the tenant on every agent message and agent internals keyed by tenant (D43); extension interfaces for authentication, policy, audit and AI (D5).
+**Decided seams the first schema must include.** Tenant identifier on every entity (D5); immutable dataset identifier (D19); schema version in the IR (D3); separate semantic and operational fields (D8); phase separate from outcome (D12 Seam 1, D31); failure classes on attempts, checkpoint slots on task runs and the reused outcome (D31); memory class on node types (D34); execution-mode field on node types (D12 Seam 3); read positions consumed (D12 Seam 4); metrics as time series (D12 Seam 10); backend lifecycle interface (D12 Seam 9); attempt-scoped staging with fencing tokens on commits (D15); backend and region of every attempt and artifact (D26 Seam 1); eligibility filter on cache hits (D26 Seam 2); placement and its reason recorded by the planner (D26 Seam 3); query and job tagging (D28); byte and row counts per partition on every manifest, and capacity ceilings per backend (D34); commentable IR collections keyed by stable identifier, partition keys stored as columns in managed tabular data, and agent identity checked as possession of the enrolled key (D44); row-level security enabled and forced on every table, the tenant in every unique constraint and foreign key, owner, application and system database roles, a permission annotation on every API method, clearance on memberships, and drafts held apart from committed definitions (D45); an execution-mode field and declared carried state on loop frames, and the loop scope in expressions (D46); the tenant on every agent message and agent internals keyed by tenant (D43); a leader epoch row, a unique key per workflow, trigger and logical interval for scheduled runs, and uncompressed sizes among manifest statistics (D47); phase, sub-state and outcome columns with their check constraints, the held attempt outcome, timestamps per key transition, write leases held by task runs, and outbox rows per event and handler carrying an ordering key and aggregate version (D48); probed positions on external source declarations and read records (D49); extension interfaces for authentication, policy, audit and AI (D5).
 
 **Settled when the work reaches them.**
 
@@ -2195,6 +2318,8 @@ Which questions must be settled before development begins, and which can wait un
 | Mapping git authors to principals (D45) | Deploying git-connected projects with checks on governed fields |
 | Engine family in the cache key (D25) | Cache implementation; an error only causes extra misses |
 | Split semantics for leakage prevention (DS 2.8) | The data-science palette; the IR leaves room for it |
+| Broker or cache behind the event-relay, change-feed or rate-limiter seams (D47) | Load tests missing the targets of D43, or a hosted control plane at scale |
+| Native agent probes for built-in source kinds (D49) | Measured probe latency |
 | Two-level warehouse policy, pinned-plan behaviour, repartition key (section 1) | Warehouse pushdown and planner work, outside the first slice |
 
 **Set aside.** Retention (S1, S15), verification sampling (S2), preview sample sizes (S3), archiving (S5), placement and residency (S6, S23, D26), skew and memory escalation (S7, S8), deprecation and breaking changes (S16, S17), visibility and sharing (S19, S20), lineage export (S21), cost attribution (S22), the open/paid line (D5), and the deferred follow-ups of D11, D17, D18, D19, D22, D24 and D25. The competitive landscape section is an addition to this document, not a design question; the mismatch between the code-node lists of CORE 1.8 and D25 was corrected in v0.10.
@@ -2203,19 +2328,20 @@ Which questions must be settled before development begins, and which can wait un
 
 In a suggested order. Each topic is expected to produce decisions, capability lines or open items in the catalogue.
 
-1. **Control plane and domain-driven design.** Bounded contexts (authoring and IR, orchestration and scheduling, dataset catalogue, provenance, execution and dispatch, identity and tenancy, plugin registry); aggregates and invariants; the scheduler, reconciler, dispatcher and planner, including placement under D25–D28 and the repartition step; lease and fencing mechanics; state-machine mechanics, building on the model recorded in D31; concurrency model; event flow.
-2. **IR specification.** The detailed specification of what D41 decided: the document schema and its migrations, the YAML subset, the three-way merge on the semantic model, the layout sidecar, the CEL environment and function library, value outputs and run rules; split semantics for leakage prevention (DS 2.8); and the node-type contract, including declared runtime, execution modes, supported dialects, declared grouping keys, memory class, order dependence, output-schema mode and value outputs (D27, D34, D41); commentable collections keyed by stable identifier (D44); and the control-flow constructs of D46: carried state, the loop scope, branch joins, the switch, loop execution modes and column selectors.
-3. **Execution backends.** The backend interface in detail; Kubernetes and Slurm adapters; the agent protocol as recorded in D40 and D44; image building and registries in the customer's environment (CORE 1.10, D22); job tagging on every backend (CORE 4.8); units spanning several containers for training across machines (MLE 2.1).
-4. **Warehouse adapter.** The interface covering pushdown, extraction to Arrow, publication (D15), time-travel replay (D4), credential minting (D22), connection policy (D28) and query tagging; the Snowflake implementation; the conformance-matrix harness and CI accounts.
-5. **Node SDK and palette.** The built-in palette per discipline with each node assigned to an Ibis-first tier (D27); the plugin SDK; UI forms from parameter schemas, including column selectors (D46).
-6. **Visual builder UX.** Canvas behaviour; sample-then-scale (DS 1.4); showing units and fusion; plan, engine, placement and capacity-check visibility, including extraction suggestions and pinned-plan differences; fused-node inspection; drafts, commits and deploying (D45).
-7. **Security and identity.** Authentication; custom roles and attribute-based policy beyond the fixed roles of D45; secrets; signed agent messages for networks that inspect TLS (D44); sandboxing of untrusted containers (CORE 7.6); audit.
-8. **Technology stack selection.** The items still undecided in Part I, section 4: authentication and identity, observability, and image building and registries. The minimum stack is recorded in D44.
-9. **Observability implementation.** Logs, metrics, events, alerting, cost attribution (CORE 4.5, S22).
-10. **Discipline specifics.** DE (connectors, CDC, SCD, idempotent writes); DS (leakage prevention, tuning loops per DS 3.6); MLE (the point-in-time join node of D38, approvals, retraining loop, checkpointing per MLE 2.3).
-11. **Reproducibility implementation.** Verification policy (S2), comparator plugins, run bundles (CORE 5.6).
-12. **APIs.** The public API over ConnectRPC, including whether and when a resource-style REST surface is added through Vanguard (D44); CLI; SDK.
-13. **Business model and open-core line** (D5), revisited in light of bring-your-own-compute.
-14. **Non-functional requirements.** Scale targets beyond those set in D43, archiving (S5), SLAs, availability.
-15. **Roadmap and phasing.** Beyond the first development slice (D29): v1, then v2, including whether and when a hosted control plane is operated.
-16. **Open items.** S1–S3, S5–S8, S15–S17 and S19–S23.
+1. **Control plane and domain-driven design.** *Settled in D47 (structure), D48 (execution mechanics) and D49 (source probes).*
+2. **Development mode.** How development and sample runs on drafts behave (D45, CORE 6.6, DS 1.4): whether they may publish, and through which environment bindings (MLE 6.2); how they relate to production runs of the same workflow; their priority class (D43) and their use of the cache.
+3. **IR specification.** The detailed specification of what D41 decided: the document schema and its migrations, the YAML subset, the three-way merge on the semantic model, the layout sidecar, the CEL environment and function library, value outputs and run rules; split semantics for leakage prevention (DS 2.8); and the node-type contract, including declared runtime, execution modes, supported dialects, declared grouping keys, memory class, order dependence, output-schema mode and value outputs (D27, D34, D41); commentable collections keyed by stable identifier (D44); and the control-flow constructs of D46: carried state, the loop scope, branch joins, the switch, loop execution modes and column selectors; the exact run outcome rule and how a fused unit's resource request combines the needs of its segments (D47).
+4. **Execution backends.** The backend interface in detail; Kubernetes and Slurm adapters; the agent protocol as recorded in D40, D44 and D48; source probes and the connector `probe` function (D49); image building and registries in the customer's environment (CORE 1.10, D22); job tagging on every backend (CORE 4.8); units spanning several containers for training across machines (MLE 2.1).
+5. **Warehouse adapter.** The interface covering pushdown, extraction to Arrow, publication (D15), time-travel replay (D4), credential minting (D22), connection policy (D28) and query tagging; the Snowflake implementation; the conformance-matrix harness and CI accounts.
+6. **Node SDK and palette.** The built-in palette per discipline with each node assigned to an Ibis-first tier (D27); the plugin SDK; UI forms from parameter schemas, including column selectors (D46); fixed-column pivots and ordered aggregates implemented in forms that spill (D27, D47).
+7. **Visual builder UX.** Canvas behaviour; sample-then-scale (DS 1.4); showing units and fusion; plan, engine, placement and capacity-check visibility, including extraction suggestions and pinned-plan differences; fused-node inspection; drafts, commits and deploying (D45).
+8. **Security and identity.** Authentication; custom roles and attribute-based policy beyond the fixed roles of D45; secrets; signed agent messages for networks that inspect TLS (D44); sandboxing of untrusted containers (CORE 7.6); audit.
+9. **Technology stack selection.** The items still undecided in Part I, section 4: authentication and identity, observability, and image building and registries. The minimum stack is recorded in D44.
+10. **Observability implementation.** Logs, metrics, events, alerting, cost attribution (CORE 4.5, S22).
+11. **Discipline specifics.** DE (connectors, CDC, SCD, idempotent writes); DS (leakage prevention, tuning loops per DS 3.6); MLE (the point-in-time join node of D38, approvals, retraining loop, checkpointing per MLE 2.3).
+12. **Reproducibility implementation.** Verification policy (S2), comparator plugins, run bundles (CORE 5.6).
+13. **APIs.** The public API over ConnectRPC, including whether and when a resource-style REST surface is added through Vanguard (D44); CLI; SDK.
+14. **Business model and open-core line** (D5), revisited in light of bring-your-own-compute.
+15. **Non-functional requirements.** Scale targets beyond those set in D43, archiving (S5), SLAs, availability; cells, each with its own database and a set of tenants, as the route for scaling a hosted control plane (D47).
+16. **Roadmap and phasing.** Beyond the first development slice (D29): v1, then v2, including whether and when a hosted control plane is operated.
+17. **Open items.** S1–S3, S5–S8, S15–S17 and S19–S23.
