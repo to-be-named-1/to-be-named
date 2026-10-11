@@ -11,7 +11,7 @@ export MSYS_NO_PATHCONV := 1
 
 .DEFAULT_GOAL := help
 
-.PHONY: help docs-up docs-down docs-validate docs-inspect docs-export docs-check
+.PHONY: help docs-up docs-down docs-validate docs-inspect docs-export docs-link docs-check
 
 help: ## List the available targets
 	@$(PYTHON) -c "import re; [print(f'{m[1]:<15} {m[2]}') for m in re.finditer(r'^([a-z][a-z-]+):.*?## (.+)$$', open('Makefile', encoding='utf-8').read(), re.M)]"
@@ -34,6 +34,10 @@ docs-export: ## Export the workspace as JSON and as a static site to docs/build
 	$(STRUCTURIZR) export -workspace workspace.dsl -format json -output /usr/local/build/json
 	$(STRUCTURIZR) export -workspace workspace.dsl -format static -output /usr/local/build/site
 
+docs-link: ## Turn bare references (D29, S25, CORE 2.6) into relative links
+	$(PYTHON) tools/docs/link.py --root docs/architecture
+
 docs-check: docs-validate ## Validate, then run the documentation checks
 	$(STRUCTURIZR) export -workspace workspace.dsl -format json -output /usr/local/build/json
 	$(PYTHON) tools/docs/check.py --root docs/architecture --workspace-json $(DOCS_BUILD)/json/workspace.json
+	$(PYTHON) tools/docs/link.py --root docs/architecture --check

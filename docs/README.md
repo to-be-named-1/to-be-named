@@ -69,6 +69,7 @@ This section is temporary. It is removed in the commit that retires `project-des
 - References: a decision's references include the decisions, open items and capability lines it cites, the decisions that amend it, and the capability lines whose notes cite it. A decision that only cites another need not appear in the other's references.
 - `Applies to` names model elements by identifier; each of them lists the decision in its `decisions` property, and the check confirms that both sides agree.
 - Reasoning carried over from the design record's Part I §3 is cited in the Context section as "Reasoning item N".
+- ADRs migrated from the design record carry the date its revision v0.10 was issued, 2026-10-11. When each decision entered the record is shown in the revision history of the workspace documentation.
 
 ### Model
 
@@ -84,8 +85,10 @@ This section is temporary. It is removed in the commit that retires `project-des
 
 - Workspace documentation (`architecture/documentation/workspace/`) holds reference material: the brief, vocabulary, capability catalogue, open items, proposals, design agenda, implementation checklist, roadmap and revision history.
 - Platform documentation (`architecture/documentation/platform/`) describes the architecture in arc42's twelve sections, in arc42's numbering.
-- Container documentation follows one template: `01-responsibility`, `02-interfaces`, `03-components`, `04-state`, `05-key-flows`, `06-failure-and-scaling`, `07-security`, `08-configuration`, `09-decisions`. A section that does not apply is omitted; the numbering never changes.
-- Each file begins with exactly one level-1 heading. Text refers to decisions, open items, capability lines and views by ID; relative links are checked.
+- Container documentation follows one template: `01-responsibility`, `02-interfaces`, `03-components`, `04-state`, `05-key-flows`, `06-failure-and-scaling`, `07-security`, `08-configuration`, `09-decisions`. A section that does not apply is omitted; file numbers never change, while the section numbers Structurizr displays follow the files present.
+- Each documentation file begins with one `##` heading, its section title; subsections use `###` and below. Structurizr hides `#` headings and numbers `##` sections in file order, so the platform documentation's files `01`–`12` carry arc42's numbering. ADRs keep `# N. Title`.
+- References in prose use IDs as link text: `[D29](…)` to the ADR file, `[S25](…)` to the open-items file, `[CORE 2.6](…)` to the capability file; never to a heading anchor, since Structurizr and GitHub derive anchors differently. Authors write bare IDs and run `make docs-link`, which adds the links; `make docs-check` reports any bare reference left. Open item S3 is linked by hand, because "S3" also names Amazon S3. On an ADR's status-block lines (`Amends`, `Amended by`, `Supersedes`, `Superseded by`) the link reads `N. Title`, matching the target's title; the linker writes and corrects that form, and the check enforces it.
+- Links between ADRs, and between files of one documentation set, work both in Structurizr and on GitHub. Links from documentation to ADRs, or between documentation sets, work on GitHub only; the ID still reads correctly where the link does not resolve.
 - Documentation describes the target architecture and never says what is not yet built; phasing lives in the roadmap section only.
 - Figures are text first; an image is an SVG or PNG beside its editable source. Diagrams are embedded with `![](embed:view-key)`.
 - Register: neutral third person, British spelling.
@@ -98,6 +101,8 @@ This section is temporary. It is removed in the commit that retires `project-des
 2. `decisions` properties name existing ADRs and agree with each ADR's `Applies to` line.
 3. No forbidden relationship, explicit or implied ([`tools/docs/forbidden-edges.json`](../tools/docs/forbidden-edges.json); each rule cites the decisions it restates).
 4. Every overlay file carries its header.
-5. Markdown headings and relative links.
+5. Markdown headings, relative links, and the text of links to ADRs.
+
+It then runs `tools/docs/link.py --check`, which reports any reference not yet linked.
 
 `make docs-inspect` runs Structurizr's inspections and reports without failing, until the model is complete.

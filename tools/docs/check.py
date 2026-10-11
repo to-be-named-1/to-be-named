@@ -9,7 +9,9 @@ Run by `make docs-check`, after `structurizr validate` and a JSON export of the 
      migrated ADR's "Applies to" line agrees with the elements that cite it.
   3. No forbidden relationship (tools/docs/forbidden-edges.json), explicit or implied.
   4. Every overlay file carries its header.
-  5. Markdown: one level-1 heading, on the first line; relative links resolve.
+  5. Markdown: documentation files begin with one `##` heading, the README with one `#`;
+     relative links resolve; links to ADRs read `Dn` or `N. Title` with the right number.
+     (Bare references are reported by tools/docs/link.py --check.)
   6. With --cutover: the count check required before project-design.md is retired.
 
 Standard library only. Exit status 1 if any error is reported.
@@ -48,11 +50,12 @@ OVERLAY_FIELDS = ("// Overlay:", "// Purpose:", "// Remove when:")
 ADR_NAME = re.compile(r"^(\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$")
 ADR_TITLE = re.compile(r"^# (\d+)\. (\S.*)$")
 ADR_LINK = re.compile(
-    r"^(Amends|Amended by|Supersedes|Superseded by) \[[^\]]+\]\((\d{4}-[a-z0-9-]+\.md)\)$"
+    r"^(Amends|Amended by|Supersedes|Superseded by) \[([^\]]+)\]\((\d{4}-[a-z0-9-]+\.md)\)$"
 )
 DECISION_REF = re.compile(r"\bD(\d+)\b")
 MD_LINK = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
-SKIPPED_LINK_PREFIXES = ("http://", "https://", "mailto:", "#", "embed:")
+INLINE_CODE = re.compile(r"`[^`]*`")
+SKIPPED_LINK_PREFIXES =("http://", "https://", "mailto:", "#", "embed:")
 
 CUTOVER_DECISIONS = 50
 CUTOVER_PARTIAL = {27}
@@ -111,6 +114,7 @@ class Adr:
     status: str | None = None
     applies_to: list[str] | None = None
     links: list[tuple[str, str, int]] = field(default_factory=list)
+    link_texts: dict[str, str] = field(default_factory=dict)  # target file -> link text
     sections: list[str] = field(default_factory=list)
     pending: bool = False
     text: str = ""
@@ -184,7 +188,8 @@ def parse_adr(path: Path, report: Report) -> Adr | None:
         if not link:
             report.error(f"{where}:{i + 1}", "lines after the status must be labelled links such as 'Amends [8. Title](0008-title.md)'")
             continue
-        adr.links.append((link[1], link[2], i + 1))
+        adr.links.append((link[1], link[3], i + 1))
+        adr.link_texts[link[3]] = link[2]
 
     if not adr.pending:
         for required in ("Context", "Decision"):
@@ -218,6 +223,9 @@ def check_adrs(decisions_dir: Path, report: Report) -> dict[int, Adr]:
             if other is None:
                 report.error(f"{where}:{line}", f"link target {target} does not exist")
                 continue
+            expected = f"{other.number}. {other.title}"
+            if adr.link_texts.get(target) != expected:
+                report.error(f"{where}:{line}", f"the link to {target} must read '{expected}'")
             inverse = INVERSE_LINK[label]
             if not any(l == inverse and t == adr.path.name for l, t, _ in other.links):
                 report.error(f"{where}:{line}", f"{target} lacks the matching '{inverse}' link back to {adr.path.name}")
@@ -384,24 +392,47 @@ def check_overlays(root: Path, report: Report) -> None:
 # --- 5. Markdown ---------------------------------------------------------------------------
 
 
-def check_markdown(paths: list[Path], report: Report) -> None:
+def check_markdown(paths: list[Path], root: Path, report: Report) -> None:
+    """Headings by kind of file, relative links, and the text of links to ADRs.
+
+    Documentation files start with one `##` heading (Structurizr hides `#` and numbers `##`
+    as sections); ADR headings are checked by parse_adr; the README outside the workspace
+    starts with one `#` heading, as GitHub renders it.
+    """
+    decisions_dir = (root / "decisions").resolve()
     for path in paths:
         where = display(path)
         lines = path.read_text(encoding="utf-8").splitlines()
         content = list(unfenced(lines))
-        h1 = [i for i, line in content if line.startswith("# ")]
         first = next((i for i, line in enumerate(lines) if line.strip()), None)
-        if len(h1) != 1:
-            report.error(where, f"needs exactly one level-1 heading, found {len(h1)}")
-        elif h1[0] != first:
-            report.error(f"{where}:{h1[0] + 1}", "the level-1 heading must be the first line")
+        is_adr = path.resolve().parent == decisions_dir
+        inside = root.resolve() in path.resolve().parents
+        if not is_adr:
+            h1 = [i for i, line in content if line.startswith("# ")]
+            if inside:
+                if h1:
+                    report.error(f"{where}:{h1[0] + 1}", "documentation files use no '#' heading; Structurizr hides it")
+                if first is None or not lines[first].startswith("## "):
+                    report.error(where, "a documentation file must begin with its '##' section heading")
+            elif len(h1) != 1 or h1[0] != first:
+                report.error(where, "must begin with exactly one level-1 heading")
         for i, line in content:
-            for target in MD_LINK.findall(line):
+            for match in MD_LINK.finditer(INLINE_CODE.sub("", line)):
+                target = match[1]
                 if target.startswith(SKIPPED_LINK_PREFIXES):
                     continue
                 relative = target.split("#", 1)[0].split("?", 1)[0]
-                if relative and not (path.parent / relative).exists():
+                if not relative:
+                    continue
+                resolved = (path.parent / relative).resolve()
+                if not resolved.exists():
                     report.error(f"{where}:{i + 1}", f"link target {target} does not exist")
+                    continue
+                if resolved.parent == decisions_dir and resolved.name[:4].isdigit():
+                    number = int(resolved.name[:4])
+                    text = re.match(r"!?\[([^\]]*)\]", match[0])[1]
+                    if text != f"D{number}" and not text.startswith(f"{number}. "):
+                        report.error(f"{where}:{i + 1}", f"a link to ADR {number} must read 'D{number}' or '{number}. Title', not '{text}'")
 
 
 # --- 6. Cut-over -------------------------------------------------------------------------
@@ -472,7 +503,7 @@ def main() -> int:
     readme = args.root.parent / "README.md"
     if readme.is_file():
         markdown.append(readme)
-    check_markdown(markdown, report)
+    check_markdown(markdown, args.root, report)
     if args.cutover:
         check_cutover(args.root, adrs, report)
 
