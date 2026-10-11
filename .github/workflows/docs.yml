@@ -1,0 +1,47 @@
+name: docs
+
+on:
+  push:
+    paths:
+      - "docs/**"
+      - "tools/docs/**"
+      - "docker-compose.yml"
+      - "Makefile"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "tools/docs/**"
+      - "docker-compose.yml"
+      - "Makefile"
+      - ".github/workflows/docs.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  architecture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # Gate: validate, the ADR checks, traceability and forbidden relationships.
+      - name: Check
+        run: make docs-check
+
+      # Report-only until the model is complete (the target ignores its exit status).
+      - name: Inspect
+        run: make docs-inspect
+
+      - name: Export
+        run: make docs-export
+
+      - name: Upload the static site
+        uses: actions/upload-artifact@v7
+        with:
+          name: architecture-site
+          path: docs/build/site

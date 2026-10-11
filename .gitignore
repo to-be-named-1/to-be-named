@@ -220,3 +220,8 @@ data/
 CLAUDE.md
 .cph
 .claude.worktrees/
+
+# Structurizr: files derived from docs/architecture (written by `local` and `export`)
+docs/architecture/workspace.json
+docs/architecture/.structurizr/
+docs/build/

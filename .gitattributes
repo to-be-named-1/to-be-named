@@ -1,0 +1,14 @@
+# Line endings: LF in the repository and in working copies.
+* text=auto eol=lf
+
+# Windows command scripts keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

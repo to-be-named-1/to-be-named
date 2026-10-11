@@ -1,0 +1,488 @@
+#!/usr/bin/env python3
+"""Checks for the architecture documentation in docs/architecture.
+
+Run by `make docs-check`, after `structurizr validate` and a JSON export of the workspace.
+
+  1. ADR files: file name, title number, Date, status, labelled links and their symmetry,
+     section order.
+  2. `decisions` properties on elements and relationships name existing ADRs, and every
+     migrated ADR's "Applies to" line agrees with the elements that cite it.
+  3. No forbidden relationship (tools/docs/forbidden-edges.json), explicit or implied.
+  4. Every overlay file carries its header.
+  5. Markdown: one level-1 heading, on the first line; relative links resolve.
+  6. With --cutover: the count check required before project-design.md is retired.
+
+Standard library only. Exit status 1 if any error is reported.
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime
+import json
+import re
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+
+STATUSES = {"Accepted", "Partial", "Superseded", "Rejected"}
+SECTIONS = [
+    "Status",
+    "Context",
+    "Decision",
+    "Consequences",
+    "Rejected alternatives",
+    "Amendment history",
+    "Follow-ups",
+    "References",
+]
+INVERSE_LINK = {
+    "Amends": "Amended by",
+    "Amended by": "Amends",
+    "Supersedes": "Superseded by",
+    "Superseded by": "Supersedes",
+}
+PENDING = "Content pending migration"
+OVERLAY_FIELDS = ("// Overlay:", "// Purpose:", "// Remove when:")
+
+ADR_NAME = re.compile(r"^(\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$")
+ADR_TITLE = re.compile(r"^# (\d+)\. (\S.*)$")
+ADR_LINK = re.compile(
+    r"^(Amends|Amended by|Supersedes|Superseded by) \[[^\]]+\]\((\d{4}-[a-z0-9-]+\.md)\)$"
+)
+DECISION_REF = re.compile(r"\bD(\d+)\b")
+MD_LINK = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
+SKIPPED_LINK_PREFIXES = ("http://", "https://", "mailto:", "#", "embed:")
+
+CUTOVER_DECISIONS = 50
+CUTOVER_PARTIAL = {27}
+CUTOVER_OPEN_ITEMS = 25
+CUTOVER_CAPABILITIES = {"CORE": 103, "DE": 36, "DS": 31, "MLE": 25}
+CUTOVER_REASONING_ITEMS = 69
+
+
+class Report:
+    def __init__(self) -> None:
+        self.errors: list[str] = []
+        self.notes: list[str] = []
+
+    def error(self, where: str, message: str) -> None:
+        self.errors.append(f"{where}: {message}")
+
+    def note(self, message: str) -> None:
+        self.notes.append(message)
+
+
+def display(path: Path) -> str:
+    try:
+        return path.resolve().relative_to(Path.cwd().resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def unfenced(lines: list[str]):
+    """Yield (index, line) for lines outside fenced code blocks."""
+    fence = None
+    for index, line in enumerate(lines):
+        stripped = line.lstrip()
+        if stripped.startswith("```") or stripped.startswith("~~~"):
+            marker = stripped[:3]
+            if fence is None:
+                fence = marker
+            elif marker == fence:
+                fence = None
+            continue
+        if fence is None:
+            yield index, line
+
+
+def decision_numbers(value: str | None) -> list[int]:
+    return [int(n) for n in DECISION_REF.findall(value or "")]
+
+
+# --- 1. ADRs -----------------------------------------------------------------------------
+
+
+@dataclass
+class Adr:
+    number: int
+    path: Path
+    title: str
+    status: str | None = None
+    applies_to: list[str] | None = None
+    links: list[tuple[str, str, int]] = field(default_factory=list)
+    sections: list[str] = field(default_factory=list)
+    pending: bool = False
+    text: str = ""
+
+
+def parse_adr(path: Path, report: Report) -> Adr | None:
+    where = display(path)
+    name = ADR_NAME.match(path.name)
+    if not name:
+        report.error(where, "file name must be NNNN-kebab-case-title.md")
+        return None
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    title = ADR_TITLE.match(lines[0]) if lines else None
+    if not title:
+        report.error(f"{where}:1", "first line must be '# N. Title'")
+        return None
+    number = int(name[1])
+    if int(title[1]) != number:
+        report.error(f"{where}:1", f"title number {title[1]} does not match file number {number}")
+    adr = Adr(number=number, path=path, title=title[2], text=text, pending=PENDING in text)
+
+    headings = [(i, line[3:].strip()) for i, line in unfenced(lines) if line.startswith("## ")]
+    adr.sections = [h for _, h in headings]
+    for i, heading in headings:
+        if heading not in SECTIONS:
+            report.error(f"{where}:{i + 1}", f"unknown section '{heading}'")
+    known = [h for h in adr.sections if h in SECTIONS]
+    if len(known) != len(set(known)):
+        report.error(where, "a section appears more than once")
+    elif known != sorted(known, key=SECTIONS.index):
+        report.error(where, "sections are out of order; expected " + ", ".join(SECTIONS))
+    if not headings or headings[0][1] != "Status":
+        report.error(where, "the first section must be '## Status'")
+        return adr
+
+    status_line = headings[0][0]
+    date_seen = False
+    for i in range(1, status_line):
+        line = lines[i].strip()
+        if not line:
+            continue
+        if line.startswith("Date: "):
+            date_seen = True
+            try:
+                datetime.date.fromisoformat(line[len("Date: "):].strip())
+            except ValueError:
+                report.error(f"{where}:{i + 1}", "Date must be YYYY-MM-DD")
+        elif line.startswith("Applies to: "):
+            adr.applies_to = [
+                part.strip().strip("`") for part in line[len("Applies to: "):].split(",") if part.strip()
+            ]
+        else:
+            report.error(f"{where}:{i + 1}", "only 'Date:' and 'Applies to:' lines may precede '## Status'")
+    if not date_seen:
+        report.error(where, "missing 'Date: YYYY-MM-DD' line (the importer would use the current date)")
+
+    end = headings[1][0] if len(headings) > 1 else len(lines)
+    block = [(i, lines[i].strip()) for i in range(status_line + 1, end) if lines[i].strip()]
+    if not block:
+        report.error(where, "the Status section is empty")
+        return adr
+    first_index, adr.status = block[0]
+    if adr.status not in STATUSES:
+        report.error(
+            f"{where}:{first_index + 1}",
+            f"status must be one word from {sorted(STATUSES)} (the importer reads only the first word)",
+        )
+    for i, line in block[1:]:
+        link = ADR_LINK.match(line)
+        if not link:
+            report.error(f"{where}:{i + 1}", "lines after the status must be labelled links such as 'Amends [8. Title](0008-title.md)'")
+            continue
+        adr.links.append((link[1], link[2], i + 1))
+
+    if not adr.pending:
+        for required in ("Context", "Decision"):
+            if required not in adr.sections:
+                report.error(where, f"a migrated ADR needs a '## {required}' section")
+        if adr.applies_to is None:
+            report.error(where, "a migrated ADR needs an 'Applies to:' line")
+    return adr
+
+
+def check_adrs(decisions_dir: Path, report: Report) -> dict[int, Adr]:
+    adrs: dict[int, Adr] = {}
+    if not decisions_dir.is_dir():
+        report.note("no decisions/ folder yet; ADR checks skipped")
+        return adrs
+    by_file: dict[str, Adr] = {}
+    for path in sorted(decisions_dir.glob("*.md")):
+        adr = parse_adr(path, report)
+        if adr is None:
+            continue
+        if adr.number in adrs:
+            report.error(display(path), f"number {adr.number} is already used by {adrs[adr.number].path.name}")
+            continue
+        adrs[adr.number] = adr
+        by_file[path.name] = adr
+
+    for adr in adrs.values():
+        where = display(adr.path)
+        for label, target, line in adr.links:
+            other = by_file.get(target)
+            if other is None:
+                report.error(f"{where}:{line}", f"link target {target} does not exist")
+                continue
+            inverse = INVERSE_LINK[label]
+            if not any(l == inverse and t == adr.path.name for l, t, _ in other.links):
+                report.error(f"{where}:{line}", f"{target} lacks the matching '{inverse}' link back to {adr.path.name}")
+        superseded_by = any(label == "Superseded by" for label, _, _ in adr.links)
+        if adr.status == "Superseded" and not superseded_by:
+            report.error(where, "status Superseded needs a 'Superseded by' link")
+        if superseded_by and adr.status != "Superseded":
+            report.error(where, "a 'Superseded by' link needs status Superseded")
+    report.note(f"{len(adrs)} ADRs, {sum(a.pending for a in adrs.values())} pending migration")
+    return adrs
+
+
+# --- Workspace JSON ----------------------------------------------------------------------
+
+
+@dataclass
+class Model:
+    elements: dict[str, dict] = field(default_factory=dict)  # id -> element
+    parent: dict[str, str] = field(default_factory=dict)  # id -> parent id
+    alias: dict[str, str] = field(default_factory=dict)  # instance id -> element id
+    identifiers: dict[str, str] = field(default_factory=dict)  # DSL identifier -> id
+    relationships: list[dict] = field(default_factory=list)
+
+
+def load_model(path: Path) -> Model:
+    workspace = json.loads(path.read_text(encoding="utf-8"))
+    model = Model()
+
+    def add(element: dict, parent_id: str | None) -> None:
+        element_id = element["id"]
+        model.elements[element_id] = element
+        if parent_id is not None:
+            model.parent[element_id] = parent_id
+        identifier = (element.get("properties") or {}).get("structurizr.dsl.identifier")
+        if identifier:
+            model.identifiers[identifier] = element_id
+        model.relationships.extend(element.get("relationships") or [])
+        if "containerId" in element:
+            model.alias[element_id] = element["containerId"]
+        if "softwareSystemId" in element:
+            model.alias[element_id] = element["softwareSystemId"]
+
+    def add_deployment_node(node: dict, parent_id: str | None) -> None:
+        add(node, parent_id)
+        for child in node.get("children") or []:
+            add_deployment_node(child, node["id"])
+        for key in ("infrastructureNodes", "softwareSystemInstances", "containerInstances"):
+            for item in node.get(key) or []:
+                add(item, node["id"])
+
+    data = workspace.get("model") or {}
+    for key in ("people", "customElements"):
+        for element in data.get(key) or []:
+            add(element, None)
+    for system in data.get("softwareSystems") or []:
+        add(system, None)
+        for container in system.get("containers") or []:
+            add(container, system["id"])
+            for component in container.get("components") or []:
+                add(component, container["id"])
+    for node in data.get("deploymentNodes") or []:
+        add_deployment_node(node, None)
+    return model
+
+
+def ancestry(model: Model, element_id: str) -> list[str]:
+    chain = []
+    current: str | None = model.alias.get(element_id, element_id)
+    while current is not None:
+        chain.append(current)
+        current = model.parent.get(current)
+    return chain
+
+
+# --- 2. Decisions and "Applies to" ---------------------------------------------------------
+
+
+def check_traceability(model: Model, adrs: dict[int, Adr], have_adrs: bool, report: Report) -> None:
+    cited: dict[int, set[str]] = {}
+    for element_id, element in model.elements.items():
+        properties = element.get("properties") or {}
+        numbers = decision_numbers(properties.get("decisions"))
+        if not numbers:
+            continue
+        identifier = properties.get("structurizr.dsl.identifier")
+        name = identifier or element.get("name", element_id)
+        if not identifier:
+            report.error(f"element '{name}'", "an element with a decisions property needs a DSL identifier")
+        for number in numbers:
+            if have_adrs and number not in adrs:
+                report.error(f"element '{name}'", f"decisions names D{number}, which has no ADR")
+            if identifier:
+                cited.setdefault(number, set()).add(identifier)
+    for relationship in model.relationships:
+        numbers = decision_numbers((relationship.get("properties") or {}).get("decisions"))
+        for number in numbers:
+            if have_adrs and number not in adrs:
+                label = relationship.get("description") or relationship.get("id")
+                report.error(f"relationship '{label}'", f"decisions names D{number}, which has no ADR")
+
+    for number, adr in adrs.items():
+        if adr.pending or adr.applies_to is None:
+            continue
+        where = display(adr.path)
+        for identifier in adr.applies_to:
+            if identifier not in model.identifiers:
+                report.error(where, f"'Applies to' names {identifier}, which is not in the model")
+            elif identifier not in cited.get(number, set()):
+                report.error(where, f"{identifier} does not list D{number} in its decisions property")
+        for identifier in sorted(cited.get(number, set()) - set(adr.applies_to)):
+            report.error(where, f"{identifier} lists D{number}, but 'Applies to' does not name it")
+
+
+# --- 3. Forbidden relationships ------------------------------------------------------------
+
+
+def check_forbidden_edges(model: Model, rules_path: Path, adrs: dict[int, Adr], have_adrs: bool,
+                          cutover: bool, report: Report) -> None:
+    rules = json.loads(rules_path.read_text(encoding="utf-8"))["rules"]
+    inactive = 0
+    for rule in rules:
+        where = f"{display(rules_path)} [{rule['id']}]"
+        for reference in rule.get("decisions", []):
+            for number in decision_numbers(reference):
+                if have_adrs and number not in adrs:
+                    report.error(where, f"cites D{number}, which has no ADR")
+        sources = {model.identifiers[i] for i in rule["from"] if i in model.identifiers}
+        targets = {model.identifiers[i] for i in rule["to"] if i in model.identifiers}
+        missing = [i for i in rule["from"] + rule["to"] if i not in model.identifiers]
+        if missing:
+            inactive += 1
+            if cutover:
+                report.error(where, "elements not in the model: " + ", ".join(missing))
+        if not sources or not targets:
+            continue
+        for relationship in model.relationships:
+            source_chain = ancestry(model, relationship["sourceId"])
+            destination_chain = ancestry(model, relationship["destinationId"])
+            if sources.intersection(source_chain) and targets.intersection(destination_chain):
+                source = model.elements.get(model.alias.get(relationship["sourceId"], relationship["sourceId"]), {})
+                destination = model.elements.get(
+                    model.alias.get(relationship["destinationId"], relationship["destinationId"]), {})
+                implied = " (implied)" if relationship.get("linkedRelationshipId") else ""
+                report.error(
+                    where,
+                    f"forbidden relationship{implied} {source.get('name')} -> {destination.get('name')} "
+                    f"'{relationship.get('description', '')}': {rule['reason']} ({', '.join(rule['decisions'])})",
+                )
+    report.note(f"{len(rules)} forbidden-edge rules, {inactive} not yet fully in the model")
+
+
+# --- 4. Overlays ---------------------------------------------------------------------------
+
+
+def check_overlays(root: Path, report: Report) -> None:
+    for folder in (root / "model" / "overlays", root / "views" / "overlays"):
+        for path in sorted(folder.glob("*.dsl")) if folder.is_dir() else []:
+            head = path.read_text(encoding="utf-8").splitlines()[:10]
+            for prefix in OVERLAY_FIELDS:
+                if not any(line.startswith(prefix) for line in head):
+                    report.error(display(path), f"overlay header lacks a '{prefix}' line")
+
+
+# --- 5. Markdown ---------------------------------------------------------------------------
+
+
+def check_markdown(paths: list[Path], report: Report) -> None:
+    for path in paths:
+        where = display(path)
+        lines = path.read_text(encoding="utf-8").splitlines()
+        content = list(unfenced(lines))
+        h1 = [i for i, line in content if line.startswith("# ")]
+        first = next((i for i, line in enumerate(lines) if line.strip()), None)
+        if len(h1) != 1:
+            report.error(where, f"needs exactly one level-1 heading, found {len(h1)}")
+        elif h1[0] != first:
+            report.error(f"{where}:{h1[0] + 1}", "the level-1 heading must be the first line")
+        for i, line in content:
+            for target in MD_LINK.findall(line):
+                if target.startswith(SKIPPED_LINK_PREFIXES):
+                    continue
+                relative = target.split("#", 1)[0].split("?", 1)[0]
+                if relative and not (path.parent / relative).exists():
+                    report.error(f"{where}:{i + 1}", f"link target {target} does not exist")
+
+
+# --- 6. Cut-over -------------------------------------------------------------------------
+
+
+def check_cutover(root: Path, adrs: dict[int, Adr], report: Report) -> None:
+    where = "cut-over"
+    for number in range(1, CUTOVER_DECISIONS + 1):
+        adr = adrs.get(number)
+        if adr is None:
+            report.error(where, f"D{number} has no ADR")
+        elif adr.pending:
+            report.error(where, f"D{number} is still pending migration")
+    partial = {n for n, a in adrs.items() if a.status == "Partial" and n <= CUTOVER_DECISIONS}
+    if partial != CUTOVER_PARTIAL:
+        report.error(where, f"Partial decisions are {sorted(partial)}, expected {sorted(CUTOVER_PARTIAL)}")
+
+    workspace_docs = root / "documentation" / "workspace"
+    open_items = workspace_docs / "07-open-items.md"
+    found = set()
+    if open_items.is_file():
+        found = {int(n) for n in re.findall(r"^#+ S(\d+)\b", open_items.read_text(encoding="utf-8"), re.M)}
+    expected = set(range(1, CUTOVER_OPEN_ITEMS + 1))
+    if not expected <= found:
+        report.error(where, "open items missing: " + ", ".join(f"S{n}" for n in sorted(expected - found)))
+
+    capabilities: dict[str, set[str]] = {family: set() for family in CUTOVER_CAPABILITIES}
+    for path in sorted(workspace_docs.glob("0[3-6]-capabilities-*.md")) if workspace_docs.is_dir() else []:
+        for family, number in re.findall(r"\*\*(CORE|DE|DS|MLE) (\d+\.\d+)\*\*", path.read_text(encoding="utf-8")):
+            capabilities[family].add(number)
+    for family, count in CUTOVER_CAPABILITIES.items():
+        if len(capabilities[family]) != count:
+            report.error(where, f"{family} has {len(capabilities[family])} capability lines, expected {count}")
+
+    reasoning = set()
+    for adr in adrs.values():
+        reasoning.update(int(n) for n in re.findall(r"Reasoning item (\d+)\b", adr.text))
+    missing = set(range(1, CUTOVER_REASONING_ITEMS + 1)) - reasoning
+    if missing:
+        report.error(where, "reasoning items not placed in any ADR: " + ", ".join(map(str, sorted(missing))))
+
+
+# --- Main ----------------------------------------------------------------------------------
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument("--root", type=Path, default=Path("docs/architecture"))
+    parser.add_argument("--workspace-json", type=Path, default=Path("docs/build/json/workspace.json"))
+    parser.add_argument("--rules", type=Path, default=Path(__file__).with_name("forbidden-edges.json"))
+    parser.add_argument("--cutover", action="store_true", help="also run the count check of the cut-over")
+    args = parser.parse_args()
+
+    report = Report()
+    decisions_dir = args.root / "decisions"
+    adrs = check_adrs(decisions_dir, report)
+    have_adrs = decisions_dir.is_dir()
+
+    if args.workspace_json.is_file():
+        model = load_model(args.workspace_json)
+        check_traceability(model, adrs, have_adrs, report)
+        check_forbidden_edges(model, args.rules, adrs, have_adrs, args.cutover, report)
+    else:
+        report.error(display(args.workspace_json), "not found; export the workspace as JSON first (make docs-check)")
+
+    check_overlays(args.root, report)
+    markdown = sorted(args.root.rglob("*.md"))
+    readme = args.root.parent / "README.md"
+    if readme.is_file():
+        markdown.append(readme)
+    check_markdown(markdown, report)
+    if args.cutover:
+        check_cutover(args.root, adrs, report)
+
+    for note in report.notes:
+        print(f"note: {note}")
+    for error in report.errors:
+        print(f"error: {error}")
+    print(f"docs-check: {len(report.errors)} error(s)")
+    return 1 if report.errors else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

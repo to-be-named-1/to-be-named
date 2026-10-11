@@ -1,0 +1,14 @@
+services:
+  structurizr:
+    image: structurizr/structurizr:2026.09.19
+    command: local
+    profiles: [docs]
+    ports:
+      - "${STRUCTURIZR_PORT:-8080}:8080"
+    environment:
+      STRUCTURIZR_WORKSPACE_MAXSIZE: "4MB"
+    volumes:
+      # Writable: `local` writes workspace.json beside workspace.dsl (gitignored).
+      - ./docs/architecture:/usr/local/structurizr
+      # Export output (gitignored).
+      - ./docs/build:/usr/local/build
