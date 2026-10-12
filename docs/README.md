@@ -77,7 +77,7 @@ This section is temporary. It is removed in the commit that retires `project-des
 - One folder per container, `model/platform/<container>/`, holding `container.dsl` and the container's `docs/`.
 - Identifiers are hierarchical and lowerCamelCase (`platform.controlPlane.runDriver`). View keys are explicit, kebab-case and prefixed by view type (`context`, `containers`, `components-control-plane`, `dynamic-…`, `deployment-…`).
 - Relationship descriptions are present-tense verb phrases, unique between any pair of elements.
-- Permanent tags: `External`, `Database`, `Web Browser`, `Maintenance unit`, `Leader only`, `Commercial`, `Extension point`, and on relationships `Asynchronous`. Properties: `decisions`, `roles`, `openItems`.
+- Permanent tags: `External`, `Database`, `Object Storage`, `Web Browser`, `Maintenance unit`, `Leader only`, `Commercial`, `Extension point`, and on relationships `Asynchronous`. Properties: `decisions`, `roles`, `openItems`.
 - Temporary content lives in overlays: one pair of files per concern, `model/overlays/<concern>.dsl` and `views/overlays/<concern>.dsl`, each opening with `// Overlay:`, `// Purpose:` and `// Remove when:` lines, each included by a single line in `workspace.dsl`.
 - Diagrams use automatic layout; manual layout is not committed.
 

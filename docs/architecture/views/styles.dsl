@@ -38,6 +38,9 @@ styles {
         stroke #b26a00
         strokeWidth 6
     }
+    element "Object Storage" {
+        shape Folder
+    }
     element "Extension point" {
         border dotted
     }
