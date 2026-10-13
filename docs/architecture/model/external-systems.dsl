@@ -18,7 +18,7 @@ objectStorage = softwareSystem "Object storage" "Customer or platform object sto
     }
 }
 
-icebergCatalogue = softwareSystem "Iceberg catalogue" "REST or SQL catalogue in which projected Iceberg tables are registered for external engines." "External" {
+icebergCatalog = softwareSystem "Iceberg catalog" "REST or SQL catalog in which projected Iceberg tables are registered for external engines." "External" {
     properties {
         "decisions" "D42, D44"
     }
@@ -30,27 +30,23 @@ queryEngines = softwareSystem "External query engines" "Engines that read manage
     }
 }
 
-dockerEngine = softwareSystem "Docker engine" "Container runtime of a single-machine installation." "External" {
-    properties {
-        "decisions" "D29"
-    }
-}
+dockerEngine = softwareSystem "Docker engine" "Container runtime of a single-machine installation." "External"
 
 kubernetes = softwareSystem "Kubernetes cluster" "Cluster on which units run as pods." "External" {
     properties {
-        "decisions" "D29"
+        "decisions" "D22"
     }
 }
 
 hpcScheduler = softwareSystem "HPC scheduler" "Slurm cluster on which units run as jobs, commonly through Apptainer." "External" {
     properties {
-        "decisions" "D22, D29"
+        "decisions" "D22"
     }
 }
 
 cloudBatch = softwareSystem "Cloud batch service" "Managed batch service on which units run as jobs." "External" {
     properties {
-        "decisions" "D22, D29"
+        "decisions" "D22"
     }
 }
 
@@ -90,9 +86,9 @@ warehouses = softwareSystem "Warehouses" "Postgres and Snowflake, to which relat
     }
 }
 
-observabilitySink = softwareSystem "Observability sink" "Log and metrics stores outside the metadata database, the vendor's or the customer's own." "External" {
+customerObservability = softwareSystem "Customer observability stack" "The customer's own log and metrics stores, to which telemetry is routed when it is kept in the customer's environment." "External" {
     properties {
-        "decisions" "D21, D40"
+        "decisions" "D22, D40"
     }
 }
 

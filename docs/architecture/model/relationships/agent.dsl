@@ -60,8 +60,14 @@ platform.agent -> platform.bundledObjectStorage "Deletes collected files from, a
     }
 }
 
-platform.agent -> observabilitySink "Forwards logs and metrics to" "" {
+platform.agent -> platform.observability "Forwards logs and metrics to" "" {
     properties {
         "decisions" "D21, D40"
+    }
+}
+
+platform.agent -> customerObservability "Forwards logs and metrics to" "" {
+    properties {
+        "decisions" "D40"
     }
 }

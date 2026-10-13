@@ -3,7 +3,7 @@
 
 Run by `make docs-check`, after `structurizr validate` and a JSON export of the workspace.
 
-  1. ADR files: file name, title number, Date, status, labelled links and their symmetry,
+  1. ADR files: file name, title number, Date, status, labeled links and their symmetry,
      section order.
   2. `decisions` properties on elements and relationships name existing ADRs, and every
      migrated ADR's "Applies to" line agrees with the elements that cite it.
@@ -12,7 +12,11 @@ Run by `make docs-check`, after `structurizr validate` and a JSON export of the 
   5. Markdown: documentation files begin with one `##` heading, the README with one `#`;
      relative links resolve; links to ADRs read `Dn` or `N. Title` with the right number.
      (Bare references are reported by tools/docs/link.py --check.)
-  6. With --cutover: the count check required before project-design.md is retired.
+  6. No comparable software is named anywhere under docs/.
+  7. No British spelling is used anywhere under docs/.
+  8. With --cutover: the count check required before project-design.md is retired, including
+     that each reasoning item of the record sits in exactly one ADR's Context, and that no
+     permanent file refers to the record.
 
 Standard library only. Exit status 1 if any error is reported.
 """
@@ -36,7 +40,6 @@ SECTIONS = [
     "Rejected alternatives",
     "Amendment history",
     "Follow-ups",
-    "References",
 ]
 INVERSE_LINK = {
     "Amends": "Amended by",
@@ -62,6 +65,35 @@ CUTOVER_PARTIAL = {27}
 CUTOVER_OPEN_ITEMS = 25
 CUTOVER_CAPABILITIES = {"CORE": 103, "DE": 36, "DS": 31, "MLE": 25}
 CUTOVER_REASONING_ITEMS = 69
+# Reasoning items whose title changes when it is carried over: a mention of comparable software
+# is dropped, or the spelling becomes American.
+CUTOVER_TITLE_CHANGES = {
+    3: "Containers rather than a single process",
+    10: "Tenant = the whole organization",
+    54: "A leader-centered control plane with invariants in the database",
+}
+# Comparable software is never named in the documentation; software the platform runs on,
+# integrates with or exports to is technology and is not listed here.
+COMPARABLE_SOFTWARE = re.compile(
+    r"\b(?:Dataiku|KNIME|n8n|Alteryx|RapidMiner|Dagster|Prefect|Kestra|Flyte|Kedro|Metaflow|Luigi|Mage\.ai|"
+    r"Windmill|Zapier|Talend|Informatica|Matillion|Azure Data Factory|Palantir|Nextflow|Snakemake|Cromwell|Galaxy)\b"
+)
+# British spellings the documentation must not use; American English is the register.
+_BRITISH_IZE_ROOTS = (
+    "author|material|normal|optim|special|synchron|serial|initial|priorit|recogn|summar|visual|minim|maxim|"
+    "standard|custom|categor|util|parallel|container|canonical|memo|token|random|character|final|organ|real|"
+    "capital|central|general|local|global|emphas|apolog|harmon|stabil|neutral|legal|modern|privat|virtual"
+)
+BRITISH_SPELLING = re.compile(
+    r"\b(?:\w*(?:" + _BRITISH_IZE_ROOTS + r")is(?:e|ed|es|ing|er|ers|ation|ations|able)"
+    r"|\w*(?:behavio|colo|favo|hono|labo|neighbo|flavo|harbo|rumo|humo|vapo|endeavo)ur(?:s|ed|ing|able|ite|ites)?"
+    r"|catalogu(?:e|es|ed|ing)|licences?|defence|offence|pretence"
+    r"|analys(?:e|ed|ing)|paralys(?:e|ed)|catalys(?:e|ed)|centres?|centred|metres?|fibre|theatre"
+    r"|artefacts?|labell(?:ed|ing)|modell(?:ed|ing|er|ers)|cancell(?:ed|ing)|travell(?:ed|ing|er)|signall(?:ed|ing)"
+    r"|enrols|enrolment|fulfils?|fulfilment|programmes?|grey|ageing|whilst|amongst|learnt|spelt|practis(?:e|ed|ing))\b",
+    re.I,
+)
+RECORD_REFERENCE = re.compile(r"project-design|\bv0\.\d|\bPart I{1,3}\b|\bReasoning items? \d")
 
 
 class Report:
@@ -186,7 +218,7 @@ def parse_adr(path: Path, report: Report) -> Adr | None:
     for i, line in block[1:]:
         link = ADR_LINK.match(line)
         if not link:
-            report.error(f"{where}:{i + 1}", "lines after the status must be labelled links such as 'Amends [8. Title](0008-title.md)'")
+            report.error(f"{where}:{i + 1}", "lines after the status must be labeled links such as 'Amends [8. Title](0008-title.md)'")
             continue
         adr.links.append((link[1], link[3], i + 1))
         adr.link_texts[link[3]] = link[2]
@@ -435,10 +467,36 @@ def check_markdown(paths: list[Path], root: Path, report: Report) -> None:
                         report.error(f"{where}:{i + 1}", f"a link to ADR {number} must read 'D{number}' or '{number}. Title', not '{text}'")
 
 
-# --- 6. Cut-over -------------------------------------------------------------------------
+# --- 6. Comparable software --------------------------------------------------------------
 
 
-def check_cutover(root: Path, adrs: dict[int, Adr], report: Report) -> None:
+def check_comparable_software(docs: Path, report: Report) -> None:
+    build = (docs / "build").resolve()
+    for path in sorted(docs.rglob("*")):
+        if path.suffix not in (".md", ".dsl") or build in path.resolve().parents:
+            continue
+        for i, line in enumerate(path.read_text(encoding="utf-8").splitlines()):
+            for match in COMPARABLE_SOFTWARE.finditer(line):
+                report.error(f"{display(path)}:{i + 1}", f"names comparable software ('{match[0]}')")
+
+
+# --- 7. American spelling ----------------------------------------------------------------
+
+
+def check_spelling(docs: Path, report: Report) -> None:
+    build = (docs / "build").resolve()
+    for path in sorted(docs.rglob("*")):
+        if path.suffix not in (".md", ".dsl") or build in path.resolve().parents:
+            continue
+        for i, line in enumerate(path.read_text(encoding="utf-8").splitlines()):
+            for match in BRITISH_SPELLING.finditer(line):
+                report.error(f"{display(path)}:{i + 1}", f"British spelling '{match[0]}'; the register is American")
+
+
+# --- 8. Cut-over -------------------------------------------------------------------------
+
+
+def check_cutover(root: Path, record: Path, adrs: dict[int, Adr], report: Report) -> None:
     where = "cut-over"
     for number in range(1, CUTOVER_DECISIONS + 1):
         adr = adrs.get(number)
@@ -467,12 +525,42 @@ def check_cutover(root: Path, adrs: dict[int, Adr], report: Report) -> None:
         if len(capabilities[family]) != count:
             report.error(where, f"{family} has {len(capabilities[family])} capability lines, expected {count}")
 
-    reasoning = set()
-    for adr in adrs.values():
-        reasoning.update(int(n) for n in re.findall(r"Reasoning item (\d+)\b", adr.text))
-    missing = set(range(1, CUTOVER_REASONING_ITEMS + 1)) - reasoning
-    if missing:
-        report.error(where, "reasoning items not placed in any ADR: " + ", ".join(map(str, sorted(missing))))
+    # Reasoning items are carried under their bold title, without the record's number; the
+    # titles are read from the record, which still exists when this check runs.
+    if not record.is_file():
+        report.error(where, f"{display(record)} not found; the reasoning items are read from it")
+    else:
+        text = record.read_text(encoding="utf-8")
+        start = text.index("\n## 3. Key reasoning")
+        part = text[start:text.index("\n## 4.", start)]
+        items = re.findall(r"^(\d+)\. \*\*(.+?)\*\*", part, re.M)
+        if len(items) != CUTOVER_REASONING_ITEMS:
+            report.error(where, f"the record has {len(items)} reasoning items, expected {CUTOVER_REASONING_ITEMS}")
+        contexts = {}
+        for number, adr in adrs.items():
+            context = re.search(r"^## Context\n(.*?)(?=^## |\Z)", adr.text, re.M | re.S)
+            contexts[number] = context[1] if context else ""
+        for item, title in items:
+            title = CUTOVER_TITLE_CHANGES.get(int(item), title)
+            holders = [f"D{n}" for n, context in sorted(contexts.items()) if f"**{title}**" in context]
+            if len(holders) != 1:
+                placed = ", ".join(holders) or "no ADR"
+                report.error(where, f"reasoning item {item} ('{title}') must be in exactly one Context, found in {placed}")
+
+    # Nothing permanent may refer to the record; the README's migration section is removed with it.
+    readme = root.parent / "README.md"
+    files = sorted(root.rglob("*.md")) + sorted(root.rglob("*.dsl")) + ([readme] if readme.is_file() else [])
+    for path in files:
+        text = path.read_text(encoding="utf-8")
+        if path == readme:
+            start = text.find("\n## Migration from the design record")
+            if start != -1:
+                end = text.find("\n## ", start + 1)
+                text = text[:start] + (text[end:] if end != -1 else "")
+        for i, line in enumerate(text.splitlines()):
+            match = RECORD_REFERENCE.search(line)
+            if match:
+                report.error(f"{display(path)}:{i + 1}", f"refers to the design record ('{match[0]}')")
 
 
 # --- Main ----------------------------------------------------------------------------------
@@ -484,6 +572,7 @@ def main() -> int:
     parser.add_argument("--workspace-json", type=Path, default=Path("docs/build/json/workspace.json"))
     parser.add_argument("--rules", type=Path, default=Path(__file__).with_name("forbidden-edges.json"))
     parser.add_argument("--cutover", action="store_true", help="also run the count check of the cut-over")
+    parser.add_argument("--record", type=Path, default=Path("project-design.md"), help="the design record (cut-over only)")
     args = parser.parse_args()
 
     report = Report()
@@ -504,8 +593,10 @@ def main() -> int:
     if readme.is_file():
         markdown.append(readme)
     check_markdown(markdown, args.root, report)
+    check_comparable_software(args.root.parent, report)
+    check_spelling(args.root.parent, report)
     if args.cutover:
-        check_cutover(args.root, adrs, report)
+        check_cutover(args.root, args.record, adrs, report)
 
     for note in report.notes:
         print(f"note: {note}")

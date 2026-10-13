@@ -11,7 +11,7 @@
         "credentialIssuer",
         "dataSources",
         "warehouses",
-        "icebergCatalogue",
+        "icebergCatalog",
         "sideEffectTargets"
       ],
       "decisions": ["D21", "D40", "D42"],
@@ -50,7 +50,7 @@
       "from": ["platform.webApp", "platform.cli"],
       "to": ["platform.database"],
       "decisions": ["D21", "D44"],
-      "reason": "Clients reach platform state only through the API, which authorises every method."
+      "reason": "Clients reach platform state only through the API, which authorizes every method."
     }
   ]
 }

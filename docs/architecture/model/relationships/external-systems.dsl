@@ -6,7 +6,7 @@ ciSystem -> platform.controlPlane "Starts sample and development runs through th
     }
 }
 
-queryEngines -> icebergCatalogue "Looks up projected tables in" "" {
+queryEngines -> icebergCatalog "Looks up projected tables in" "" {
     properties {
         "decisions" "D44"
     }

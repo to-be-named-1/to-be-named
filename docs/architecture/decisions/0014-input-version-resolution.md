@@ -6,7 +6,7 @@ Date: 2026-10-11
 
 Accepted
 
-Amended by [42. Catalogue persistence](0042-catalogue-persistence.md)
+Amended by [42. Catalog persistence](0042-catalog-persistence.md)
 Amended by [49. Source probes](0049-source-probes.md)
 
 ## Context

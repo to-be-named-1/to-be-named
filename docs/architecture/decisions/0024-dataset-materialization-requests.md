@@ -1,4 +1,4 @@
-# 24. Dataset materialisation requests
+# 24. Dataset materialization requests
 
 Date: 2026-10-11
 

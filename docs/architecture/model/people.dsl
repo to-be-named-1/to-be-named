@@ -7,7 +7,7 @@ workflowAuthor = person "Workflow author" "Analyst, researcher, data scientist o
     }
 }
 
-operator = person "Operator" "Triggers, backfills, pauses and cancels runs and materialisation requests, and monitors them." {
+operator = person "Operator" "Triggers, backfills, pauses and cancels runs and materialization requests, and monitors them." {
     properties {
         "roles" "Operator"
         "decisions" "D20, D24, D31, D45"
@@ -28,7 +28,7 @@ datasetOwner = person "Dataset owner" "Sets a dataset's contract, classification
     }
 }
 
-tenantAdmin = person "Tenant administrator" "Manages members, service accounts, projects, agent pools, connections, storage targets, catalogues, quotas and fair-share weights." {
+tenantAdmin = person "Tenant administrator" "Manages members, service accounts, projects, agent pools, connections, storage targets, catalogs, quotas and fair-share weights." {
     properties {
         "roles" "Admin"
         "decisions" "D43, D45, D47"
@@ -50,7 +50,7 @@ dataConsumer = person "Data consumer" "Reads managed datasets as tables with the
 
 infrastructureOperator = person "Infrastructure operator" "Customer staff who install and upgrade a self-hosted platform, its agents and the backends they drive." {
     properties {
-        "decisions" "D22, D29, D40"
+        "decisions" "D22, D40"
     }
 }
 

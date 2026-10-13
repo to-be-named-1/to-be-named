@@ -1,5 +1,5 @@
 // Permanent styles. Temporary styles live in views/overlays/.
-// Colour is never the only cue: shapes, borders and line styles carry each tag's meaning as well.
+// Color is never the only cue: shapes, borders and line styles carry each tag's meaning as well.
 styles {
     element "Person" {
         shape Person

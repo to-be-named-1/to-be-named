@@ -60,7 +60,7 @@ infrastructureOperator -> platform.controlPlane "Installs and upgrades, when sel
     }
 }
 
-infrastructureOperator -> platform.agent "Installs, enrols and upgrades" "" {
+infrastructureOperator -> platform.agent "Installs, enrolls and upgrades" "" {
     properties {
         "decisions" "D40, D44"
     }

@@ -18,8 +18,12 @@ workspace "Platform architecture" "C4 model, documentation and decision records 
             !docs documentation/platform
             !adrs decisions
 
+            properties {
+                "decisions" "D21, D22"
+            }
+
             // One folder per container: model/platform/<container>/container.dsl, with its docs/ beside it.
-            // The groups are the planes of D21; observability has no container of its own.
+            // The groups are the planes of D21.
             group "Interface plane" {
                 !include model/platform/web-app/container.dsl
                 !include model/platform/cli/container.dsl
@@ -39,6 +43,9 @@ workspace "Platform architecture" "C4 model, documentation and decision records 
                 !include model/platform/sample-builder/container.dsl
                 !include model/platform/bundled-object-storage/container.dsl
             }
+            group "Observability plane" {
+                !include model/platform/observability/container.dsl
+            }
         }
 
         !include model/relationships/people.dsl
@@ -52,6 +59,7 @@ workspace "Platform architecture" "C4 model, documentation and decision records 
         !include model/relationships/projection-unit.dsl
         !include model/relationships/probe-unit.dsl
         !include model/relationships/sample-builder.dsl
+        !include model/relationships/observability.dsl
         !include model/relationships/external-systems.dsl
 
         !include model/overlays/lifecycle.dsl

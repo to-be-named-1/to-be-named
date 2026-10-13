@@ -18,7 +18,7 @@ platform.projectionUnit -> platform.bundledObjectStorage "Writes Iceberg metadat
     }
 }
 
-platform.projectionUnit -> icebergCatalogue "Registers Iceberg snapshots in" "REST or SQL catalogue" {
+platform.projectionUnit -> icebergCatalog "Registers Iceberg snapshots in" "REST or SQL catalog" {
     properties {
         "decisions" "D44"
     }

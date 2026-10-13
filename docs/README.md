@@ -14,7 +14,7 @@ This folder holds the formal documentation of the platform.
 | `make docs-export` | Writes the workspace as JSON and as a static site to `docs/build/` (not committed) |
 | `make docs-check` | Runs every check a commit must pass (below) |
 
-The static site built by CI is attached to each run as the artefact `architecture-site`.
+The static site built by CI is attached to each run as the artifact `architecture-site`.
 
 ## Single source of truth
 
@@ -30,9 +30,16 @@ From the cut-over described below, `docs/architecture/` is the only authoritativ
 
 This section is temporary. It is removed in the commit that retires `project-design.md`.
 
-- [`project-design.md`](../project-design.md) is frozen at revision v0.10 (11 October 2026) and is no longer edited.
+- [`project-design.md`](../project-design.md) is frozen at revision v0.10 (October 11, 2026) and is no longer edited.
 - Until a decision's ADR is migrated, the design record remains the authority for that decision; the ADR stub says so. Once migrated, the ADR is the authority. New material goes only into `docs/architecture/`.
-- The design record is retired when all fifty ADRs are migrated and reviewed, every part of the record has its destination, `python tools/docs/check.py --cutover` passes after a JSON export, and `make docs-check` is green. Its last commit is tagged `design-record-v0.10` and the file is then removed.
+- Decisions are migrated faithfully, with these exceptions, so that nothing refers to the design record once it is retired:
+  - Notes lose their revision: "Amended in v0.10 by D40" becomes "Amended by D40". A note left with nothing but its revision, such as "Added in v0.10.", is dropped. "Revised in …" bullets become undated entries in the amendment history.
+  - Each reasoning item of the record's Part I §3 goes into the Context of its main decision under its bold title, without its number. Other decisions it cites refer to it by title and decision.
+  - Pointers into the record name the place where the content now lives.
+  - The record's References lines are not carried over.
+  - Comparisons with other software are not carried over.
+  - Spelling is converted to American English.
+- The design record is retired when all fifty ADRs are migrated and reviewed, every part of the record has its destination, `python tools/docs/check.py --cutover` passes after a JSON export, and `make docs-check` is green. The cut-over check also confirms that each reasoning item sits in exactly one ADR's Context and that no permanent file refers to the design record. Its last commit is tagged `design-record-v0.10` and the file is then removed.
 
 ## Conventions
 
@@ -60,16 +67,13 @@ This section is temporary. It is removed in the commit that retires `project-des
   ## Rejected alternatives
   ## Amendment history
   ## Follow-ups
-  ## References
   ```
 
 - Status is one word: **Accepted**; **Partial** (direction confirmed, details open); **Superseded**, with a `Superseded by` link; **Rejected**. Proposals are never ADRs.
-- Links in the status block are labelled `Amends`, `Amended by`, `Supersedes` or `Superseded by`, and every link has its inverse in the other ADR.
-- An amendment edits the amended ADR: an inline note where the change applies ("Amended 2026-10-11:" or "Amended 2026-10-11 by D51:"), an entry in its amendment history, and labelled links where another decision causes it. A decision is superseded only when it is replaced outright.
-- References: a decision's references include the decisions, open items and capability lines it cites, the decisions that amend it, and the capability lines whose notes cite it. A decision that only cites another need not appear in the other's references.
+- Links in the status block are labeled `Amends`, `Amended by`, `Supersedes` or `Superseded by`, and every link has its inverse in the other ADR.
+- An amendment edits the amended ADR where the change applies, in one of two ways: a note after the existing text ("Amended 2026-10-11:" or "Amended 2026-10-11 by D51:", followed by the change), or, optionally, the text rewritten in place and marked "Amended 2026-10-11." (or "Amended 2026-10-11 by D51."), with the earlier wording kept in the amendment history. Either way it adds an entry to the amendment history, and labeled links where another decision causes it. A decision is superseded only when it is replaced outright.
 - `Applies to` names model elements by identifier; each of them lists the decision in its `decisions` property, and the check confirms that both sides agree.
-- Reasoning carried over from the design record's Part I §3 is cited in the Context section as "Reasoning item N".
-- ADRs migrated from the design record carry the date its revision v0.10 was issued, 2026-10-11. When each decision entered the record is shown in the revision history of the workspace documentation.
+- Decisions recorded before this record began carry its start date, 2026-10-11.
 
 ### Model
 
@@ -83,7 +87,7 @@ This section is temporary. It is removed in the commit that retires `project-des
 
 ### Documentation
 
-- Workspace documentation (`architecture/documentation/workspace/`) holds reference material: the brief, vocabulary, capability catalogue, open items, proposals, design agenda, implementation checklist, roadmap and revision history.
+- Workspace documentation (`architecture/documentation/workspace/`) holds reference material: the brief, vocabulary, capability catalog, open items, proposals, design agenda, implementation checklist and roadmap.
 - Platform documentation (`architecture/documentation/platform/`) describes the architecture in arc42's twelve sections, in arc42's numbering.
 - Container documentation follows one template: `01-responsibility`, `02-interfaces`, `03-components`, `04-state`, `05-key-flows`, `06-failure-and-scaling`, `07-security`, `08-configuration`, `09-decisions`. A section that does not apply is omitted; file numbers never change, while the section numbers Structurizr displays follow the files present.
 - Each documentation file begins with one `##` heading, its section title; subsections use `###` and below. Structurizr hides `#` headings and numbers `##` sections in file order, so the platform documentation's files `01`–`12` carry arc42's numbering. ADRs keep `# N. Title`.
@@ -91,17 +95,20 @@ This section is temporary. It is removed in the commit that retires `project-des
 - Links between ADRs, and between files of one documentation set, work both in Structurizr and on GitHub. Links from documentation to ADRs, or between documentation sets, work on GitHub only; the ID still reads correctly where the link does not resolve.
 - Documentation describes the target architecture and never says what is not yet built; phasing lives in the roadmap section only.
 - Figures are text first; an image is an SVG or PNG beside its editable source. Diagrams are embedded with `![](embed:view-key)`.
-- Register: neutral third person, British spelling.
+- Register: neutral third person, American spelling.
+- The documentation never names comparable software or compares the platform with it. Software the platform runs on, integrates with or exports to is named as technology.
 
 ### Checks
 
 `make docs-check` validates the workspace with Structurizr, exports it as JSON and runs `tools/docs/check.py`, which checks:
 
-1. ADR files: name, title number, date, status, labelled links and their inverses, section order.
+1. ADR files: name, title number, date, status, labeled links and their inverses, section order.
 2. `decisions` properties name existing ADRs and agree with each ADR's `Applies to` line.
 3. No forbidden relationship, explicit or implied ([`tools/docs/forbidden-edges.json`](../tools/docs/forbidden-edges.json); each rule cites the decisions it restates).
 4. Every overlay file carries its header.
 5. Markdown headings, relative links, and the text of links to ADRs.
+6. No comparable software is named anywhere under `docs/` (the list is in `tools/docs/check.py`).
+7. No British spelling is used anywhere under `docs/` (the patterns are in `tools/docs/check.py`).
 
 It then runs `tools/docs/link.py --check`, which reports any reference not yet linked.
 

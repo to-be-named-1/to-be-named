@@ -17,5 +17,3 @@ platform.controlPlane -> identityProvider "Authenticates people through" "OpenID
         "decisions" "D45"
     }
 }
-
-platform.controlPlane -> notificationChannels "Sends alerts to" ""

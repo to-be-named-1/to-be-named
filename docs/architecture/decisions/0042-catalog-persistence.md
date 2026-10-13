@@ -1,4 +1,4 @@
-# 42. Catalogue persistence
+# 42. Catalog persistence
 
 Date: 2026-10-11
 
