@@ -17,7 +17,7 @@ operator = person "Operator" "Triggers, backfills, pauses and cancels runs and m
 projectMaintainer = person "Project maintainer" "Manages a project's settings, environment bindings and membership, approves changes to governed fields and deploys." {
     properties {
         "roles" "Maintainer"
-        "decisions" "D41, D45"
+        "decisions" "D41, D45, D47"
     }
 }
 
@@ -38,7 +38,7 @@ tenantAdmin = person "Tenant administrator" "Manages members, service accounts, 
 auditor = person "Auditor" "Reads the audit trail and all metadata, but no data content." "Commercial" {
     properties {
         "roles" "Auditor"
-        "decisions" "D5, D45"
+        "decisions" "D5, D45, D53"
     }
 }
 
@@ -56,6 +56,6 @@ infrastructureOperator = person "Infrastructure operator" "Customer staff who in
 
 vendorOperator = person "Vendor operator" "Vendor staff who operate the hosted control plane; support access to tenant records is break-glass only." "Commercial" {
     properties {
-        "decisions" "D22, D45"
+        "decisions" "D22, D45, D53"
     }
 }

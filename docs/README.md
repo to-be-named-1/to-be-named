@@ -33,7 +33,7 @@ This section is temporary. It is removed in the commit that retires `project-des
 - [`project-design.md`](../project-design.md) is frozen at revision v0.10 (October 11, 2026) and is no longer edited.
 - Until a decision's ADR is migrated, the design record remains the authority for that decision; the ADR stub says so. Once migrated, the ADR is the authority. New material goes only into `docs/architecture/`.
 - Decisions are migrated faithfully, with these exceptions, so that nothing refers to the design record once it is retired:
-  - Notes lose their revision: "Amended in v0.10 by D40" becomes "Amended by D40". A note left with nothing but its revision, such as "Added in v0.10.", is dropped. "Revised in …" bullets become undated entries in the amendment history.
+  - Notes lose their revision: "Amended in v0.10 by D40" becomes "Amended by D40". A note left with nothing but its revision, such as "Added in v0.10.", is dropped. "Revised in …" bullets become part of the Context section. The record's own notes, such as "Amended by D40: …", stay as recorded, except in a passage that a later decision rewrites.
   - Each reasoning item of the record's Part I §3 goes into the Context of its main decision under its bold title, without its number. Other decisions it cites refer to it by title and decision.
   - Pointers into the record name the place where the content now lives.
   - The record's References lines are not carried over.
@@ -65,13 +65,12 @@ This section is temporary. It is removed in the commit that retires `project-des
   ## Decision
   ## Consequences
   ## Rejected alternatives
-  ## Amendment history
   ## Follow-ups
   ```
 
 - Status is one word: **Accepted**; **Partial** (direction confirmed, details open); **Superseded**, with a `Superseded by` link; **Rejected**. Proposals are never ADRs.
 - Links in the status block are labeled `Amends`, `Amended by`, `Supersedes` or `Superseded by`, and every link has its inverse in the other ADR.
-- An amendment edits the amended ADR where the change applies, in one of two ways: a note after the existing text ("Amended 2026-10-11:" or "Amended 2026-10-11 by D51:", followed by the change), or, optionally, the text rewritten in place and marked "Amended 2026-10-11." (or "Amended 2026-10-11 by D51."), with the earlier wording kept in the amendment history. Either way it adds an entry to the amendment history, and labeled links where another decision causes it. A decision is superseded only when it is replaced outright.
+- An amendment rewrites the affected text of the amended ADR in place, so that it always states the current decision, with no inline note or date; git history records when and how the text changed. A substantive change, a new choice with its own reasoning and rejected alternatives, is recorded as a new ADR, and both ADRs carry labeled links. A decision is superseded only when it is replaced outright.
 - `Applies to` names model elements by identifier; each of them lists the decision in its `decisions` property, and the check confirms that both sides agree.
 - Decisions recorded before this record began carry its start date, 2026-10-11.
 

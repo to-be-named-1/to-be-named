@@ -19,6 +19,7 @@ Amends [42. Catalog persistence](0042-catalog-persistence.md)
 Amends [43. Scheduling and capacity](0043-scheduling-and-capacity.md)
 Amended by [45. Isolation enforcement and role model](0045-isolation-enforcement-and-role-model.md)
 Amended by [50. Development mode](0050-development-mode.md)
+Amended by [52. Agent identity by message signatures](0052-agent-identity-by-message-signatures.md)
 
 ## Context
 

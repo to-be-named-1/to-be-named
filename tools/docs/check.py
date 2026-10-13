@@ -38,7 +38,6 @@ SECTIONS = [
     "Decision",
     "Consequences",
     "Rejected alternatives",
-    "Amendment history",
     "Follow-ups",
 ]
 INVERSE_LINK = {

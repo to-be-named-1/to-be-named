@@ -25,13 +25,9 @@ Four options are supported, ordered by how much the customer controls: **fully m
 - **Credentials.** In the hybrid topology, credentials for customer storage are minted inside the customer's environment by the agent. The hosted control plane never holds them. Amended by [D40](0040-protocol-between-the-control-and-data-planes.md): this applies in every deployment, not only hybrid, together with secrets, which the agent resolves from references.
 - **What crosses.** Only metadata, statistics, events and pre-computed previews cross to the hosted planes. Previews and samples obey the classification of their source dataset, and a customer may disable them for sensitive datasets.
 - **Telemetry.** A customer may keep logs and metrics within its own environment, with live tailing proxied through the agent, because logs may contain sensitive content.
-- **Primary model.** Bring-your-own-compute is the primary model: execution runs on the customer's own infrastructure and the vendor coordinates. Hybrid and self-hosted are the first-class topologies. Fully managed serves trials and organizations that do not want to manage their own data-plane infrastructure, and managed with customer storage is retained unchanged. Amended 2026-10-12.
+- **Primary model.** Bring-your-own-compute is the primary model: execution runs on the customer's own infrastructure and the vendor coordinates. Hybrid and self-hosted are the first-class topologies. Fully managed serves trials and organizations that do not want to manage their own data-plane infrastructure, and managed with customer storage is retained unchanged.
 - **Compute.** A bring-your-own-compute deployment provides a container-capable backend: Kubernetes, cloud batch or an HPC cluster. A warehouse alone runs only pushdown work; in-process nodes on DuckDB or Polars, Python code nodes and command-line tools require container compute. A warehouse-native container service may later serve as a backend for customers whose only compute is a warehouse.
 - **Images.** Image builds and the image registry may run in the customer's environment, and images are referenced by digest wherever they are stored (CORE 1.10, CORE 5.1). HPC clusters commonly run images through Apptainer rather than Docker.
-
-## Amendment history
-
-- 2026-10-12: Fully managed serves trials and organizations that do not want to manage their own data-plane infrastructure. It was previously described as serving trials and small teams.
 
 ## Follow-ups
 

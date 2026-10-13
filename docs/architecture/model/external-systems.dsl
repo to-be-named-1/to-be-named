@@ -8,7 +8,7 @@ gitHost = softwareSystem "Git host" "Holds the history and review of git-connect
 
 identityProvider = softwareSystem "Identity provider" "Authenticates people through OpenID Connect, or through SAML in the commercial edition." "External" {
     properties {
-        "decisions" "D5, D45"
+        "decisions" "D5, D45, D53"
     }
 }
 
