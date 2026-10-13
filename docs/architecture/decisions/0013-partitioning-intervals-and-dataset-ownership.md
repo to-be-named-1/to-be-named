@@ -8,6 +8,7 @@ Accepted
 
 Amended by [35. Ephemeral extraction](0035-ephemeral-extraction.md)
 Amended by [44. Minimum technology stack](0044-minimum-technology-stack.md)
+Amended by [51. Adoption of existing data](0051-adoption-of-existing-data.md)
 
 ## Context
 

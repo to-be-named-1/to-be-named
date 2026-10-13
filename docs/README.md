@@ -11,10 +11,10 @@ This folder holds the formal documentation of the platform.
 |---|---|
 | `make docs-up` | Starts Structurizr local on <http://localhost:8080> (`STRUCTURIZR_PORT` overrides the port). It writes `architecture/workspace.json`, which is derived and never committed. |
 | `make docs-down` | Stops it |
-| `make docs-export` | Writes the workspace as JSON and as a static site to `docs/build/` (not committed) |
+| `make docs-export` | Writes the workspace as JSON and as a static site to `docs/build/` (not committed); the static site holds the diagrams only |
 | `make docs-check` | Runs every check a commit must pass (below) |
 
-The static site built by CI is attached to each run as the artifact `architecture-site`.
+The static site built by CI is attached to each run as the artifact `architecture-site`. The documentation and the decisions are read in Structurizr local, the primary reader.
 
 ## Single source of truth
 
@@ -72,7 +72,7 @@ This section is temporary. It is removed in the commit that retires `project-des
 - Links in the status block are labeled `Amends`, `Amended by`, `Supersedes` or `Superseded by`, and every link has its inverse in the other ADR.
 - An amendment rewrites the affected text of the amended ADR in place, so that it always states the current decision, with no inline note or date; git history records when and how the text changed. A substantive change, a new choice with its own reasoning and rejected alternatives, is recorded as a new ADR, and both ADRs carry labeled links. A decision is superseded only when it is replaced outright.
 - `Applies to` names model elements by identifier; each of them lists the decision in its `decisions` property, and the check confirms that both sides agree.
-- Decisions recorded before this record began carry its start date, 2026-10-11.
+- Decisions recorded before this record began carry its start date, 2026-10-11. A new decision carries the date it is written, so dates never decrease as numbers rise: Structurizr orders the decision log by date, then by number, and the check enforces it.
 
 ### Model
 
@@ -90,8 +90,9 @@ This section is temporary. It is removed in the commit that retires `project-des
 - Platform documentation (`architecture/documentation/platform/`) describes the architecture in arc42's twelve sections, in arc42's numbering.
 - Container documentation follows one template: `01-responsibility`, `02-interfaces`, `03-components`, `04-state`, `05-key-flows`, `06-failure-and-scaling`, `07-security`, `08-configuration`, `09-decisions`. A section that does not apply is omitted; file numbers never change, while the section numbers Structurizr displays follow the files present.
 - Each documentation file begins with one `##` heading, its section title; subsections use `###` and below. Structurizr hides `#` headings and numbers `##` sections in file order, so the platform documentation's files `01`–`12` carry arc42's numbering. ADRs keep `# N. Title`.
-- References in prose use IDs as link text: `[D29](…)` to the ADR file, `[S25](…)` to the open-items file, `[CORE 2.6](…)` to the capability file; never to a heading anchor, since Structurizr and GitHub derive anchors differently. Authors write bare IDs and run `make docs-link`, which adds the links; `make docs-check` reports any bare reference left. Open item S3 is linked by hand, because "S3" also names Amazon S3. On an ADR's status-block lines (`Amends`, `Amended by`, `Supersedes`, `Superseded by`) the link reads `N. Title`, matching the target's title; the linker writes and corrects that form, and the check enforces it.
-- Links between ADRs, and between files of one documentation set, work both in Structurizr and on GitHub. Links from documentation to ADRs, or between documentation sets, work on GitHub only; the ID still reads correctly where the link does not resolve.
+- References in prose use IDs as link text: `[D29](…)` to the ADR, `[S25](…)` to the open item, `[CORE 2.6](…)` to the capability line. Authors write bare IDs and run `make docs-link`, which adds the links; `make docs-check` reports any bare reference left. Open item S3 is linked by hand, because "S3" also names Amazon S3. On an ADR's status-block lines (`Amends`, `Amended by`, `Supersedes`, `Superseded by`) the link reads `N. Title`, matching the target's title; the linker writes and corrects that form, and the check enforces it.
+- Links are written for Structurizr, the primary reader. Structurizr resolves a relative link only within one set: between ADRs, or between files of one documentation set. A link that crosses sets uses Structurizr's `{workspace}` form, such as `{workspace}/decisions/Platform#29` or `{workspace}/documentation#3.1`, which resolves in Structurizr and not on GitHub; the ID still reads correctly where a link does not resolve.
+- Sections are addressed by the numbers Structurizr gives them: a set's files in name order, each file's `##` heading by its position, its `###` headings within it. An open item or capability line with a `###` heading of its own is linked to that heading, otherwise to its file's section. The numbers change as files are added, so `make docs-link` recomputes every link whose text is an ID, and rewrites a relative link into another set; `make docs-check` reports a link that crosses sets without the `{workspace}` form or names no section. Heading anchors derived from titles are never used.
 - Documentation describes the target architecture and never says what is not yet built; phasing lives in the roadmap section only.
 - Figures are text first; an image is an SVG or PNG beside its editable source. Diagrams are embedded with `![](embed:view-key)`.
 - Register: neutral third person, American spelling.
@@ -101,11 +102,11 @@ This section is temporary. It is removed in the commit that retires `project-des
 
 `make docs-check` validates the workspace with Structurizr, exports it as JSON and runs `tools/docs/check.py`, which checks:
 
-1. ADR files: name, title number, date, status, labeled links and their inverses, section order.
+1. ADR files: name, title number, date, status, labeled links and their inverses, section order, and dates that never decrease as numbers rise.
 2. `decisions` properties name existing ADRs and agree with each ADR's `Applies to` line.
 3. No forbidden relationship, explicit or implied ([`tools/docs/forbidden-edges.json`](../tools/docs/forbidden-edges.json); each rule cites the decisions it restates).
 4. Every overlay file carries its header.
-5. Markdown headings, relative links, and the text of links to ADRs.
+5. Markdown headings; relative links that resolve and stay within one set; `{workspace}` links that name an existing ADR or section; and the text of links to ADRs.
 6. No comparable software is named anywhere under `docs/` (the list is in `tools/docs/check.py`).
 7. No British spelling is used anywhere under `docs/` (the patterns are in `tools/docs/check.py`).
 

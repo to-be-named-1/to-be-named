@@ -24,7 +24,7 @@ projectMaintainer = person "Project maintainer" "Manages a project's settings, e
 datasetOwner = person "Dataset owner" "Sets a dataset's contract, classification, retention and freshness, releases quarantined versions and approves gated publication." {
     properties {
         "roles" "dataset.manage"
-        "decisions" "D4, D31, D45"
+        "decisions" "D4, D31, D45, D51"
     }
 }
 

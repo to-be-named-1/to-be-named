@@ -14,7 +14,7 @@ identityProvider = softwareSystem "Identity provider" "Authenticates people thro
 
 objectStorage = softwareSystem "Object storage" "Customer or platform object storage holding artifacts, staged outputs and managed datasets, for example Amazon S3, Google Cloud Storage or Azure Blob Storage." "External, Object Storage" {
     properties {
-        "decisions" "D4, D23, D42"
+        "decisions" "D4, D23, D42, D51"
     }
 }
 
@@ -70,7 +70,7 @@ credentialIssuer = softwareSystem "Cloud credential issuer" "Issues the short-li
 
 dataSources = softwareSystem "External data sources" "Operational databases, APIs, files and object stores that workflows read without the platform owning them." "External" {
     properties {
-        "decisions" "D4, D35, D37, D49"
+        "decisions" "D4, D35, D37, D49, D51"
     }
 }
 

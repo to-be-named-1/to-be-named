@@ -6,7 +6,7 @@ The platform serves the people below and works with the external systems that fo
 
 ### People
 
-| Person | How they use the platform | Role ([D45](../../decisions/0045-isolation-enforcement-and-role-model.md)) |
+| Person | How they use the platform | Role ([D45]({workspace}/decisions/Platform#45)) |
 |---|---|---|
 | Workflow author | Builds and tries workflows and commits drafts in the web application; reviews and merges changes in the git host | Developer |
 | Operator | Triggers, backfills, pauses and monitors runs | Operator |
@@ -22,22 +22,22 @@ The platform serves the people below and works with the external systems that fo
 
 | System | Role | Decisions |
 |---|---|---|
-| Git host | History and review of git-connected projects; the platform pushes on authors' behalf and deploys from the deploy branch | [D41](../../decisions/0041-ir-text-form-round-trip-and-structure.md), [D45](../../decisions/0045-isolation-enforcement-and-role-model.md) |
-| Identity provider | Authenticates people | [D5](../../decisions/0005-distribution-and-tenancy.md), [D45](../../decisions/0045-isolation-enforcement-and-role-model.md) |
-| Object storage | Artifacts, staged outputs and managed datasets, in platform or customer storage | [D4](../../decisions/0004-datasets-as-first-class-objects.md), [D23](../../decisions/0023-artifact-storage-layout.md), [D42](../../decisions/0042-catalog-persistence.md) |
-| Iceberg catalog | Where projected tables are registered for external engines | [D42](../../decisions/0042-catalog-persistence.md), [D44](../../decisions/0044-minimum-technology-stack.md) |
-| External query engines | Read managed datasets as Iceberg tables | [D44](../../decisions/0044-minimum-technology-stack.md) |
-| Docker engine, Kubernetes cluster, HPC scheduler, cloud batch service | Backends on which the agent runs units | [D12](../../decisions/0012-streaming-readiness.md), [D22](../../decisions/0022-deployment-topologies.md), [D29](../../decisions/0029-first-development-slice.md) |
-| Container registry | Images that units run, referenced by digest | [D22](../../decisions/0022-deployment-topologies.md) |
-| Secret manager | Secrets resolved by the agent from references | [D40](../../decisions/0040-protocol-between-the-control-and-data-planes.md) |
-| Cloud credential issuer | Short-lived storage credentials minted by the agent per unit | [D22](../../decisions/0022-deployment-topologies.md), [D40](../../decisions/0040-protocol-between-the-control-and-data-planes.md) |
-| External data sources | Data that workflows read without the platform owning it | [D4](../../decisions/0004-datasets-as-first-class-objects.md), [D35](../../decisions/0035-ephemeral-extraction.md), [D37](../../decisions/0037-incremental-extraction-state.md), [D49](../../decisions/0049-source-probes.md) |
-| Side-effect targets | Systems that nodes write to, message or trigger | [D40](../../decisions/0040-protocol-between-the-control-and-data-planes.md), [D50](../../decisions/0050-development-mode.md) |
-| Warehouses | Postgres and Snowflake, for pushdown, extraction and publication | [D25](../../decisions/0025-processing-engines-and-runtimes.md), [D28](../../decisions/0028-warehouse-connection-policy-and-plan-pinning.md) |
-| Customer observability stack | The customer's own log and metrics stores, where telemetry is kept in the customer's environment (CORE 4.7) | [D22](../../decisions/0022-deployment-topologies.md), [D40](../../decisions/0040-protocol-between-the-control-and-data-planes.md) |
+| Git host | History and review of git-connected projects; the platform pushes on authors' behalf and deploys from the deploy branch | [D41]({workspace}/decisions/Platform#41), [D45]({workspace}/decisions/Platform#45) |
+| Identity provider | Authenticates people | [D5]({workspace}/decisions/Platform#5), [D45]({workspace}/decisions/Platform#45) |
+| Object storage | Artifacts, staged outputs and managed datasets, in platform or customer storage | [D4]({workspace}/decisions/Platform#4), [D23]({workspace}/decisions/Platform#23), [D42]({workspace}/decisions/Platform#42), [D51]({workspace}/decisions/Platform#51) |
+| Iceberg catalog | Where projected tables are registered for external engines | [D42]({workspace}/decisions/Platform#42), [D44]({workspace}/decisions/Platform#44) |
+| External query engines | Read managed datasets as Iceberg tables | [D44]({workspace}/decisions/Platform#44) |
+| Docker engine, Kubernetes cluster, HPC scheduler, cloud batch service | Backends on which the agent runs units | [D12]({workspace}/decisions/Platform#12), [D22]({workspace}/decisions/Platform#22), [D29]({workspace}/decisions/Platform#29) |
+| Container registry | Images that units run, referenced by digest | [D22]({workspace}/decisions/Platform#22) |
+| Secret manager | Secrets resolved by the agent from references | [D40]({workspace}/decisions/Platform#40) |
+| Cloud credential issuer | Short-lived storage credentials minted by the agent per unit | [D22]({workspace}/decisions/Platform#22), [D40]({workspace}/decisions/Platform#40) |
+| External data sources | Data that workflows read without the platform owning it | [D4]({workspace}/decisions/Platform#4), [D35]({workspace}/decisions/Platform#35), [D37]({workspace}/decisions/Platform#37), [D49]({workspace}/decisions/Platform#49), [D51]({workspace}/decisions/Platform#51) |
+| Side-effect targets | Systems that nodes write to, message or trigger | [D40]({workspace}/decisions/Platform#40), [D50]({workspace}/decisions/Platform#50) |
+| Warehouses | Postgres and Snowflake, for pushdown, extraction and publication | [D25]({workspace}/decisions/Platform#25), [D28]({workspace}/decisions/Platform#28) |
+| Customer observability stack | The customer's own log and metrics stores, where telemetry is kept in the customer's environment (CORE 4.7) | [D22]({workspace}/decisions/Platform#22), [D40]({workspace}/decisions/Platform#40) |
 | Notification channels | Alerts | — |
-| CI system | Starts sample and development runs as a service account | [D45](../../decisions/0045-isolation-enforcement-and-role-model.md), [D50](../../decisions/0050-development-mode.md) |
+| CI system | Starts sample and development runs as a service account | [D45]({workspace}/decisions/Platform#45), [D50]({workspace}/decisions/Platform#50) |
 
 ### What crosses the boundary
 
-Agents in the customer's environment connect outward to the control plane and pull work; no inbound connectivity into a customer network is ever required ([D22](../../decisions/0022-deployment-topologies.md), [D29](../../decisions/0029-first-development-slice.md), [D40](../../decisions/0040-protocol-between-the-control-and-data-planes.md)). Only metadata, statistics, events and pre-computed previews cross to the hosted planes; previews and samples obey the classification of their source dataset, and a customer may disable them for sensitive datasets ([D22](../../decisions/0022-deployment-topologies.md)). A customer may keep logs and metrics in its own environment, with live tailing proxied through the agent ([D22](../../decisions/0022-deployment-topologies.md), [D40](../../decisions/0040-protocol-between-the-control-and-data-planes.md)).
+Agents in the customer's environment connect outward to the control plane and pull work; no inbound connectivity into a customer network is ever required ([D22]({workspace}/decisions/Platform#22), [D29]({workspace}/decisions/Platform#29), [D40]({workspace}/decisions/Platform#40)). Only metadata, statistics, events and pre-computed previews cross to the hosted planes; previews and samples obey the classification of their source dataset, and a customer may disable them for sensitive datasets ([D22]({workspace}/decisions/Platform#22)). A customer may keep logs and metrics in its own environment, with live tailing proxied through the agent ([D22]({workspace}/decisions/Platform#22), [D40]({workspace}/decisions/Platform#40)).

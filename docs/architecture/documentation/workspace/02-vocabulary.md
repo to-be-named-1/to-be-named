@@ -16,39 +16,39 @@ Terms used throughout that are not given their own entry in the key terms below.
 | Format type, plugin, binding | The platform defines a format type (for example `genomics/bam` v1); plugins implement types; each dataset is bound to one pinned implementation. |
 | Data commit | The atomic act by which the control plane makes an attempt's staged outputs current; defined in the catalog's Key terms. Distinct from a git commit, a database transaction and a table-format commit. |
 | Materialization request | A declarative request to make a dataset current through a given time, for which the reconciler plans the minimum work. |
-| Engine segment | Consecutive in-process nodes on the same engine, chained so that one optimizer sees them all. The level between node and execution unit ([D32](../../decisions/0032-execution-unit-structure.md)). |
-| Phase and outcome | Every run, task run and attempt carries a lifecycle phase (pending, active, suspended, ended) and, separately, an outcome that is empty until the phase is ended ([D31](../../decisions/0031-execution-state-model.md)). |
-| Checkpoint slot | An optional location scoped to a task run, not an attempt, into which a unit may write resumable state that the next attempt receives ([D31](../../decisions/0031-execution-state-model.md)). |
-| Fusion policy | The replaceable rule that chooses among legal groupings of nodes into units; its version is recorded on every plan ([D33](../../decisions/0033-automatic-fusion.md)). |
+| Engine segment | Consecutive in-process nodes on the same engine, chained so that one optimizer sees them all. The level between node and execution unit ([D32]({workspace}/decisions/Platform#32)). |
+| Phase and outcome | Every run, task run and attempt carries a lifecycle phase (pending, active, suspended, ended) and, separately, an outcome that is empty until the phase is ended ([D31]({workspace}/decisions/Platform#31)). |
+| Checkpoint slot | An optional location scoped to a task run, not an attempt, into which a unit may write resumable state that the next attempt receives ([D31]({workspace}/decisions/Platform#31)). |
+| Fusion policy | The replaceable rule that chooses among legal groupings of nodes into units; its version is recorded on every plan ([D33]({workspace}/decisions/Platform#33)). |
 | Pushdown | Running a relational node inside the warehouse that holds its inputs, instead of extracting the data. |
 | Extraction cap | A configurable limit on data extracted from a warehouse; exceeding it stops the plan and asks the author. |
-| Single-node guideline | A threshold beyond which work is flagged as exceeding in-process capacity. Made concrete as the planner's capacity check ([D34](../../decisions/0034-capacity-and-size.md)). |
-| Memory class | A node type's declared memory behavior: streaming, blocking and spilling, or blocking and non-spilling ([D34](../../decisions/0034-capacity-and-size.md)). |
+| Single-node guideline | A threshold beyond which work is flagged as exceeding in-process capacity. Made concrete as the planner's capacity check ([D34]({workspace}/decisions/Platform#34)). |
+| Memory class | A node type's declared memory behavior: streaming, blocking and spilling, or blocking and non-spilling ([D34]({workspace}/decisions/Platform#34)). |
 | Repartition step | A unit that rewrites data hash-bucketed by a key, so that a node can fan out by a key other than the input's partitioning. |
 | Conformance matrix | Built-in relational nodes × engines (DuckDB, Postgres, Snowflake); each cell is a fixture suite checking that the node gives the same answer on that engine. |
 | Connection policy | Settings on a warehouse connection, set by the warehouse's owner: whether the platform may compute there, which compute cluster it uses, and an optional credit budget. |
 | Plan pinning | Freezing a production workflow's placement so that changes are reported rather than applied. |
 | Bring-your-own-compute (BYOC) | The deployment model in which execution runs on customer infrastructure and the vendor coordinates. |
-| Draft | An autosaved, uncommitted edit to a workflow or dataset declaration, held by the platform for its author until committed or discarded ([D45](../../decisions/0045-isolation-enforcement-and-role-model.md)). |
-| Deploy | The platform's act of making a committed workflow change the version that scheduled and production runs use; for a git-connected project, a commit on the branch the platform deploys from, once any change to governed settings is authorized. Distinct from dataset publication and from the long-lived executions of [D6](../../decisions/0006-streaming.md) and [D12](../../decisions/0012-streaming-readiness.md) ([D45](../../decisions/0045-isolation-enforcement-and-role-model.md)). |
-| Clearance | The highest classification whose data content a member may read; roles govern metadata and actions ([D45](../../decisions/0045-isolation-enforcement-and-role-model.md)). |
-| Carried state | Values and outputs a loop passes from one iteration to the next, declared on the loop frame ([D46](../../decisions/0046-control-flow-constructs.md)). |
-| In-unit loop | A loop whose iterations run inside one execution unit, cached and retried as a whole and resumed from its checkpoint slot ([D46](../../decisions/0046-control-flow-constructs.md)). |
-| Capacity domain | A set of agent pools that share physical capacity, such as one cluster; admission and fair share are computed per domain ([D43](../../decisions/0043-scheduling-and-capacity.md)). |
-| Input resolution | Choosing, once per run, the versions and positions of the inputs it reads and recording them as identifiers; external sources are resolved by source probes. "Resolve" is used for nothing else: environment names are bound, node-type and workflow versions are pinned, attempts are specified by building their unit specification, and expressions are evaluated ([D47](../../decisions/0047-control-plane-structure.md), [D49](../../decisions/0049-source-probes.md)). |
-| Source probe | A platform maintenance unit, run through the agent, that asks external sources for their current version or position so that a run can read them as of it ([D49](../../decisions/0049-source-probes.md)). |
-| Run driver | The control-plane component that advances each run through its graph at run time: it creates task runs, evaluates conditions and run rules, decides retries and ends the run ([D47](../../decisions/0047-control-plane-structure.md)). |
-| Expected reuse | The units a plan expects to serve from cache, from the keys known at run start; the lookup made when each task run is created is authoritative ([D47](../../decisions/0047-control-plane-structure.md)). |
-| Capacity check and admission | The capacity check is the planner's check of one unit's estimated working set against its backend's per-unit ceiling ([D34](../../decisions/0034-capacity-and-size.md), [D47](../../decisions/0047-control-plane-structure.md)); admission is the scheduler's decision that a ready unit's request fits the free capacity of its capacity domain now ([D43](../../decisions/0043-scheduling-and-capacity.md)). |
-| Leader epoch | A number incremented at every change of leader; every leader-only write checks it, so a deposed leader cannot act ([D47](../../decisions/0047-control-plane-structure.md)). |
-| Held attempt | An attempt whose commit awaits a quality-gate release or an approval; its staged outputs stay durable and the control plane completes the commit later ([D48](../../decisions/0048-execution-mechanics.md)). |
-| Hoisting | Moving a node that depends on neither the map item, the loop index nor carried state out of its frame, so that it runs once ([D47](../../decisions/0047-control-plane-structure.md)). |
-| Sandbox | A workspace for full-scale development runs: datasets it writes are committed on its own line, visible only to runs in it, while everything else is read from production ([D50](../../decisions/0050-development-mode.md)). |
-| Line | The sequence of heads, versions and partition versions a dataset has in production or in one sandbox; a sandbox line shares unwritten partitions with production by reference ([D50](../../decisions/0050-development-mode.md)). |
-| Sample run and full-scale development run | The two kinds of development run: one on a sample of its inputs, writing only run-scoped artifacts, the other on full inputs, committing to a sandbox. A preview is a canvas action that starts a sample run of one node ([D50](../../decisions/0050-development-mode.md)). |
-| Selection boundary | The edges where unselected nodes feed the nodes a run is asked to execute; unchanged upstream outputs are read there and, in a sample run, sampled there ([D50](../../decisions/0050-development-mode.md)). |
-| Referential subsetting | Sampling one driving input by a hash of its key and keeping, in every input joined to it, only the rows whose join key matches, so that joins on the sample keep their matches ([D50](../../decisions/0050-development-mode.md)). |
-| Session unit | A warm container for one author, project, image and pool that runs successive interactive sample runs, each unit in a fresh process ([D50](../../decisions/0050-development-mode.md)). |
+| Draft | An autosaved, uncommitted edit to a workflow or dataset declaration, held by the platform for its author until committed or discarded ([D45]({workspace}/decisions/Platform#45)). |
+| Deploy | The platform's act of making a committed workflow change the version that scheduled and production runs use; for a git-connected project, a commit on the branch the platform deploys from, once any change to governed settings is authorized. Distinct from dataset publication and from the long-lived executions of [D6]({workspace}/decisions/Platform#6) and [D12]({workspace}/decisions/Platform#12) ([D45]({workspace}/decisions/Platform#45)). |
+| Clearance | The highest classification whose data content a member may read; roles govern metadata and actions ([D45]({workspace}/decisions/Platform#45)). |
+| Carried state | Values and outputs a loop passes from one iteration to the next, declared on the loop frame ([D46]({workspace}/decisions/Platform#46)). |
+| In-unit loop | A loop whose iterations run inside one execution unit, cached and retried as a whole and resumed from its checkpoint slot ([D46]({workspace}/decisions/Platform#46)). |
+| Capacity domain | A set of agent pools that share physical capacity, such as one cluster; admission and fair share are computed per domain ([D43]({workspace}/decisions/Platform#43)). |
+| Input resolution | Choosing, once per run, the versions and positions of the inputs it reads and recording them as identifiers; external sources are resolved by source probes. "Resolve" is used for nothing else: environment names are bound, node-type and workflow versions are pinned, attempts are specified by building their unit specification, and expressions are evaluated ([D47]({workspace}/decisions/Platform#47), [D49]({workspace}/decisions/Platform#49)). |
+| Source probe | A platform maintenance unit, run through the agent, that asks external sources for their current version or position so that a run can read them as of it ([D49]({workspace}/decisions/Platform#49)). |
+| Run driver | The control-plane component that advances each run through its graph at run time: it creates task runs, evaluates conditions and run rules, decides retries and ends the run ([D47]({workspace}/decisions/Platform#47)). |
+| Expected reuse | The units a plan expects to serve from cache, from the keys known at run start; the lookup made when each task run is created is authoritative ([D47]({workspace}/decisions/Platform#47)). |
+| Capacity check and admission | The capacity check is the planner's check of one unit's estimated working set against its backend's per-unit ceiling ([D34]({workspace}/decisions/Platform#34), [D47]({workspace}/decisions/Platform#47)); admission is the scheduler's decision that a ready unit's request fits the free capacity of its capacity domain now ([D43]({workspace}/decisions/Platform#43)). |
+| Leader epoch | A number incremented at every change of leader; every leader-only write checks it, so a deposed leader cannot act ([D47]({workspace}/decisions/Platform#47)). |
+| Held attempt | An attempt whose commit awaits a quality-gate release or an approval; its staged outputs stay durable and the control plane completes the commit later ([D48]({workspace}/decisions/Platform#48)). |
+| Hoisting | Moving a node that depends on neither the map item, the loop index nor carried state out of its frame, so that it runs once ([D47]({workspace}/decisions/Platform#47)). |
+| Sandbox | A workspace for full-scale development runs: datasets it writes are committed on its own line, visible only to runs in it, while everything else is read from production ([D50]({workspace}/decisions/Platform#50)). |
+| Line | The sequence of heads, versions and partition versions a dataset has in production or in one sandbox; a sandbox line shares unwritten partitions with production by reference ([D50]({workspace}/decisions/Platform#50)). |
+| Sample run and full-scale development run | The two kinds of development run: one on a sample of its inputs, writing only run-scoped artifacts, the other on full inputs, committing to a sandbox. A preview is a canvas action that starts a sample run of one node ([D50]({workspace}/decisions/Platform#50)). |
+| Selection boundary | The edges where unselected nodes feed the nodes a run is asked to execute; unchanged upstream outputs are read there and, in a sample run, sampled there ([D50]({workspace}/decisions/Platform#50)). |
+| Referential subsetting | Sampling one driving input by a hash of its key and keeping, in every input joined to it, only the rows whose join key matches, so that joins on the sample keep their matches ([D50]({workspace}/decisions/Platform#50)). |
+| Session unit | A warm container for one author, project, image and pool that runs successive interactive sample runs, each unit in a fresh process ([D50]({workspace}/decisions/Platform#50)). |
 
 ### Key terms
 
@@ -58,9 +58,9 @@ Vocabulary the rest of the documentation depends on. Each core concept is given 
 
 The platform's **canonical, machine-readable definition of a workflow**: its nodes, their typed inputs and outputs, the edges and control-flow constructs between them, parameters, resource requests, pinned image digests, and retry, caching and side-effect declarations. The term comes from compilers, where the IR sits between the language people write and the code machines run.
 
-The IR is **the single source of truth**. The canvas, the git-committed text form and imported templates are all views of it; backend submissions are all generated from it. Validation, cache keys, provenance records, version diffs and reproducibility checks all operate on the IR — never on canvas state or on a backend's own format. It is custom to this platform ([D3](../../decisions/0003-ir-and-execution-engines.md)) and carries its own schema version. For a project connected to git, the YAML file in git is the authoritative stored form of the IR; the canvas reads it and changes it through drafts that their author commits ([D45](../../decisions/0045-isolation-enforcement-and-role-model.md)), and keys are computed over its normalized semantic model, not its text ([D41](../../decisions/0041-ir-text-form-round-trip-and-structure.md)).
+The IR is **the single source of truth**. The canvas, the git-committed text form and imported templates are all views of it; backend submissions are all generated from it. Validation, cache keys, provenance records, version diffs and reproducibility checks all operate on the IR — never on canvas state or on a backend's own format. It is custom to this platform ([D3]({workspace}/decisions/Platform#3)) and carries its own schema version. For a project connected to git, the YAML file in git is the authoritative stored form of the IR; the canvas reads it and changes it through drafts that their author commits ([D45]({workspace}/decisions/Platform#45)), and keys are computed over its normalized semantic model, not its text ([D41]({workspace}/decisions/Platform#41)).
 
-> *Diagram:* Authored in: Visual canvas, YAML in git (a Python SDK generating IR follows, [D41](../../decisions/0041-ir-text-form-round-trip-and-structure.md)), Template import → **IR** (validated · versioned · hashed) → Compiled to: Kubernetes, HPC (Slurm), Local containers, Export: Argo / Airflow
+> *Diagram:* Authored in: Visual canvas, YAML in git (a Python SDK generating IR follows, [D41]({workspace}/decisions/Platform#41)), Template import → **IR** (validated · versioned · hashed) → Compiled to: Kubernetes, HPC (Slurm), Local containers, Export: Argo / Airflow
 
 **Semantic fields — what the node computes**
 
@@ -76,20 +76,20 @@ The IR is **the single source of truth**. The canvas, the git-committed text for
 - Labels, descriptions, log level
 - Canvas layout, kept as metadata beside the IR, not in it
 
-Only semantic fields feed cache keys and reproducibility checks ([D8](../../decisions/0008-cache-keying.md)), so changing memory or moving a node on the canvas never invalidates a result.
+Only semantic fields feed cache keys and reproducibility checks ([D8]({workspace}/decisions/Platform#8)), so changing memory or moving a node on the canvas never invalidates a result.
 
 #### Workflow structure
 
 ##### Node — *what the user draws*
 
-One operation on the canvas, with typed inputs, typed outputs and parameters — what a user would call a **step**. Nodes describe *what* should happen; they say nothing about how the work is packaged for execution. Granularity is chosen by context ([D1](../../decisions/0001-node-granularity.md)).
+One operation on the canvas, with typed inputs, typed outputs and parameters — what a user would call a **step**. Nodes describe *what* should happen; they say nothing about how the work is packaged for execution. Granularity is chosen by context ([D1]({workspace}/decisions/Platform#1)).
 
 - **Fine-grained.** One small operation: a scaler, a join, drop nulls.
 - **Coarse.** A large unit of work: a script, a SQL query, a tool such as BWA-MEM.
 - **Composite.** A subworkflow collapsed into one node for readability and reuse.
 - **Control-flow.** `if`, `map`, `loop`. Compute nothing; decide what runs next.
 
-**Composition** is the user action that creates a composite node. It shapes the canvas only: at compile time a composite is flattened back into its inner nodes, and execution is planned from the flattened graph. Composition never implies fusion: a composite may become one execution unit, several, or part of a unit shared with nodes outside it ([D33](../../decisions/0033-automatic-fusion.md)).
+**Composition** is the user action that creates a composite node. It shapes the canvas only: at compile time a composite is flattened back into its inner nodes, and execution is planned from the flattened graph. Composition never implies fusion: a composite may become one execution unit, several, or part of a unit shared with nodes outside it ([D33]({workspace}/decisions/Platform#33)).
 
 > *Diagram: A composite node on the canvas is flattened into its inner nodes at compile time; control-flow and other nodes pass through unchanged.*
 >
@@ -99,7 +99,7 @@ One operation on the canvas, with typed inputs, typed outputs and parameters —
 
 ##### Execution unit — *what the orchestrator dispatches*
 
-The smallest thing the orchestrator **schedules, retries, caches and records provenance for**. One or more nodes compiled into a single job that reads its inputs from storage, runs its nodes in one container, writes its outputs to storage and exits; a sample run started from the canvas may instead run it as a fresh process in a warm session container ([D50](../../decisions/0050-development-mode.md)). Inside the unit, nodes are grouped into **engine segments** — consecutive nodes on one engine, such as a DuckDB query, a Polars lazy plan or a Python block — which hand data to each other in memory as Arrow ([D32](../../decisions/0032-execution-unit-structure.md)).
+The smallest thing the orchestrator **schedules, retries, caches and records provenance for**. One or more nodes compiled into a single job that reads its inputs from storage, runs its nodes in one container, writes its outputs to storage and exits; a sample run started from the canvas may instead run it as a fresh process in a warm session container ([D50]({workspace}/decisions/Platform#50)). Inside the unit, nodes are grouped into **engine segments** — consecutive nodes on one engine, such as a DuckDB query, a Polars lazy plan or a Python block — which hand data to each other in memory as Arrow ([D32]({workspace}/decisions/Platform#32)).
 
 - **One container, one image.** The runtime belongs to each segment, not to the unit.
 - **One resource request.** CPU, memory and GPU on one backend.
@@ -110,7 +110,7 @@ The smallest thing the orchestrator **schedules, retries, caches and records pro
 >
 > Eleven nodes, five execution units. Inside a unit, data passes between nodes in memory; outputs are written to storage only at the boundaries between units. **U5** stands alone because it writes to an external system.
 
-At run time, one compiled unit can execute many times. Each execution is a **task run**; each try at a task run is an **attempt**. The record of every task run and attempt that actually happened is the **run trace** — always acyclic, because loop iterations are unrolled into separate task runs ([D2](../../decisions/0002-graph-model.md)).
+At run time, one compiled unit can execute many times. Each execution is a **task run**; each try at a task run is an **attempt**. The record of every task run and attempt that actually happened is the **run trace** — always acyclic, because loop iterations are unrolled into separate task runs ([D2]({workspace}/decisions/Platform#2)).
 
 > *Diagram: One execution unit becomes many task runs under a map, and each task run can have several attempts.*
 >
@@ -120,7 +120,7 @@ At run time, one compiled unit can execute many times. Each execution is a **tas
 
 ##### Fusion — *grouping nodes into one unit*
 
-Grouping adjacent nodes into one execution unit so they run in one container and never store what passes between them. It exists because every unit pays fixed overheads — starting a container, writing its output, the next unit reading it back, storing the intermediate, a scheduler round-trip — and for cheap operations those overheads dwarf the work itself. **Fusion is what makes fine-grained nodes affordable.** It is applied automatically by the planner; users can only split, by pinning a cache boundary or marking a node to run as its own unit ([D33](../../decisions/0033-automatic-fusion.md)).
+Grouping adjacent nodes into one execution unit so they run in one container and never store what passes between them. It exists because every unit pays fixed overheads — starting a container, writing its output, the next unit reading it back, storing the intermediate, a scheduler round-trip — and for cheap operations those overheads dwarf the work itself. **Fusion is what makes fine-grained nodes affordable.** It is applied automatically by the planner; users can only split, by pinning a cache boundary or marking a node to run as its own unit ([D33]({workspace}/decisions/Platform#33)).
 
 > *Diagram: Unfused, four nodes pay four container starts and three write-read round trips; fused, one start and data stays in memory.*
 >
@@ -130,12 +130,12 @@ Grouping adjacent nodes into one execution unit so they run in one container and
 
 **Nodes can be fused only when**
 
-- They share an image and execution location ([D32](../../decisions/0032-execution-unit-structure.md))
+- They share an image and execution location ([D32]({workspace}/decisions/Platform#32))
 - Their resource needs are compatible
-- No control flow sits between them, unless a loop runs inside one unit ([D46](../../decisions/0046-control-flow-constructs.md))
-- No output between them must be stored: a published dataset, an output used by several units, a pinned cache boundary, a read from a copied external source ([D35](../../decisions/0035-ephemeral-extraction.md))
+- No control flow sits between them, unless a loop runs inside one unit ([D46]({workspace}/decisions/Platform#46))
+- No output between them must be stored: a published dataset, an output used by several units, a pinned cache boundary, a read from a copied external source ([D35]({workspace}/decisions/Platform#35))
 - Neither has an external side effect
-- Neither is marked to run as its own unit ([D33](../../decisions/0033-automatic-fusion.md))
+- Neither is marked to run as its own unit ([D33]({workspace}/decisions/Platform#33))
 - Grouping would not create a cycle between units
 
 **What fused nodes give up, and how it is recovered**
@@ -143,7 +143,7 @@ Grouping adjacent nodes into one execution unit so they run in one container and
 - Per-node caching and retries: a change or failure reruns the whole unit
 - Full intermediates: replaced by per-node statistics, traced row samples and fitted parameters
 - Any intermediate can be regenerated on demand from the unit's stored inputs
-- Development runs choose their fusion mode, automatic or unfused, and how many intermediates to keep (CORE 6.6, [D50](../../decisions/0050-development-mode.md))
+- Development runs choose their fusion mode, automatic or unfused, and how many intermediates to keep (CORE 6.6, [D50]({workspace}/decisions/Platform#50))
 
 #### Caching
 
@@ -155,16 +155,16 @@ Before running an execution unit, the platform computes a **cache key** from eve
 >
 > Keys travel along the edges. Editing **B** changes key(B), which is part of key(C), which is part of key(F), so all three rerun. **A** and **E** never involved B, so their keys, and their cached outputs, are unchanged. All of this is known before the run starts.
 
-- **Cache key.** A hash of a node's semantic IR fields — code, image digest, node version, resolved parameters, declared environment — plus the keys of the nodes feeding it, so the key of a stored output depends only on the subgraph that produces it, not on how nodes are grouped into units ([D8](../../decisions/0008-cache-keying.md)). Keys of intermediates inside a unit are computed but never stored or looked up. Operational fields such as resources, backend, labels and canvas layout are excluded, so changing memory or moving a node never invalidates a result.
-- **Input-addressed.** Input identity is the upstream *key*. Stable, cheap, and what will rerun is shown before the run starts, as in the diagram above, as expected reuse that the lookup made when each task run is created confirms ([D47](../../decisions/0047-control-plane-structure.md)).
-- **Content-addressed.** Input identity is a hash of the upstream *output*. Allows early cutoff, but needs stable output hashing and decides the plan as the run proceeds. Used together with input-addressed keys ([D8](../../decisions/0008-cache-keying.md)).
+- **Cache key.** A hash of a node's semantic IR fields — code, image digest, node version, resolved parameters, declared environment — plus the keys of the nodes feeding it, so the key of a stored output depends only on the subgraph that produces it, not on how nodes are grouped into units ([D8]({workspace}/decisions/Platform#8)). Keys of intermediates inside a unit are computed but never stored or looked up. Operational fields such as resources, backend, labels and canvas layout are excluded, so changing memory or moving a node never invalidates a result.
+- **Input-addressed.** Input identity is the upstream *key*. Stable, cheap, and what will rerun is shown before the run starts, as in the diagram above, as expected reuse that the lookup made when each task run is created confirms ([D47]({workspace}/decisions/Platform#47)).
+- **Content-addressed.** Input identity is a hash of the upstream *output*. Allows early cutoff, but needs stable output hashing and decides the plan as the run proceeds. Used together with input-addressed keys ([D8]({workspace}/decisions/Platform#8)).
 - **Canonicalizer.** Normalizes an output — sorts rows, strips file metadata — so it can be hashed exactly for content addressing. No tolerance; distinct from a comparator.
 
 > *Diagram: A harmless edit to B reruns everything downstream under input-addressed keys, but only B under content-addressed keys.*
 >
 > The difference between the two strategies. Editing a comment in **B** changes nothing it produces. Input-addressed keys cannot detect this, so C and D rerun. Content-addressed keys hash B's new output, find it unchanged, and reuse C and D — **early cutoff** — at the price of hashing outputs and not knowing the plan in advance.
 
-**The platform uses both ([D8](../../decisions/0008-cache-keying.md)).** Input-addressed keys are computed for every node, chained through the nodes that feed it, so the plan shows before the run starts which units are expected to be reused; the lookup made when each task run is created is authoritative ([D47](../../decisions/0047-control-plane-structure.md)). In addition, artifacts small enough to hash cheaply get a canonical content hash recorded when they are written; nodes whose stored inputs all carry one also get a content key. A unit is skipped if every one of its stored outputs is found under either key.
+**The platform uses both ([D8]({workspace}/decisions/Platform#8)).** Input-addressed keys are computed for every node, chained through the nodes that feed it, so the plan shows before the run starts which units are expected to be reused; the lookup made when each task run is created is authoritative ([D47]({workspace}/decisions/Platform#47)). In addition, artifacts small enough to hash cheaply get a canonical content hash recorded when they are written; nodes whose stored inputs all carry one also get a content key. A unit is skipped if every one of its stored outputs is found under either key.
 
 > *Diagram: A unit is checked against its input-addressed key first, then against its content key, and only runs if both miss.*
 >
@@ -188,7 +188,7 @@ Before running an execution unit, the platform computes a **cache key** from eve
 
 ##### Reproducibility — *a verified, per-run claim*
 
-The platform's ability to re-execute a recorded run and state precisely **how closely the new outputs match the originals, and why** — not a yes/no badge. The goal is the same result, not byte-identical files ([D7](../../decisions/0007-reproducibility-guarantee.md)). A tier belongs to a *run*, not a workflow: fixing a workflow makes future runs more reproducible, never past ones. Tiers are as recorded in [D7](../../decisions/0007-reproducibility-guarantee.md).
+The platform's ability to re-execute a recorded run and state precisely **how closely the new outputs match the originals, and why** — not a yes/no badge. The goal is the same result, not byte-identical files ([D7]({workspace}/decisions/Platform#7)). A tier belongs to a *run*, not a workflow: fixing a workflow makes future runs more reproducible, never past ones. Tiers are as recorded in [D7]({workspace}/decisions/Platform#7).
 
 | Tier | Guarantee | Requires | What caps a run here |
 |---|---|---|---|
@@ -213,10 +213,10 @@ The workflow definition can prove a **ceiling** — network access caps a run at
 
 #### Data
 
-- **Artifact.** Any stored output of an execution unit, often temporary, stored at an identity-addressed path and described by a manifest in the catalog ([D23](../../decisions/0023-artifact-storage-layout.md)).
-- **Dataset.** A named, versioned, long-lived data asset with an owner and consumers, independent of the run that wrote it ([D4](../../decisions/0004-datasets-as-first-class-objects.md)). Every dataset version is an artifact or, for an external dataset, a reference; most artifacts never become dataset versions.
+- **Artifact.** Any stored output of an execution unit, often temporary, stored at an identity-addressed path and described by a manifest in the catalog ([D23]({workspace}/decisions/Platform#23)).
+- **Dataset.** A named, versioned, long-lived data asset with an owner and consumers, independent of the run that wrote it ([D4]({workspace}/decisions/Platform#4)). Every dataset version is an artifact or, for an external dataset, a reference; most artifacts never become dataset versions.
 - **Logical interval.** The slice of time a run is *for* (e.g. 2026-09-19), as opposed to when it happened to execute. Makes reruns and backfills deterministic.
-- **Data commit.** The single atomic act by which the control plane makes the staged outputs of one attempt current in the catalog ([D15](../../decisions/0015-atomic-publication.md), [D21](../../decisions/0021-architecture-planes.md)). An attempt writes its outputs to an attempt-scoped staging location, where they are durable but invisible; the agent then sends a commit request carrying the attempt's fencing token, the staged manifests, the read records and any quality-gate results ([D40](../../decisions/0040-protocol-between-the-control-and-data-planes.md)). The control plane rejects the request if the attempt has been superseded; otherwise, in one database transaction, it records the manifests, the new partition versions and dataset version, the read records and cursor frontier, moves the head of the dataset's line, production or a sandbox ([D50](../../decisions/0050-development-mode.md)), to the new version and writes one outbox row for each subscribed handler ([D48](../../decisions/0048-execution-mechanics.md)). Afterwards, runs that resolve their inputs see the new version. A commit is all-or-nothing, happens at most once per attempt, and is performed only by the control plane; by default it makes one dataset's new version current, and a publication group makes several current together.
-  - *Also commits:* an append to an open partition and marking it complete; releasing a quarantined version ([D31](../../decisions/0031-execution-state-model.md)); registering an unbound run-scoped artifact. A fenced write to a task run's checkpoint slot is a **checkpoint commit**, which makes a checkpoint current but creates no dataset version.
-  - *Not commits:* writing to staging; a failed quality gate, which records a quarantined version but makes nothing current; a task run or run succeeding, which is an execution outcome ([D31](../../decisions/0031-execution-state-model.md)) — one run may make many commits, as in a backfill ([D20](../../decisions/0020-backfill-commits-and-scheduling.md)), or none; a cache hit.
-  - *Distinct terms:* a **git commit** changes workflow definitions ([D41](../../decisions/0041-ir-text-form-round-trip-and-structure.md)); a **database transaction** is the mechanism by which a data commit is carried out; a **table-format commit** (Iceberg, Delta) is a step inside a data commit where the storage target is a lakehouse table ([D15](../../decisions/0015-atomic-publication.md)), whereas the Iceberg metadata projected for datasets on object storage is written after the data commit and is not part of it ([D42](../../decisions/0042-catalog-persistence.md)). Used alone, "commit" means a data commit.
+- **Data commit.** The single atomic act by which the control plane makes the staged outputs of one attempt current in the catalog ([D15]({workspace}/decisions/Platform#15), [D21]({workspace}/decisions/Platform#21)). An attempt writes its outputs to an attempt-scoped staging location, where they are durable but invisible; the agent then sends a commit request carrying the attempt's fencing token, the staged manifests, the read records and any quality-gate results ([D40]({workspace}/decisions/Platform#40)). The control plane rejects the request if the attempt has been superseded; otherwise, in one database transaction, it records the manifests, the new partition versions and dataset version, the read records and cursor frontier, moves the head of the dataset's line, production or a sandbox ([D50]({workspace}/decisions/Platform#50)), to the new version and writes one outbox row for each subscribed handler ([D48]({workspace}/decisions/Platform#48)). Afterwards, runs that resolve their inputs see the new version. A commit is all-or-nothing, happens at most once per attempt, and is performed only by the control plane; by default it makes one dataset's new version current, and a publication group makes several current together.
+  - *Also commits:* an append to an open partition and marking it complete; releasing a quarantined version ([D31]({workspace}/decisions/Platform#31)); registering an unbound run-scoped artifact. A fenced write to a task run's checkpoint slot is a **checkpoint commit**, which makes a checkpoint current but creates no dataset version.
+  - *Not commits:* writing to staging; a failed quality gate, which records a quarantined version but makes nothing current; a task run or run succeeding, which is an execution outcome ([D31]({workspace}/decisions/Platform#31)) — one run may make many commits, as in a backfill ([D20]({workspace}/decisions/Platform#20)), or none; a cache hit.
+  - *Distinct terms:* a **git commit** changes workflow definitions ([D41]({workspace}/decisions/Platform#41)); a **database transaction** is the mechanism by which a data commit is carried out; a **table-format commit** (Iceberg, Delta) is a step inside a data commit where the storage target is a lakehouse table ([D15]({workspace}/decisions/Platform#15)), whereas the Iceberg metadata projected for datasets on object storage is written after the data commit and is not part of it ([D42]({workspace}/decisions/Platform#42)). Used alone, "commit" means a data commit.

@@ -4,14 +4,17 @@
 Run by `make docs-check`, after `structurizr validate` and a JSON export of the workspace.
 
   1. ADR files: file name, title number, Date, status, labeled links and their symmetry,
-     section order.
+     section order; dates never decrease as numbers rise, since Structurizr orders the
+     decision log by date and then by number.
   2. `decisions` properties on elements and relationships name existing ADRs, and every
      migrated ADR's "Applies to" line agrees with the elements that cite it.
   3. No forbidden relationship (tools/docs/forbidden-edges.json), explicit or implied.
   4. Every overlay file carries its header.
   5. Markdown: documentation files begin with one `##` heading, the README with one `#`;
-     relative links resolve; links to ADRs read `Dn` or `N. Title` with the right number.
-     (Bare references are reported by tools/docs/link.py --check.)
+     relative links resolve and stay within one set (an ADR to an ADR, or within one
+     documentation set); links across sets use Structurizr's `{workspace}` form and name an
+     existing ADR or section; links to ADRs read `Dn` or `N. Title` with the right number.
+     (Bare references and outdated section numbers are reported by tools/docs/link.py --check.)
   6. No comparable software is named anywhere under docs/.
   7. No British spelling is used anywhere under docs/.
   8. With --cutover: the count check required before project-design.md is retired, including
@@ -30,6 +33,9 @@ import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import link as linker  # noqa: E402
 
 STATUSES = {"Accepted", "Partial", "Superseded", "Rejected"}
 SECTIONS = [
@@ -57,7 +63,9 @@ ADR_LINK = re.compile(
 DECISION_REF = re.compile(r"\bD(\d+)\b")
 MD_LINK = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 INLINE_CODE = re.compile(r"`[^`]*`")
-SKIPPED_LINK_PREFIXES =("http://", "https://", "mailto:", "#", "embed:")
+SKIPPED_LINK_PREFIXES = ("http://", "https://", "mailto:", "#", "embed:")
+WORKSPACE_DECISION_LINK = re.compile(r"^\{workspace\}/decisions/([^#]+)#(\d+)$")
+WORKSPACE_DOCUMENTATION_LINK = re.compile(r"^\{workspace\}/documentation(?:/([^#]+))?#(\d+(?:\.\d+)?)$")
 
 CUTOVER_DECISIONS = 50
 CUTOVER_PARTIAL = {27}
@@ -142,6 +150,7 @@ class Adr:
     number: int
     path: Path
     title: str
+    date: datetime.date | None = None
     status: str | None = None
     applies_to: list[str] | None = None
     links: list[tuple[str, str, int]] = field(default_factory=list)
@@ -191,7 +200,7 @@ def parse_adr(path: Path, report: Report) -> Adr | None:
         if line.startswith("Date: "):
             date_seen = True
             try:
-                datetime.date.fromisoformat(line[len("Date: "):].strip())
+                adr.date = datetime.date.fromisoformat(line[len("Date: "):].strip())
             except ValueError:
                 report.error(f"{where}:{i + 1}", "Date must be YYYY-MM-DD")
         elif line.startswith("Applies to: "):
@@ -265,6 +274,14 @@ def check_adrs(decisions_dir: Path, report: Report) -> dict[int, Adr]:
             report.error(where, "status Superseded needs a 'Superseded by' link")
         if superseded_by and adr.status != "Superseded":
             report.error(where, "a 'Superseded by' link needs status Superseded")
+    dated = [adr for _, adr in sorted(adrs.items()) if adr.date is not None]
+    for earlier, later in zip(dated, dated[1:]):
+        if later.date < earlier.date:
+            report.error(
+                display(later.path),
+                f"dated {later.date}, before ADR {earlier.number} ({earlier.date}); Structurizr orders the "
+                "decision log by date, so a later number needs the same or a later date",
+            )
     report.note(f"{len(adrs)} ADRs, {sum(a.pending for a in adrs.values())} pending migration")
     return adrs
 
@@ -431,6 +448,7 @@ def check_markdown(paths: list[Path], root: Path, report: Report) -> None:
     starts with one `#` heading, as GitHub renders it.
     """
     decisions_dir = (root / "decisions").resolve()
+    layout = linker.Layout(root)
     for path in paths:
         where = display(path)
         lines = path.read_text(encoding="utf-8").splitlines()
@@ -450,6 +468,10 @@ def check_markdown(paths: list[Path], root: Path, report: Report) -> None:
         for i, line in content:
             for match in MD_LINK.finditer(INLINE_CODE.sub("", line)):
                 target = match[1]
+                text = re.match(r"!?\[([^\]]*)\]", match[0])[1]
+                if target.startswith("{workspace}"):
+                    check_workspace_link(target, text, f"{where}:{i + 1}", layout, report)
+                    continue
                 if target.startswith(SKIPPED_LINK_PREFIXES):
                     continue
                 relative = target.split("#", 1)[0].split("?", 1)[0]
@@ -459,11 +481,42 @@ def check_markdown(paths: list[Path], root: Path, report: Report) -> None:
                 if not resolved.exists():
                     report.error(f"{where}:{i + 1}", f"link target {target} does not exist")
                     continue
+                if (inside and resolved.suffix == ".md" and root.resolve() in resolved.parents
+                        and resolved.parent != path.resolve().parent):
+                    report.error(f"{where}:{i + 1}", f"{target} crosses into another set, which Structurizr does not "
+                                 "resolve; use the {workspace} form (make docs-link)")
+                    continue
+                if "#" in target and resolved.parent == path.resolve().parent and resolved.parent != decisions_dir:
+                    anchor = target.split("#", 1)[1]
+                    if anchor not in layout.anchors(resolved.parent) or not (
+                            anchor == f"{layout.section(resolved)}" or anchor.startswith(f"{layout.section(resolved)}.")):
+                        report.error(f"{where}:{i + 1}", f"{target} names no section of {resolved.name}")
                 if resolved.parent == decisions_dir and resolved.name[:4].isdigit():
                     number = int(resolved.name[:4])
-                    text = re.match(r"!?\[([^\]]*)\]", match[0])[1]
                     if text != f"D{number}" and not text.startswith(f"{number}. "):
                         report.error(f"{where}:{i + 1}", f"a link to ADR {number} must read 'D{number}' or '{number}. Title', not '{text}'")
+
+
+def check_workspace_link(target: str, text: str, where: str, layout: "linker.Layout", report: Report) -> None:
+    """A `{workspace}` link names an existing ADR, or an existing section of a documentation set."""
+    if match := WORKSPACE_DECISION_LINK.match(target):
+        number = int(match[2])
+        if match[1] != layout.system:
+            report.error(where, f"{target}: decisions live under '{layout.system}'")
+        elif number not in layout.adrs:
+            report.error(where, f"{target}: there is no ADR {number}")
+        elif text != f"D{number}" and not text.startswith(f"{number}. "):
+            report.error(where, f"a link to ADR {number} must read 'D{number}' or '{number}. Title', not '{text}'")
+        return
+    if match := WORKSPACE_DOCUMENTATION_LINK.match(target):
+        directory = layout.documentation_dir(match[1])
+        if directory is None:
+            report.error(where, f"{target}: no documentation set is attached under '{match[1]}'")
+        elif match[2] not in layout.anchors(directory):
+            report.error(where, f"{target}: no section {match[2]} in {directory.name} documentation")
+        return
+    report.error(where, f"{target}: a {{workspace}} link must be {{workspace}}/decisions/{layout.system}#N or "
+                 f"{{workspace}}/documentation[/{layout.system}]#n[.m]")
 
 
 # --- 6. Comparable software --------------------------------------------------------------
