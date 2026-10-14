@@ -1,6 +1,6 @@
 // Relationships from external systems.
 
-ciSystem -> platform.controlPlane "Starts sample and development runs through the API of" "ConnectRPC over HTTPS" {
+ciSystem -> platform.controlPlane.apiLayer "Starts sample and development runs through the API of" "ConnectRPC over HTTPS" {
     properties {
         "decisions" "D45, D50"
     }

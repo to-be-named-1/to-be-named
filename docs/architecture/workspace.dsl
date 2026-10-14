@@ -68,6 +68,13 @@ workspace "Platform architecture" "C4 model, documentation and decision records 
     views {
         !include views/context.dsl
         !include views/containers.dsl
+        !include views/components.dsl
+        !include views/dynamic/run-start.dsl
+        !include views/dynamic/task-execution.dsl
+        !include views/dynamic/data-commit.dsl
+        !include views/dynamic/lease-fencing.dsl
+        !include views/dynamic/leader-failover.dsl
+        !include views/dynamic/source-probe.dsl
 
         !include views/styles.dsl
         !include views/overlays/lifecycle.dsl

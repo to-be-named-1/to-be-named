@@ -1,6 +1,6 @@
 // Relationships from cli.
 
-platform.cli -> platform.controlPlane "Calls the API of" "ConnectRPC over HTTPS" {
+platform.cli -> platform.controlPlane.apiLayer "Calls the API of" "ConnectRPC over HTTPS" {
     properties {
         "decisions" "D44"
     }

@@ -1,6 +1,6 @@
 // Relationships from web app.
 
-platform.webApp -> platform.controlPlane "Calls the API of" "ConnectRPC over HTTPS" {
+platform.webApp -> platform.controlPlane.apiLayer "Calls the API of" "ConnectRPC over HTTPS" {
     properties {
         "decisions" "D44, D45"
     }

@@ -3,7 +3,9 @@
   "rules": [
     {
       "id": "control-plane-no-data-or-credentials",
-      "from": ["platform.controlPlane"],
+      "from": [
+        "platform.controlPlane"
+      ],
       "to": [
         "objectStorage",
         "platform.bundledObjectStorage",
@@ -14,14 +16,27 @@
         "icebergCatalog",
         "sideEffectTargets"
       ],
-      "decisions": ["D21", "D40", "D42"],
+      "decisions": [
+        "D21",
+        "D40",
+        "D42"
+      ],
       "reason": "The control plane never handles bulk data and holds no storage credentials or secret values; whatever touches customer data or credentials runs in the data plane."
     },
     {
       "id": "control-plane-no-backend-calls",
-      "from": ["platform.controlPlane"],
-      "to": ["dockerEngine", "kubernetes", "hpcScheduler", "cloudBatch"],
-      "decisions": ["D29"],
+      "from": [
+        "platform.controlPlane"
+      ],
+      "to": [
+        "dockerEngine",
+        "kubernetes",
+        "hpcScheduler",
+        "cloudBatch"
+      ],
+      "decisions": [
+        "D29"
+      ],
       "reason": "The control plane never calls a backend's API directly; the pull-based agent does, in every deployment."
     },
     {
@@ -34,23 +49,57 @@
         "platform.probeUnit",
         "platform.sampleBuilder"
       ],
-      "to": ["platform.controlPlane", "platform.database"],
-      "decisions": ["D40"],
+      "to": [
+        "platform.controlPlane",
+        "platform.database"
+      ],
+      "decisions": [
+        "D40"
+      ],
       "reason": "A unit talks only to its local agent; the agent is the single point at which data-plane traffic leaves the customer environment."
     },
     {
       "id": "agent-through-gateway",
-      "from": ["platform.agent"],
-      "to": ["platform.database"],
-      "decisions": ["D40", "D47"],
+      "from": [
+        "platform.agent"
+      ],
+      "to": [
+        "platform.database"
+      ],
+      "decisions": [
+        "D40",
+        "D47"
+      ],
       "reason": "Agents reach the control plane only through its agent gateway; the database belongs to the control plane alone."
     },
     {
       "id": "web-app-through-api",
-      "from": ["platform.webApp", "platform.cli"],
-      "to": ["platform.database"],
-      "decisions": ["D21", "D44"],
+      "from": [
+        "platform.webApp",
+        "platform.cli"
+      ],
+      "to": [
+        "platform.database"
+      ],
+      "decisions": [
+        "D21",
+        "D44"
+      ],
       "reason": "Clients reach platform state only through the API, which authorizes every method."
+    },
+    {
+      "id": "contexts-own-their-schemas",
+      "from": [
+        "platform.controlPlane"
+      ],
+      "to": [
+        "platform.database"
+      ],
+      "across_groups": true,
+      "decisions": [
+        "D47"
+      ],
+      "reason": "A bounded context never reads another context's tables; each control-plane component reaches only the schema of its own group, and components of no context only the shared schema."
     }
   ]
 }

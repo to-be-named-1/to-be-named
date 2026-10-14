@@ -1,6 +1,6 @@
 // Relationships from agent.
 
-platform.agent -> platform.controlPlane "Claims work from, renews leases with and requests commits from" "ConnectRPC over HTTPS, outbound only" {
+platform.agent -> platform.controlPlane.agentGateway "Claims work from, renews leases with and requests commits from" "ConnectRPC over HTTPS, outbound only" {
     properties {
         "decisions" "D40, D44, D48"
     }

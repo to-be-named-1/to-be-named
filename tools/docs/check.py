@@ -8,7 +8,9 @@ Run by `make docs-check`, after `structurizr validate` and a JSON export of the 
      decision log by date and then by number.
   2. `decisions` properties on elements and relationships name existing ADRs, and every
      migrated ADR's "Applies to" line agrees with the elements that cite it.
-  3. No forbidden relationship (tools/docs/forbidden-edges.json), explicit or implied.
+  3. No forbidden relationship (tools/docs/forbidden-edges.json), explicit or implied; a rule
+     marked across_groups forbids only explicit relationships that reach a grouped element from
+     outside its group.
   4. Every overlay file carries its header.
   5. Markdown: documentation files begin with one `##` heading, the README with one `#`;
      relative links resolve and stay within one set (an ADR to an ADR, or within one
@@ -78,6 +80,10 @@ CUTOVER_TITLE_CHANGES = {
     3: "Containers rather than a single process",
     10: "Tenant = the whole organization",
     54: "A leader-centered control plane with invariants in the database",
+}
+# Reasoning items removed from their ADR after migration; the cut-over check does not look for them.
+CUTOVER_DROPPED_REASONING_ITEMS = {
+    62,  # "Spark is not a general remedy for resource exhaustion" (D47)
 }
 # Comparable software is never named in the documentation; software the platform runs on,
 # integrates with or exports to is technology and is not listed here.
@@ -390,6 +396,15 @@ def check_traceability(model: Model, adrs: dict[int, Adr], have_adrs: bool, repo
 # --- 3. Forbidden relationships ------------------------------------------------------------
 
 
+def crosses_groups(model: Model, relationship: dict) -> bool:
+    """True when an explicit relationship reaches a grouped element from outside that element's group."""
+    if relationship.get("linkedRelationshipId"):
+        return False
+    source = model.elements.get(relationship["sourceId"], {})
+    destination = model.elements.get(relationship["destinationId"], {})
+    return bool(destination.get("group")) and source.get("group") != destination.get("group")
+
+
 def check_forbidden_edges(model: Model, rules_path: Path, adrs: dict[int, Adr], have_adrs: bool,
                           cutover: bool, report: Report) -> None:
     rules = json.loads(rules_path.read_text(encoding="utf-8"))["rules"]
@@ -413,6 +428,8 @@ def check_forbidden_edges(model: Model, rules_path: Path, adrs: dict[int, Adr], 
             source_chain = ancestry(model, relationship["sourceId"])
             destination_chain = ancestry(model, relationship["destinationId"])
             if sources.intersection(source_chain) and targets.intersection(destination_chain):
+                if rule.get("across_groups") and not crosses_groups(model, relationship):
+                    continue
                 source = model.elements.get(model.alias.get(relationship["sourceId"], relationship["sourceId"]), {})
                 destination = model.elements.get(
                     model.alias.get(relationship["destinationId"], relationship["destinationId"]), {})
@@ -593,6 +610,8 @@ def check_cutover(root: Path, record: Path, adrs: dict[int, Adr], report: Report
             context = re.search(r"^## Context\n(.*?)(?=^## |\Z)", adr.text, re.M | re.S)
             contexts[number] = context[1] if context else ""
         for item, title in items:
+            if int(item) in CUTOVER_DROPPED_REASONING_ITEMS:
+                continue
             title = CUTOVER_TITLE_CHANGES.get(int(item), title)
             holders = [f"D{n}" for n, context in sorted(contexts.items()) if f"**{title}**" in context]
             if len(holders) != 1:
