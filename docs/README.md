@@ -16,6 +16,8 @@ This folder holds the formal documentation of the platform.
 
 The static site built by CI is attached to each run as the artifact `architecture-site`. The documentation and the decisions are read in Structurizr local, the primary reader.
 
+The make targets run Structurizr as the host user, so that on Linux it can write its data directory and `docs/build`. Calling Docker Compose directly on Linux needs the same: `DOCS_UID=$(id -u) DOCS_GID=$(id -g) docker compose --profile docs up -d structurizr`.
+
 ## Single source of truth
 
 From the cut-over described below, `docs/architecture/` is the only authoritative record of the platform's architecture: the model, the documentation and the ADRs. Anything not recorded there is not decided. Until the cut-over, authority is held item by item, as the migration section sets out.

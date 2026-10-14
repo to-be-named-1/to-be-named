@@ -2,6 +2,9 @@ services:
   structurizr:
     image: structurizr/structurizr:2026.09.19
     command: local
+    # The image's own user (65532) by default; the Makefile passes the host user's IDs, so that on a Linux host
+    # Structurizr can write its data directory (docs/architecture) and docs/build.
+    user: "${DOCS_UID:-65532}:${DOCS_GID:-65532}"
     profiles: [docs]
     ports:
       - "${STRUCTURIZR_PORT:-8080}:8080"

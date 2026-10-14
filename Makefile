@@ -6,12 +6,17 @@ STRUCTURIZR := $(COMPOSE) run --rm structurizr
 PYTHON      ?= python
 DOCS_BUILD  := docs/build
 
+# Structurizr runs as the host user, so that on Linux it can write docs/architecture and docs/build; Python on
+# Windows has no getuid, and the image's own user (65532) is kept there.
+export DOCS_UID := $(shell $(PYTHON) -c "import os; print(os.getuid() if hasattr(os, 'getuid') else 65532)")
+export DOCS_GID := $(shell $(PYTHON) -c "import os; print(os.getgid() if hasattr(os, 'getgid') else 65532)")
+
 # Git Bash on Windows rewrites arguments that look like POSIX paths; container paths must pass through unchanged.
 export MSYS_NO_PATHCONV := 1
 
 .DEFAULT_GOAL := help
 
-.PHONY: help docs-up docs-down docs-validate docs-inspect docs-export docs-link docs-check
+.PHONY: help docs-up docs-down docs-validate docs-inspect docs-export docs-link docs-check docs-build-dir
 
 help: ## List the available targets
 	@$(PYTHON) -c "import re; [print(f'{m[1]:<15} {m[2]}') for m in re.finditer(r'^([a-z][a-z-]+):.*?## (.+)$$', open('Makefile', encoding='utf-8').read(), re.M)]"
@@ -30,14 +35,18 @@ docs-validate: ## Validate the workspace
 docs-inspect: ## Run Structurizr inspections (report-only)
 	-$(STRUCTURIZR) inspect -workspace workspace.dsl
 
-docs-export: ## Export the workspace as JSON and as a static site to docs/build
+# On Linux, Docker would create a missing docs/build owned by root, which the container's user cannot write.
+docs-build-dir:
+	$(PYTHON) -c "import pathlib; pathlib.Path('$(DOCS_BUILD)').mkdir(parents=True, exist_ok=True)"
+
+docs-export: docs-build-dir ## Export the workspace as JSON and as a static site to docs/build
 	$(STRUCTURIZR) export -workspace workspace.dsl -format json -output /usr/local/build/json
 	$(STRUCTURIZR) export -workspace workspace.dsl -format static -output /usr/local/build/site
 
 docs-link: ## Turn bare references (D29, S25, CORE 2.6) into relative links
 	$(PYTHON) tools/docs/link.py --root docs/architecture
 
-docs-check: docs-validate ## Validate, then run the documentation checks
+docs-check: docs-validate docs-build-dir ## Validate, then run the documentation checks
 	$(STRUCTURIZR) export -workspace workspace.dsl -format json -output /usr/local/build/json
 	$(PYTHON) tools/docs/check.py --root docs/architecture --workspace-json $(DOCS_BUILD)/json/workspace.json
 	$(PYTHON) tools/docs/link.py --root docs/architecture --check
