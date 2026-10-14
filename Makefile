@@ -23,21 +23,22 @@ help: ## List the available targets
 
 # --- Architecture documentation (docs/architecture, Structurizr) ---
 
-docs-up: ## Start Structurizr local on http://localhost:8080 (STRUCTURIZR_PORT overrides)
+docs-up: docs-build-dir ## Start Structurizr local on http://localhost:8080 (STRUCTURIZR_PORT overrides)
 	$(COMPOSE) --profile docs up -d structurizr
 
 docs-down: ## Stop Structurizr local
 	$(COMPOSE) --profile docs down
 
-docs-validate: ## Validate the workspace
+docs-validate: docs-build-dir ## Validate the workspace
 	$(STRUCTURIZR) validate -workspace workspace.dsl
 
-docs-inspect: ## Run Structurizr inspections (report-only)
+docs-inspect: docs-build-dir ## Run Structurizr inspections (report-only)
 	-$(STRUCTURIZR) inspect -workspace workspace.dsl
 
-# On Linux, Docker would create a missing docs/build owned by root, which the container's user cannot write.
+# Every target that starts the container depends on this one: Docker creates a missing bind-mount folder as root,
+# which the container's user cannot write on Linux, so docs/build is created first, by the host user.
 docs-build-dir:
-	$(PYTHON) -c "import pathlib; pathlib.Path('$(DOCS_BUILD)').mkdir(parents=True, exist_ok=True)"
+	@$(PYTHON) -c "import os, pathlib, sys; p = pathlib.Path('$(DOCS_BUILD)'); p.mkdir(parents=True, exist_ok=True); os.access(p, os.W_OK) or sys.exit(f'{p} is not writable by this user; Docker may have created it as root. Remove it and run make again.')"
 
 docs-export: docs-build-dir ## Export the workspace as JSON and as a static site to docs/build
 	$(STRUCTURIZR) export -workspace workspace.dsl -format json -output /usr/local/build/json
@@ -46,7 +47,7 @@ docs-export: docs-build-dir ## Export the workspace as JSON and as a static site
 docs-link: ## Turn bare references (D29, S25, CORE 2.6) into relative links
 	$(PYTHON) tools/docs/link.py --root docs/architecture
 
-docs-check: docs-validate docs-build-dir ## Validate, then run the documentation checks
+docs-check: docs-validate ## Validate, then run the documentation checks
 	$(STRUCTURIZR) export -workspace workspace.dsl -format json -output /usr/local/build/json
 	$(PYTHON) tools/docs/check.py --root docs/architecture --workspace-json $(DOCS_BUILD)/json/workspace.json
 	$(PYTHON) tools/docs/link.py --root docs/architecture --check
