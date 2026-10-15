@@ -262,6 +262,18 @@ platform.controlPlane.outbox -> platform.controlPlane.reconciler "Wakes the loop
     }
 }
 
+platform.controlPlane.outbox -> platform.controlPlane.scheduler "Delivers events that make work ready, and quota and weight changes, to" {
+    properties {
+        "decisions" "D43, D48"
+    }
+}
+
+platform.controlPlane.outbox -> platform.controlPlane.dispatcher "Delivers cancel and pause commands for running attempts to" {
+    properties {
+        "decisions" "D47, D48"
+    }
+}
+
 platform.controlPlane.leadership -> platform.controlPlane.scheduler "Starts and stops the leader loops of" {
     properties {
         "decisions" "D47"
@@ -281,6 +293,80 @@ platform.controlPlane.leadership -> platform.controlPlane.runDriver "Starts and 
 }
 
 platform.controlPlane.leadership -> platform.controlPlane.agentGateway "Starts and stops the leader loops of" {
+    properties {
+        "decisions" "D47"
+    }
+}
+
+// From the API layer to the components that serve its calls, and within authoring.
+
+platform.controlPlane.apiLayer -> platform.controlPlane.identity "Routes tenant, membership and project calls to" {
+    properties {
+        "decisions" "D45, D47"
+    }
+}
+
+platform.controlPlane.apiLayer -> platform.controlPlane.authorization "Authorizes every call with" {
+    properties {
+        "decisions" "D45"
+    }
+}
+
+platform.controlPlane.apiLayer -> platform.controlPlane.audit "Records user and administrative actions in" {
+    properties {
+        "decisions" "D45"
+    }
+}
+
+platform.controlPlane.apiLayer -> platform.controlPlane.definitions "Routes draft, commit and binding calls to" {
+    properties {
+        "decisions" "D45, D47"
+    }
+}
+
+platform.controlPlane.apiLayer -> platform.controlPlane.gitSync "Routes pushes of authors' commits to" {
+    properties {
+        "decisions" "D45"
+    }
+}
+
+platform.controlPlane.apiLayer -> platform.controlPlane.deployment "Routes deployment and approval calls to" {
+    properties {
+        "decisions" "D45"
+    }
+}
+
+platform.controlPlane.apiLayer -> platform.controlPlane.registry "Routes plugin registry calls to" {
+    properties {
+        "decisions" "D47"
+    }
+}
+
+platform.controlPlane.apiLayer -> platform.controlPlane.catalog "Routes dataset queries and owner acts to" {
+    properties {
+        "decisions" "D45, D47"
+    }
+}
+
+platform.controlPlane.apiLayer -> platform.controlPlane.adoption "Routes adoption calls to" {
+    properties {
+        "decisions" "D51"
+    }
+}
+
+platform.controlPlane.apiLayer -> platform.controlPlane.provenance "Routes lineage and verification queries to" {
+    properties {
+        "decisions" "D47"
+    }
+}
+
+platform.controlPlane.apiLayer -> platform.controlPlane.runDriver "Routes commands on runs to" {
+    properties {
+        "decisions" "D47"
+    }
+}
+
+platform.controlPlane.definitions -> platform.controlPlane.compiler "Compiles each version with" {
     properties {
         "decisions" "D47"
     }

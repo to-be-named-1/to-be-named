@@ -1,4 +1,6 @@
 controlPlane = container "Control-plane server" "Compiles, plans, schedules and dispatches work, makes results current and holds the catalog; one binary deployed in roles, with a single active leader." "Go, ConnectRPC, cel-go" {
+    !docs docs
+
     properties {
         "decisions" "D21, D29, D30, D40, D43, D44, D45, D47, D48, D49, D51, D52"
     }
@@ -6,6 +8,8 @@ controlPlane = container "Control-plane server" "Compiles, plans, schedules and 
     // Groups are the bounded contexts of D47. The roles property names the roles that the component's
     // actions require; a replica with any one of them performs that role's actions. Which action needs
     // which role is set out in the container documentation.
+    // The roles api, worker and candidate are configured; leader is held only by the candidate that wins the
+    // election. The Leader only tag marks exactly the components whose only role is leader.
 
     group "Identity and tenancy" {
         identity = component "Identity and membership" "Manages tenants, principals, memberships and clearance, service accounts, projects, and tenant resources with their grants." {
@@ -150,7 +154,7 @@ controlPlane = container "Control-plane server" "Compiles, plans, schedules and 
     }
     leadership = component "Leadership" "Elects the leader with a session-level advisory lock and fences leader-only writes by epoch." {
         properties {
-            "roles" "leader"
+            "roles" "candidate, leader"
         }
     }
 }

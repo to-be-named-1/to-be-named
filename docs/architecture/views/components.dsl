@@ -1,7 +1,19 @@
 // Component views. A component view holds only its own container's components; other containers appear whole.
+// The database is left out of the control plane's views: its documentation lists which components reach each schema.
 
-component platform.controlPlane "components-control-plane" "The control-plane server's components, grouped by bounded context, with the clients, agents, external systems and database they connect to." {
-    include "*"
+component platform.controlPlane "components-control-plane-execution" "How a run gets from its trigger to the commit of its outputs: the components of orchestration, planning, the catalog and dispatch, and the agents they serve." {
+    include platform.controlPlane.reconciler platform.controlPlane.runDriver platform.controlPlane.planner platform.controlPlane.authorization
+    include platform.controlPlane.cacheIndex platform.controlPlane.catalog platform.controlPlane.probeScheduling platform.controlPlane.projectionScheduling platform.controlPlane.collectionMarking
+    include platform.controlPlane.scheduler platform.controlPlane.dispatcher platform.controlPlane.agentGateway platform.controlPlane.outbox platform.controlPlane.leadership
+    include platform.agent
+    autoLayout lr
+}
+
+component platform.controlPlane "components-control-plane-requests" "How people and automation reach the platform: the API layer and the components that serve its calls, with the clients, the identity provider and the git host." {
+    include platform.controlPlane.apiLayer platform.controlPlane.identity platform.controlPlane.authorization platform.controlPlane.audit
+    include platform.controlPlane.definitions platform.controlPlane.compiler platform.controlPlane.gitSync platform.controlPlane.deployment platform.controlPlane.registry
+    include platform.controlPlane.catalog platform.controlPlane.adoption platform.controlPlane.provenance platform.controlPlane.runDriver
+    include platform.webApp platform.cli ciSystem identityProvider gitHost
     autoLayout lr
 }
 

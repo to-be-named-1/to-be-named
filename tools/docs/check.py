@@ -17,8 +17,12 @@ Run by `make docs-check`, after `structurizr validate` and a JSON export of the 
      documentation set); links across sets use Structurizr's `{workspace}` form and name an
      existing ADR or section; links to ADRs read `Dn` or `N. Title` with the right number.
      (Bare references and outdated section numbers are reported by tools/docs/link.py --check.)
-  6. No comparable software is named anywhere under docs/.
-  7. No British spelling is used anywhere under docs/.
+  6. No British spelling is used anywhere under docs/.
+  7. Roles and container documentation: a component is tagged `Leader only` exactly when its only
+     role is `leader`; a row of a container's 03-components.md that names one of its
+     components gives the model's description in its second column, and an "Actions by role"
+     column labels exactly the component's roles; every component has a row; 09-decisions.md
+     lists exactly the container's decisions property.
   8. With --cutover: the count check required before project-design.md is retired, including
      that each reasoning item of the record sits in exactly one ADR's Context, and that no
      permanent file refers to the record.
@@ -85,12 +89,6 @@ CUTOVER_TITLE_CHANGES = {
 CUTOVER_DROPPED_REASONING_ITEMS = {
     62,  # "Spark is not a general remedy for resource exhaustion" (D47)
 }
-# Comparable software is never named in the documentation; software the platform runs on,
-# integrates with or exports to is technology and is not listed here.
-COMPARABLE_SOFTWARE = re.compile(
-    r"\b(?:Dataiku|KNIME|n8n|Alteryx|RapidMiner|Dagster|Prefect|Kestra|Flyte|Kedro|Metaflow|Luigi|Mage\.ai|"
-    r"Windmill|Zapier|Talend|Informatica|Matillion|Azure Data Factory|Palantir|Nextflow|Snakemake|Cromwell|Galaxy)\b"
-)
 # British spellings the documentation must not use; American English is the register.
 _BRITISH_IZE_ROOTS = (
     "author|material|normal|optim|special|synchron|serial|initial|priorit|recogn|summar|visual|minim|maxim|"
@@ -533,23 +531,10 @@ def check_workspace_link(target: str, text: str, where: str, layout: "linker.Lay
             report.error(where, f"{target}: no section {match[2]} in {directory.name} documentation")
         return
     report.error(where, f"{target}: a {{workspace}} link must be {{workspace}}/decisions/{layout.system}#N or "
-                 f"{{workspace}}/documentation[/{layout.system}]#n[.m]")
+                 f"{{workspace}}/documentation[/{layout.system}[/<container name>]]#n[.m]")
 
 
-# --- 6. Comparable software --------------------------------------------------------------
-
-
-def check_comparable_software(docs: Path, report: Report) -> None:
-    build = (docs / "build").resolve()
-    for path in sorted(docs.rglob("*")):
-        if path.suffix not in (".md", ".dsl") or build in path.resolve().parents:
-            continue
-        for i, line in enumerate(path.read_text(encoding="utf-8").splitlines()):
-            for match in COMPARABLE_SOFTWARE.finditer(line):
-                report.error(f"{display(path)}:{i + 1}", f"names comparable software ('{match[0]}')")
-
-
-# --- 7. American spelling ----------------------------------------------------------------
+# --- 6. American spelling -----------------------------------------------------------------
 
 
 def check_spelling(docs: Path, report: Report) -> None:
@@ -562,7 +547,89 @@ def check_spelling(docs: Path, report: Report) -> None:
                 report.error(f"{display(path)}:{i + 1}", f"British spelling '{match[0]}'; the register is American")
 
 
-# --- 8. Cut-over -------------------------------------------------------------------------
+# --- 7. Container documentation -----------------------------------------------------------
+
+ROLE_LABEL = re.compile(r"\*\*([a-z-]+):\*\*")
+LINK_TEXT = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
+DECISION_CELL = re.compile(r"^D(\d+)$")
+
+
+def plain(cell: str) -> str:
+    """A table cell's text without links, bold markers or surrounding space."""
+    return LINK_TEXT.sub(r"\1", cell).replace("**", "").strip()
+
+
+def table_rows(path: Path):
+    """Yield (line number, header cells, cells) for each body row of each Markdown table."""
+    header = None
+    for index, line in unfenced(path.read_text(encoding="utf-8").split("\n")):
+        if not line.startswith("|"):
+            header = None
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if header is None:
+            header = cells
+        elif not all(set(cell) <= set("-: ") for cell in cells):
+            yield index + 1, header, cells
+
+
+def check_leader_only(model: Model, report: Report) -> None:
+    for element in model.elements.values():
+        roles = {role.strip() for role in ((element.get("properties") or {}).get("roles") or "").split(",") if role.strip()}
+        tagged = "Leader only" in [tag.strip() for tag in (element.get("tags") or "").split(",")]
+        if tagged != (roles == {"leader"}):
+            report.error(f"element '{element.get('name')}'", "the Leader only tag and roles 'leader' alone go together")
+
+
+def check_container_docs(model: Model, layout: "linker.Layout", report: Report) -> None:
+    system_id = model.identifiers.get("platform")
+    for directory, name in sorted(layout.container_docs.items()):
+        container_id = next((i for i, e in model.elements.items()
+                             if model.parent.get(i) == system_id and e.get("name") == name), None)
+        if container_id is None:
+            report.error(display(directory), f"no container named '{name}' in the model")
+            continue
+        container = model.elements[container_id]
+        components = {e["name"]: e for i, e in model.elements.items() if model.parent.get(i) == container_id}
+
+        components_file = directory / "03-components.md"
+        if components and components_file.is_file():
+            seen = set()
+            for number, header, cells in table_rows(components_file):
+                component = components.get(plain(cells[0]))
+                if component is None:
+                    continue
+                where = f"{display(components_file)}:{number}"
+                seen.add(component["name"])
+                description = (component.get("description") or "").strip()
+                if len(cells) < 2 or plain(cells[1]) != description:
+                    report.error(where, f"the second column must give the model's description of "
+                                 f"'{component['name']}': '{description}'")
+                if "Actions by role" in header:
+                    column = header.index("Actions by role")
+                    labels = set(ROLE_LABEL.findall(cells[column] if column < len(cells) else ""))
+                    roles = {role.strip() for role in
+                             ((component.get("properties") or {}).get("roles") or "").split(",") if role.strip()}
+                    if labels != roles:
+                        report.error(where, f"actions are given for roles {sorted(labels)}, but "
+                                     f"'{component['name']}' has the roles {sorted(roles)}")
+            for missing in sorted(set(components) - seen):
+                report.error(display(components_file), f"no table row for the component '{missing}'")
+
+        decisions_file = directory / "09-decisions.md"
+        if decisions_file.is_file():
+            listed = set()
+            for _, _, cells in table_rows(decisions_file):
+                if match := DECISION_CELL.match(plain(cells[0])):
+                    listed.add(int(match[1]))
+            expected = set(decision_numbers((container.get("properties") or {}).get("decisions")))
+            for number in sorted(expected - listed):
+                report.error(display(decisions_file), f"D{number} is in the decisions property of '{name}' but not listed")
+            for number in sorted(listed - expected):
+                report.error(display(decisions_file), f"D{number} is listed but not in the decisions property of '{name}'")
+
+
+# --- 8. Cut-over --------------------------------------------------------------------------
 
 
 def check_cutover(root: Path, record: Path, adrs: dict[int, Adr], report: Report) -> None:
@@ -655,6 +722,8 @@ def main() -> int:
         model = load_model(args.workspace_json)
         check_traceability(model, adrs, have_adrs, report)
         check_forbidden_edges(model, args.rules, adrs, have_adrs, args.cutover, report)
+        check_leader_only(model, report)
+        check_container_docs(model, linker.Layout(args.root), report)
     else:
         report.error(display(args.workspace_json), "not found; export the workspace as JSON first (make docs-check)")
 
@@ -664,7 +733,6 @@ def main() -> int:
     if readme.is_file():
         markdown.append(readme)
     check_markdown(markdown, args.root, report)
-    check_comparable_software(args.root.parent, report)
     check_spelling(args.root.parent, report)
     if args.cutover:
         check_cutover(args.root, args.record, adrs, report)

@@ -14,6 +14,9 @@ primary reader, and not on GitHub.
                  section alone while the item has no heading of its own.
   CORE 2.6    -> the capability line in 03-capabilities-core.md, likewise (DE, DS and MLE too).
 
+Each container's documentation, model/platform/<container>/docs/, is a set of its own, at
+{workspace}/documentation/<system>/<container name>, with the name percent-encoded.
+
 Section numbers are the ones Structurizr assigns: a set's files in name order, each file's `##`
 heading numbered by its position and its `###` headings numbered within it. They change as files
 are added, so every link whose text is an ID is recomputed on each run, and a relative link to a
@@ -35,6 +38,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from urllib.parse import quote, unquote
 
 DECISION = re.compile(r"(?<![\w/.#\[-])D(\d{1,3})\b(?![\w-])")
 OPEN_ITEM = re.compile(r"(?<![\w/.#\[-])S(\d{1,3})\b(?![\w-])")
@@ -54,6 +58,7 @@ UNLINKED_OPEN_ITEMS = {3}
 STATUS_LINK_LINE = re.compile(r"^(Amends|Amended by|Supersedes|Superseded by) ")
 ADR_TITLE = re.compile(r"^# (\d+\. .+)$")
 SYSTEM_NAME = re.compile(r'^\s*platform\s*=\s*softwareSystem\s+"([^"]+)"', re.MULTILINE)
+CONTAINER_NAME = re.compile(r'^\s*\w+\s*=\s*container\s+"([^"]+)"', re.MULTILINE)
 WORKSPACE = "{workspace}"
 SKIPPED = ("http://", "https://", "mailto:", "#", "embed:", WORKSPACE)
 
@@ -101,6 +106,13 @@ class Layout:
             for family, name in CAPABILITY_FILES.items()
             if (self.workspace_dir / name).is_file()
         }
+        # Container documentation sets: docs/ folder -> container name, from the folder's container.dsl.
+        self.container_docs: dict[Path, str] = {}
+        for dsl in sorted((root / "model" / "platform").glob("*/container.dsl")):
+            docs = dsl.parent / "docs"
+            match = CONTAINER_NAME.search(dsl.read_text(encoding="utf-8"))
+            if match and docs.is_dir():
+                self.container_docs[docs.resolve()] = match[1]
 
     def documentation_url(self, directory: Path) -> str | None:
         directory = directory.resolve()
@@ -108,12 +120,22 @@ class Layout:
             return f"{WORKSPACE}/documentation"
         if directory == self.platform_dir:
             return f"{WORKSPACE}/documentation/{self.system}"
+        if directory in self.container_docs:
+            return f"{WORKSPACE}/documentation/{self.system}/{quote(self.container_docs[directory])}"
         return None
 
     def documentation_dir(self, scope: str | None) -> Path | None:
+        """The documentation set a `{workspace}/documentation[/scope]` link names, or None."""
         if scope is None:
             return self.workspace_dir
-        return self.platform_dir if scope == self.system else None
+        if scope == self.system:
+            return self.platform_dir
+        system, _, container = scope.partition("/")
+        if system == self.system and container:
+            for directory, name in self.container_docs.items():
+                if name == unquote(container):
+                    return directory
+        return None
 
     @staticmethod
     def section(path: Path) -> int:
