@@ -239,7 +239,7 @@ def parse_adr(path: Path, report: Report) -> Adr | None:
         adr.link_texts[link[3]] = link[2]
 
     if not adr.pending:
-        for required in ("Context", "Decision"):
+        for required in ("Decision",):
             if required not in adr.sections:
                 report.error(where, f"a migrated ADR needs a '## {required}' section")
         if adr.applies_to is None:

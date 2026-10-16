@@ -2,7 +2,7 @@ controlPlane = container "Control-plane server" "Compiles, plans, schedules and 
     !docs docs
 
     properties {
-        "decisions" "D1, D2, D3, D21, D25, D26, D28, D29, D30, D31, D32, D33, D34, D40, D41, D43, D44, D45, D46, D47, D48, D49, D51, D52"
+        "decisions" "D1, D2, D3, D4, D13, D14, D15, D16, D17, D18, D19, D20, D21, D23, D24, D25, D26, D28, D29, D30, D31, D32, D33, D34, D40, D41, D43, D44, D45, D46, D47, D48, D49, D51, D52, D55"
     }
 
     // Groups are the bounded contexts of D47. The roles property names the roles that the component's
@@ -71,7 +71,7 @@ controlPlane = container "Control-plane server" "Compiles, plans, schedules and 
                 "roles" "worker, leader"
             }
         }
-        projectionScheduling = component "Projection scheduling" "Schedules the projection of committed versions as Iceberg snapshots for external engines." {
+        tableScheduling = component "Projection and publication scheduling" "Schedules, in version order, the table work that follows a commit: Iceberg projections for external engines, and commits to storage targets that have their own commit." {
             properties {
                 "roles" "worker"
             }

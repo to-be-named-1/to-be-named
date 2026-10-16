@@ -18,6 +18,12 @@ objectStorage = softwareSystem "Object storage" "Customer or platform object sto
     }
 }
 
+lakehouseCatalog = softwareSystem "Lakehouse catalog" "Iceberg and Delta catalogs and Hive metastores in which customers' tables are registered, including tables that are storage targets or taken over in place; may be the same service as the Iceberg catalog." "External" {
+    properties {
+        "decisions" "D15, D51, D55"
+    }
+}
+
 icebergCatalog = softwareSystem "Iceberg catalog" "REST or SQL catalog in which projected Iceberg tables are registered for external engines." "External" {
     properties {
         "decisions" "D42, D44"

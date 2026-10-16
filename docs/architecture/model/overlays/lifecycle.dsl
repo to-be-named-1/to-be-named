@@ -12,6 +12,9 @@
 !element platform.commandUnit {
     tags "Later"
 }
+!element platform.publicationUnit {
+    tags "Later"
+}
 
 // External systems the first development slice does not use (D29).
 !element hpcScheduler {
@@ -21,6 +24,9 @@
     tags "Later"
 }
 !element warehouses {
+    tags "Later"
+}
+!element lakehouseCatalog {
     tags "Later"
 }
 !element notificationChannels {

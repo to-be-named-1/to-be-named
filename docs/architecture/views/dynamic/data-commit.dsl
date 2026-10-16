@@ -10,7 +10,7 @@ dynamic platform.controlPlane "dynamic-data-commit" "An attempt's staged outputs
     platform.controlPlane.dispatcher -> platform.controlPlane.catalog "Commits in the same transaction"
     platform.controlPlane.catalog -> platform.database "Records manifests, partition versions, the head move, read records and one outbox row per handler"
     platform.controlPlane.agentGateway -> platform.agent "Answers committed"
-    platform.controlPlane.outbox -> platform.controlPlane.projectionScheduling "Delivers the commit event"
+    platform.controlPlane.outbox -> platform.controlPlane.tableScheduling "Delivers the commit event"
     platform.controlPlane.outbox -> platform.controlPlane.reconciler "Wakes the loops waiting on the dataset"
     autoLayout lr
 }

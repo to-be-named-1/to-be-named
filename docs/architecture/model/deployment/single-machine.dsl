@@ -32,6 +32,7 @@ singleMachine = deploymentEnvironment "Single machine" {
             unitRuntime = containerInstance platform.unitRuntime
             probeUnit = containerInstance platform.probeUnit
             projectionUnit = containerInstance platform.projectionUnit
+            publicationUnit = containerInstance platform.publicationUnit
             sampleBuilder = containerInstance platform.sampleBuilder
             sessionUnit = containerInstance platform.sessionUnit
             commandUnit = containerInstance platform.commandUnit

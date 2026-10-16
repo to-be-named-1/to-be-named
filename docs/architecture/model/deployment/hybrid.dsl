@@ -45,6 +45,7 @@ hybrid = deploymentEnvironment "Hybrid" {
                 unitRuntime = containerInstance platform.unitRuntime dataplane
                 probeUnit = containerInstance platform.probeUnit dataplane
                 projectionUnit = containerInstance platform.projectionUnit dataplane
+                publicationUnit = containerInstance platform.publicationUnit dataplane
                 sampleBuilder = containerInstance platform.sampleBuilder dataplane
                 sessionUnit = containerInstance platform.sessionUnit dataplane
                 commandUnit = containerInstance platform.commandUnit dataplane
@@ -52,6 +53,7 @@ hybrid = deploymentEnvironment "Hybrid" {
         }
         services = deploymentNode "Customer cloud services" {
             objectStorage = softwareSystemInstance objectStorage dataplane,uploads
+            lakehouseCatalog = softwareSystemInstance lakehouseCatalog dataplane
             secretManager = softwareSystemInstance secretManager dataplane
             credentialIssuer = softwareSystemInstance credentialIssuer dataplane
             customerObservability = softwareSystemInstance customerObservability dataplane

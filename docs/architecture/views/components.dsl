@@ -3,7 +3,7 @@
 
 component platform.controlPlane "components-control-plane-execution" "How a run gets from its trigger to the commit of its outputs: the components of orchestration, planning, the catalog and dispatch, and the agents they serve." {
     include platform.controlPlane.reconciler platform.controlPlane.runDriver platform.controlPlane.planner platform.controlPlane.authorization
-    include platform.controlPlane.cacheIndex platform.controlPlane.catalog platform.controlPlane.probeScheduling platform.controlPlane.projectionScheduling platform.controlPlane.collectionMarking
+    include platform.controlPlane.cacheIndex platform.controlPlane.catalog platform.controlPlane.probeScheduling platform.controlPlane.tableScheduling platform.controlPlane.collectionMarking
     include platform.controlPlane.scheduler platform.controlPlane.dispatcher platform.controlPlane.agentGateway platform.controlPlane.outbox platform.controlPlane.leadership
     include platform.agent
     autoLayout lr

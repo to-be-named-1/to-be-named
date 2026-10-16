@@ -3,7 +3,7 @@
 workflowAuthor = person "Workflow author" "Analyst, researcher, data scientist or engineer who builds workflows, tries them on samples and in sandboxes, and commits them." {
     properties {
         "roles" "Developer"
-        "decisions" "D28, D41, D45, D50"
+        "decisions" "D13, D16, D28, D41, D45, D50"
     }
 }
 
@@ -24,14 +24,14 @@ projectMaintainer = person "Project maintainer" "Manages a project's settings, e
 datasetOwner = person "Dataset owner" "Sets a dataset's contract, classification, retention and freshness, releases quarantined versions and approves gated publication." {
     properties {
         "roles" "dataset.manage"
-        "decisions" "D4, D31, D45, D51"
+        "decisions" "D4, D13, D31, D45, D51"
     }
 }
 
 tenantAdmin = person "Tenant administrator" "Manages members, service accounts, projects, agent pools, connections, storage targets, catalogs, quotas and fair-share weights." {
     properties {
         "roles" "Admin"
-        "decisions" "D34, D43, D45, D47"
+        "decisions" "D18, D34, D43, D45, D47"
     }
 }
 

@@ -74,9 +74,9 @@ platform.controlPlane.cacheIndex -> platform.database.catalog "Reads and writes 
     }
 }
 
-platform.controlPlane.projectionScheduling -> platform.database.catalog "Reads and writes projection state in" "SQL over pgx" {
+platform.controlPlane.tableScheduling -> platform.database.catalog "Reads and writes projection and publication state in" "SQL over pgx" {
     properties {
-        "decisions" "D42, D44"
+        "decisions" "D42, D44, D55"
     }
 }
 
@@ -250,9 +250,9 @@ platform.controlPlane.runDriver -> platform.database.shared "Writes outbox rows 
     }
 }
 
-platform.controlPlane.outbox -> platform.controlPlane.projectionScheduling "Delivers commit events to" {
+platform.controlPlane.outbox -> platform.controlPlane.tableScheduling "Delivers commit events to" {
     properties {
-        "decisions" "D42, D48"
+        "decisions" "D42, D48, D55"
     }
 }
 

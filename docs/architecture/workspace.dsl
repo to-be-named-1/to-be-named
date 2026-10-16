@@ -39,6 +39,7 @@ workspace "Platform architecture" "C4 model, documentation and decision records 
                 !include model/platform/session-unit/container.dsl
                 !include model/platform/command-unit/container.dsl
                 !include model/platform/projection-unit/container.dsl
+                !include model/platform/publication-unit/container.dsl
                 !include model/platform/probe-unit/container.dsl
                 !include model/platform/sample-builder/container.dsl
                 !include model/platform/bundled-object-storage/container.dsl
@@ -57,6 +58,7 @@ workspace "Platform architecture" "C4 model, documentation and decision records 
         !include model/relationships/session-unit.dsl
         !include model/relationships/command-unit.dsl
         !include model/relationships/projection-unit.dsl
+        !include model/relationships/publication-unit.dsl
         !include model/relationships/probe-unit.dsl
         !include model/relationships/sample-builder.dsl
         !include model/relationships/observability.dsl

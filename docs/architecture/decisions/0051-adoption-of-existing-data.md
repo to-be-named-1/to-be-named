@@ -1,7 +1,7 @@
 # 51. Adoption of existing data
 
 Date: 2026-10-13
-Applies to: platform.controlPlane, platform.probeUnit, objectStorage, dataSources, datasetOwner
+Applies to: platform.controlPlane, platform.probeUnit, objectStorage, dataSources, datasetOwner, lakehouseCatalog
 
 ## Status
 

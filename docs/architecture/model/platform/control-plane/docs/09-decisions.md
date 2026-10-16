@@ -5,7 +5,18 @@
 | [D1]({workspace}/decisions/Platform#1) | Nodes are not the unit of dispatch: the planner fuses them into execution units |
 | [D2]({workspace}/decisions/Platform#2) | Structured control flow: the compiler checks it, and loops unroll into an acyclic run trace |
 | [D3]({workspace}/decisions/Platform#3) | The platform's own IR and orchestrator: the control plane owns control flow and state and dispatches units to backends; a whole workflow without loops can be exported to Argo or Airflow |
+| [D4]({workspace}/decisions/Platform#4) | Datasets as domain objects with versions, partitions and owners; managed or external; storage targets; uploads |
+| [D13]({workspace}/decisions/Platform#13) | Partitioning and intervals validated against each other, single producers, partition dependency functions |
+| [D14]({workspace}/decisions/Platform#14) | Inputs resolved once per run under snapshot isolation, pinning and coherent reads, protection of inputs in use |
+| [D15]({workspace}/decisions/Platform#15) | Publication staged per attempt and made current by one catalog commit, publication groups, partially published external targets |
+| [D16]({workspace}/decisions/Platform#16) | Per-input readiness policies, waiting without compute, degraded outputs cascading with their cause |
+| [D17]({workspace}/decisions/Platform#17) | Dataset families behind one plugin interface; models as a dataset type |
+| [D18]({workspace}/decisions/Platform#18) | Format types, pinned implementations and bindings, allowed implementations per project |
+| [D19]({workspace}/decisions/Platform#19) | Fixed dataset names over immutable identifiers |
+| [D20]({workspace}/decisions/Platform#20) | Backfills committed per interval with downstream work coalesced, atomic restatements, lower priority than scheduled work |
 | [D21]({workspace}/decisions/Platform#21) | The planes: the control plane holds pointers, never bulk data, runs no untrusted code, and alone makes a result current |
+| [D23]({workspace}/decisions/Platform#23) | Identity-addressed artifact paths and manifests in the catalog, collection by marking |
+| [D24]({workspace}/decisions/Platform#24) | Requests to make a dataset current, planned over the project's dataset graph |
 | [D25]({workspace}/decisions/Platform#25) | Engine selection by data location: pushdown, the extraction cap, repartition steps and the plan's stated reasons |
 | [D26]({workspace}/decisions/Platform#26) | Explicit placement with recorded reasons, location records and cache eligibility, kept for placement constraints |
 | [D28]({workspace}/decisions/Platform#28) | Connection policy within which pushdown is placed, query and job tagging, and plan pinning |
@@ -26,3 +37,4 @@
 | [D49]({workspace}/decisions/Platform#49) | Source probes resolving external versions at run start |
 | [D51]({workspace}/decisions/Platform#51) | Adoption of existing tables and files |
 | [D52]({workspace}/decisions/Platform#52) | Agent identity proven by message signatures on every request and response |
+| [D55]({workspace}/decisions/Platform#55) | Commits to table-format storage targets made after the platform's commit, by publication units, in version order |

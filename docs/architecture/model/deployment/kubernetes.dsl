@@ -42,6 +42,7 @@ kubernetesEnvironment = deploymentEnvironment "Kubernetes" {
                 unitRuntime = containerInstance platform.unitRuntime dataplane
                 probeUnit = containerInstance platform.probeUnit dataplane
                 projectionUnit = containerInstance platform.projectionUnit dataplane
+                publicationUnit = containerInstance platform.publicationUnit dataplane
                 sampleBuilder = containerInstance platform.sampleBuilder dataplane
                 sessionUnit = containerInstance platform.sessionUnit dataplane
                 commandUnit = containerInstance platform.commandUnit dataplane
@@ -59,6 +60,7 @@ kubernetesEnvironment = deploymentEnvironment "Kubernetes" {
 
     storage = deploymentNode "Customer storage" {
         objectStorage = softwareSystemInstance objectStorage dataplane,uploads
+        lakehouseCatalog = softwareSystemInstance lakehouseCatalog dataplane
     }
 
     kubernetesEnvironment.userComputer.browser.webApp -> kubernetesEnvironment.cluster.apiService "Calls the API through" "HTTPS"

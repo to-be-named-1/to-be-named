@@ -25,6 +25,7 @@ The platform serves the people below and works with the external systems that fo
 | Git host | History and review of git-connected projects; the platform pushes on authors' behalf and deploys from the deploy branch | [D41]({workspace}/decisions/Platform#41), [D45]({workspace}/decisions/Platform#45) |
 | Identity provider | Authenticates people | [D5]({workspace}/decisions/Platform#5), [D45]({workspace}/decisions/Platform#45) |
 | Object storage | Artifacts, staged outputs and managed datasets, in platform or customer storage | [D4]({workspace}/decisions/Platform#4), [D23]({workspace}/decisions/Platform#23), [D42]({workspace}/decisions/Platform#42), [D51]({workspace}/decisions/Platform#51) |
+| Lakehouse catalog | Where customers' tables are registered, including tables that are storage targets or taken over in place | [D15]({workspace}/decisions/Platform#15), [D51]({workspace}/decisions/Platform#51), [D55]({workspace}/decisions/Platform#55) |
 | Iceberg catalog | Where projected tables are registered for external engines | [D42]({workspace}/decisions/Platform#42), [D44]({workspace}/decisions/Platform#44) |
 | External query engines | Read managed datasets as Iceberg tables | [D44]({workspace}/decisions/Platform#44) |
 | Docker engine, Kubernetes cluster, HPC scheduler, cloud batch service | Backends on which the agent runs units | [D12]({workspace}/decisions/Platform#12), [D22]({workspace}/decisions/Platform#22), [D29]({workspace}/decisions/Platform#29) |

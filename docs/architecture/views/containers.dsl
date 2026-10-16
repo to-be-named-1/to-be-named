@@ -14,13 +14,13 @@ container platform "containers-interface-and-control" "The interface and control
 }
 
 container platform "containers-execution" "How work reaches the data plane and runs: the agent, the units it launches, the backends it drives, the services it uses on their behalf, and where telemetry and alerts go." {
-    include platform.controlPlane platform.agent platform.secretStore platform.unitRuntime platform.sessionUnit platform.commandUnit platform.projectionUnit platform.probeUnit platform.sampleBuilder platform.observability
+    include platform.controlPlane platform.agent platform.secretStore platform.unitRuntime platform.sessionUnit platform.commandUnit platform.projectionUnit platform.publicationUnit platform.probeUnit platform.sampleBuilder platform.observability
     include dockerEngine kubernetes hpcScheduler cloudBatch secretManager credentialIssuer customerObservability notificationChannels
     autoLayout lr
 }
 
 container platform "containers-data-access" "What units read and write: storage, external sources, warehouses, side-effect targets and the Iceberg catalog." {
-    include platform.unitRuntime platform.sessionUnit platform.commandUnit platform.projectionUnit platform.probeUnit platform.sampleBuilder platform.bundledObjectStorage
-    include objectStorage icebergCatalog dataSources sideEffectTargets warehouses
+    include platform.unitRuntime platform.sessionUnit platform.commandUnit platform.projectionUnit platform.publicationUnit platform.probeUnit platform.sampleBuilder platform.bundledObjectStorage
+    include objectStorage icebergCatalog lakehouseCatalog dataSources sideEffectTargets warehouses
     autoLayout lr
 }
