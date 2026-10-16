@@ -38,7 +38,7 @@ tenantAdmin = person "Tenant administrator" "Manages members, service accounts, 
 auditor = person "Auditor" "Reads the audit trail and all metadata, but no data content." "Commercial" {
     properties {
         "roles" "Auditor"
-        "decisions" "D5, D45, D53"
+        "decisions" "D45, D53"
     }
 }
 

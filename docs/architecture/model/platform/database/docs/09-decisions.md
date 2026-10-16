@@ -2,6 +2,8 @@
 
 | Decision | What it settles for this container |
 |---|---|
+| [D5]({workspace}/decisions/Platform#5) | A tenant identifier on every entity |
+| [D12]({workspace}/decisions/Platform#12) | Status vocabularies and schemas not limited to terminal states; dataset versions as append-only sequences with positions |
 | [D30]({workspace}/decisions/Platform#30) | Isolation enforced on every path, including persistence |
 | [D42]({workspace}/decisions/Platform#42) | How the catalog is stored: partition versions by validity interval, the commit transaction, read records and identifiers |
 | [D44]({workspace}/decisions/Platform#44) | PostgreSQL 17 or later |

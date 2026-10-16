@@ -19,7 +19,7 @@ workspace "Platform architecture" "C4 model, documentation and decision records 
             !adrs decisions
 
             properties {
-                "decisions" "D21, D22, D53, D54"
+                "decisions" "D5, D6, D21, D22, D39, D53, D54"
             }
 
             // One folder per container: model/platform/<container>/container.dsl, with its docs/ beside it.

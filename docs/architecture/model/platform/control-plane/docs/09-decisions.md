@@ -6,6 +6,8 @@
 | [D2]({workspace}/decisions/Platform#2) | Structured control flow: the compiler checks it, and loops unroll into an acyclic run trace |
 | [D3]({workspace}/decisions/Platform#3) | The platform's own IR and orchestrator: the control plane owns control flow and state and dispatches units to backends; a whole workflow without loops can be exported to Argo or Airflow |
 | [D4]({workspace}/decisions/Platform#4) | Datasets as domain objects with versions, partitions and owners; managed or external; storage targets; uploads |
+| [D5]({workspace}/decisions/Platform#5) | Tenant identifier on every entity; capabilities likely to be commercial (authentication, access policy, audit sinks, AI providers) behind extension interfaces |
+| [D12]({workspace}/decisions/Platform#12) | The streaming seams: a neutral execution concept, health from lease renewal, execution modes declared by node types, recorded position ranges, caching as a policy |
 | [D13]({workspace}/decisions/Platform#13) | Partitioning and intervals validated against each other, single producers, partition dependency functions |
 | [D14]({workspace}/decisions/Platform#14) | Inputs resolved once per run under snapshot isolation, pinning and coherent reads, protection of inputs in use |
 | [D15]({workspace}/decisions/Platform#15) | Publication staged per attempt and made current by one catalog commit, publication groups, partially published external targets |
