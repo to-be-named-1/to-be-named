@@ -143,7 +143,7 @@ Grouping adjacent nodes into one execution unit so they run in one container and
 - Per-node caching and retries: a change or failure reruns the whole unit
 - Full intermediates: replaced by per-node statistics, traced row samples and fitted parameters
 - Any intermediate can be regenerated on demand from the unit's stored inputs
-- Development runs choose their fusion mode, automatic or unfused, and how many intermediates to keep (CORE 6.6, [D50]({workspace}/decisions/Platform#50))
+- Development runs choose their fusion mode, automatic or unfused, and how many intermediates to keep ([CORE 6.6](03-capabilities-core.md), [D50]({workspace}/decisions/Platform#50))
 
 #### Caching
 

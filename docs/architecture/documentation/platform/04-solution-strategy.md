@@ -48,7 +48,7 @@ The planes keep four invariants:
 | Warehouses (v1) | Postgres and Snowflake | Chosen |
 | Table formats | Iceberg and Delta, used as the commit mechanism underneath where applicable; Iceberg metadata projected for managed datasets on object storage, from the first slice ([D42]({workspace}/decisions/Platform#42)), by PyIceberg in a maintenance unit into REST and SQL catalogs ([D44]({workspace}/decisions/Platform#44)) | Chosen |
 | Later engines | Spark, Flink, Ray, all against customer-operated clusters | Deferred |
-| Standards | OpenLineage ([S21]({workspace}/documentation#3)), EDAM format ontology ([D18]({workspace}/decisions/Platform#18)) | Candidates |
+| Standards | OpenLineage ([S21]({workspace}/documentation#7.21)), EDAM format ontology ([D18]({workspace}/decisions/Platform#18)) | Candidates |
 | IR text form | Strict YAML subset, round-tripping with the canvas, parsed with goccy/go-yaml; comments not preserved on write-back in the first slice; Python SDK generating IR later ([D41]({workspace}/decisions/Platform#41), [D44]({workspace}/decisions/Platform#44)) | Chosen |
 | Version control | Git for connected projects, which holds history and review; drafts, and linear platform-held versions for projects without git; deployment by the platform ([D41]({workspace}/decisions/Platform#41), [D45]({workspace}/decisions/Platform#45)) | Chosen |
 | Expression language | CEL for conditions, collections, loop termination and parameters ([D41]({workspace}/decisions/Platform#41)), evaluated with cel-go ([D44]({workspace}/decisions/Platform#44)) | Chosen |

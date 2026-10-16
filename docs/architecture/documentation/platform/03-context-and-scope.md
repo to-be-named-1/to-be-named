@@ -35,7 +35,7 @@ The platform serves the people below and works with the external systems that fo
 | External data sources | Data that workflows read without the platform owning it | [D4]({workspace}/decisions/Platform#4), [D35]({workspace}/decisions/Platform#35), [D37]({workspace}/decisions/Platform#37), [D49]({workspace}/decisions/Platform#49), [D51]({workspace}/decisions/Platform#51) |
 | Side-effect targets | Systems that nodes write to, message or trigger | [D40]({workspace}/decisions/Platform#40), [D50]({workspace}/decisions/Platform#50) |
 | Warehouses | Postgres and Snowflake, for pushdown, extraction and publication | [D25]({workspace}/decisions/Platform#25), [D28]({workspace}/decisions/Platform#28) |
-| Customer observability stack | The customer's own log and metrics stores, where telemetry is kept in the customer's environment (CORE 4.7) | [D22]({workspace}/decisions/Platform#22), [D40]({workspace}/decisions/Platform#40) |
+| Customer observability stack | The customer's own log and metrics stores, where telemetry is kept in the customer's environment ([CORE 4.7]({workspace}/documentation#3)) | [D22]({workspace}/decisions/Platform#22), [D40]({workspace}/decisions/Platform#40) |
 | Notification channels | Alerts | — |
 | CI system | Starts sample and development runs as a service account | [D45]({workspace}/decisions/Platform#45), [D50]({workspace}/decisions/Platform#50) |
 

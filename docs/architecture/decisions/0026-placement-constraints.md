@@ -21,7 +21,7 @@ Placement constraints, the hard requirements and soft preferences that govern wh
 - **Seam 3.** **Explicit placement.** The planner decides every unit's backend and location and records the reason ([D25](0025-processing-engines-and-runtimes.md)), including where the reason is only the default. No backend selects a location that the planner cannot see or override.
 - **Considered.** Discussed before deferral and not decided: deriving most hard constraints from the policy of the datasets a unit reads rather than requiring node authors to declare them; limiting node-level requirements to properties of the computation, such as an accelerator or a tool licensed on one cluster; expressing requirements in the IR as abstract labels resolved through environment bindings rather than as concrete regions; and treating a cached output stored in a location that violates a run's constraints as a miss.
 - **Transition.** Workflows built before constraints exist may depend on unrestricted data movement and fail to plan once constraints apply. A warning-only phase before enforcement was raised as the likely remedy and is not decided.
-- **Open items.** [S6]({workspace}/documentation#3) and [S23]({workspace}/documentation#3) remain open and are deferred with this decision.
+- **Open items.** [S6]({workspace}/documentation#7.6) and [S23]({workspace}/documentation#7.23) remain open and are deferred with this decision.
 
 ## Follow-ups
 

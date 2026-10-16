@@ -23,7 +23,7 @@ Hybrid. Every node gets an **input-addressed** key, built from its own semantic 
 
 - **Node-level chaining.** Keys of intermediates inside a unit are computed at plan time and discarded, never stored or looked up, so fusion's savings are unaffected, and the key of a stored output does not change when automatic fusion regroups nodes ([D33](0033-automatic-fusion.md)).
 - **Follows.** Early cutoff where it is cheap: an upstream unit that reran but produced identical output no longer forces expensive downstream work to repeat.
-- **Follows.** A lookup is a lookup, not a check — caching trusts that a unit is a function of its key. Confirming that a rerun matches is the job of verification runs (CORE 5.7).
+- **Follows.** A lookup is a lookup, not a check — caching trusts that a unit is a function of its key. Confirming that a rerun matches is the job of verification runs ([CORE 5.7]({workspace}/documentation#3)).
 - **Byte digests.** A byte-level digest is computed for every file as it is written, at negligible cost because it is streamed alongside the write. No threshold applies.
 - **Threshold.** Canonical content hashing — which may require re-reading and sorting — applies by default to artifacts up to **1 GB**. This is an initial default to be tuned from measurements during development, and configurable per project.
 - **Overrides.** A node or dataset may opt in to canonical hashing above the threshold where downstream work is expensive enough to justify it, or opt out below it.

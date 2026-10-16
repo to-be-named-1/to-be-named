@@ -27,7 +27,7 @@ Four options are supported, ordered by how much the customer controls: **fully m
 - **Telemetry.** A customer may keep logs and metrics within its own environment, with live tailing proxied through the agent, because logs may contain sensitive content.
 - **Primary model.** Bring-your-own-compute is the primary model: execution runs on the customer's own infrastructure and the vendor coordinates. Hybrid and self-hosted are the first-class topologies. Fully managed serves trials and organizations that do not want to manage their own data-plane infrastructure, and managed with customer storage is retained unchanged.
 - **Compute.** A bring-your-own-compute deployment provides a container-capable backend: Kubernetes, cloud batch or an HPC cluster. A warehouse alone runs only pushdown work; in-process nodes on DuckDB or Polars, Python code nodes and command-line tools require container compute. A warehouse-native container service may later serve as a backend for customers whose only compute is a warehouse.
-- **Images.** Image builds and the image registry may run in the customer's environment, and images are referenced by digest wherever they are stored (CORE 1.10, CORE 5.1). HPC clusters commonly run images through Apptainer rather than Docker.
+- **Images.** Image builds and the image registry may run in the customer's environment, and images are referenced by digest wherever they are stored ([CORE 1.10]({workspace}/documentation#3), [CORE 5.1]({workspace}/documentation#3)). HPC clusters commonly run images through Apptainer rather than Docker.
 
 ## Follow-ups
 

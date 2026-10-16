@@ -21,7 +21,7 @@ The platform's containers are grouped by plane. Logs and metrics go to the obser
 | Data | Publication unit | Python | Commits current versions to storage targets that have their own commit: Iceberg and Delta tables and Hive-style tables | [D15]({workspace}/decisions/Platform#15), [D55]({workspace}/decisions/Platform#55) |
 | Data | Probe unit | Python | Fixes external sources' versions or positions at run start, checks and scans existing data at adoption, and observes external producers | [D49]({workspace}/decisions/Platform#49), [D51]({workspace}/decisions/Platform#51) |
 | Data | Sample-building unit | Python, DuckDB | Builds the samples that sample runs read | [D50]({workspace}/decisions/Platform#50) |
-| Data | Bundled object storage | Not decided ([S25]({workspace}/documentation#3.1)) | Default storage target of self-hosted installations without object storage of their own | [D4]({workspace}/decisions/Platform#4), [D23]({workspace}/decisions/Platform#23) |
+| Data | Bundled object storage | Not decided ([S25]({workspace}/documentation#7.25)) | Default storage target of self-hosted installations without object storage of their own | [D4]({workspace}/decisions/Platform#4), [D23]({workspace}/decisions/Platform#23) |
 | Observability | Observability service | Not decided | Receives logs, metrics and node events, redacts secrets on ingestion, serves the live log tail and the archive, and raises alerts | [D12]({workspace}/decisions/Platform#12), [D21]({workspace}/decisions/Platform#21), [D40]({workspace}/decisions/Platform#40) |
 
 ### Interface and control planes
@@ -46,4 +46,4 @@ The platform's containers are grouped by plane. Logs and metrics go to the obser
 | Log archive, time-series store | Observability | Logs, metrics and events |
 | Git repositories | Interface | Workflow definitions as text |
 
-Self-hosted installations without object storage of their own use the bundled object storage as their default storage target ([S25]({workspace}/documentation#3.1)).
+Self-hosted installations without object storage of their own use the bundled object storage as their default storage target ([S25]({workspace}/documentation#7.25)).
