@@ -20,28 +20,13 @@ The make targets run Structurizr as the host user, so that on Linux it can write
 
 ## Single source of truth
 
-From the cut-over described below, `docs/architecture/` is the only authoritative record of the platform's architecture: the model, the documentation and the ADRs. Anything not recorded there is not decided. Until the cut-over, authority is held item by item, as the migration section sets out.
+`docs/architecture/` is the only authoritative record of the platform's architecture: the model, the documentation and the ADRs. Anything not recorded there is not decided.
 
 1. A decision is recorded only once confirmed, as a new ADR or as an amendment to one. The model and the documentation change in the same commit.
 2. Proposals live in the workspace documentation's proposals section until confirmed; open questions live in its open-items section.
 3. IDs are stable and never reused: decisions (D), open items (S) and capability lines (CORE, DE, DS, MLE). CORE 3.8 is unused.
 4. Nothing temporary sits permanently on the diagrams or in the documentation. Temporary marking lives in removable overlays (diagrams) or in the roadmap section (documentation).
 5. Every change passes `make docs-check` before it is committed; CI runs the same check.
-
-## Migration from the design record
-
-This section is temporary. It is removed in the commit that retires `project-design.md`.
-
-- [`project-design.md`](../project-design.md) is frozen at revision v0.10 (October 11, 2026) and is no longer edited.
-- Until a decision's ADR is migrated, the design record remains the authority for that decision; the ADR stub says so. Once migrated, the ADR is the authority. New material goes only into `docs/architecture/`.
-- Decisions are migrated faithfully, with these exceptions, so that nothing refers to the design record once it is retired:
-  - Notes lose their revision: "Amended in v0.10 by D40" becomes "Amended by D40". A note left with nothing but its revision, such as "Added in v0.10.", is dropped. "Revised in …" bullets become part of the Context section. The record's own notes, such as "Amended by D40: …", stay as recorded, except in a passage that a later decision rewrites.
-  - Each reasoning item of the record's Part I §3 goes into the Context of its main decision under its bold title, without its number. Other decisions it cites refer to it by title and decision.
-  - Pointers into the record name the place where the content now lives.
-  - The record's References lines are not carried over.
-  - Comparisons with other software are not carried over.
-  - Spelling is converted to American English.
-- The design record is retired when all fifty ADRs are migrated and reviewed, every part of the record has its destination, `python tools/docs/check.py --cutover` passes after a JSON export, and `make docs-check` is green. The cut-over check also confirms that each reasoning item sits in exactly one ADR's Context and that no permanent file refers to the design record. Its last commit is tagged `design-record-v0.10` and the file is then removed.
 
 ## Conventions
 

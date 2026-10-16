@@ -7,7 +7,7 @@ Run by `make docs-check`, after `structurizr validate` and a JSON export of the 
      section order; dates never decrease as numbers rise, since Structurizr orders the
      decision log by date and then by number.
   2. `decisions` properties on elements and relationships name existing ADRs, and every
-     migrated ADR's "Applies to" line agrees with the elements that cite it.
+     ADR's "Applies to" line agrees with the elements that cite it.
   3. No forbidden relationship (tools/docs/forbidden-edges.json), explicit or implied; a rule
      marked across_groups forbids only explicit relationships that reach a grouped element from
      outside its group.
@@ -26,9 +26,6 @@ Run by `make docs-check`, after `structurizr validate` and a JSON export of the 
   8. Deployment routing: in an environment with more than one control-plane instance, no web
      application, CLI or agent instance connects to a control-plane instance directly; traffic
      reaches the roles through a routing node, so a missing or misspelled deployment group fails.
-  9. With --cutover: the count check required before project-design.md is retired, including
-     that each reasoning item of the record sits in exactly one ADR's Context, and that no
-     permanent file refers to the record.
 
 Standard library only. Exit status 1 if any error is reported.
 """
@@ -61,7 +58,6 @@ INVERSE_LINK = {
     "Supersedes": "Superseded by",
     "Superseded by": "Supersedes",
 }
-PENDING = "Content pending migration"
 OVERLAY_FIELDS = ("// Overlay:", "// Purpose:", "// Remove when:")
 
 ADR_NAME = re.compile(r"^(\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$")
@@ -76,22 +72,6 @@ SKIPPED_LINK_PREFIXES = ("http://", "https://", "mailto:", "#", "embed:")
 WORKSPACE_DECISION_LINK = re.compile(r"^\{workspace\}/decisions/([^#]+)#(\d+)$")
 WORKSPACE_DOCUMENTATION_LINK = re.compile(r"^\{workspace\}/documentation(?:/([^#]+))?#(\d+(?:\.\d+)?)$")
 
-CUTOVER_DECISIONS = 50
-CUTOVER_PARTIAL = {27}
-CUTOVER_OPEN_ITEMS = 25
-CUTOVER_CAPABILITIES = {"CORE": 103, "DE": 36, "DS": 31, "MLE": 25}
-CUTOVER_REASONING_ITEMS = 69
-# Reasoning items whose title changes when it is carried over: a mention of comparable software
-# is dropped, or the spelling becomes American.
-CUTOVER_TITLE_CHANGES = {
-    3: "Containers rather than a single process",
-    10: "Tenant = the whole organization",
-    54: "A leader-centered control plane with invariants in the database",
-}
-# Reasoning items removed from their ADR after migration; the cut-over check does not look for them.
-CUTOVER_DROPPED_REASONING_ITEMS = {
-    62,  # "Spark is not a general remedy for resource exhaustion" (D47)
-}
 # British spellings the documentation must not use; American English is the register.
 _BRITISH_IZE_ROOTS = (
     "author|material|normal|optim|special|synchron|serial|initial|priorit|recogn|summar|visual|minim|maxim|"
@@ -108,7 +88,6 @@ BRITISH_SPELLING = re.compile(
     r"|enrols|enrolment|fulfils?|fulfilment|programmes?|grey|ageing|whilst|amongst|learnt|spelt|practis(?:e|ed|ing)|judgements?)\b",
     re.I,
 )
-RECORD_REFERENCE = re.compile(r"project-design|\bv0\.\d|\bPart I{1,3}\b|\bReasoning items? \d")
 
 
 class Report:
@@ -164,7 +143,6 @@ class Adr:
     links: list[tuple[str, str, int]] = field(default_factory=list)
     link_texts: dict[str, str] = field(default_factory=dict)  # target file -> link text
     sections: list[str] = field(default_factory=list)
-    pending: bool = False
     text: str = ""
 
 
@@ -183,7 +161,7 @@ def parse_adr(path: Path, report: Report) -> Adr | None:
     number = int(name[1])
     if int(title[1]) != number:
         report.error(f"{where}:1", f"title number {title[1]} does not match file number {number}")
-    adr = Adr(number=number, path=path, title=title[2], text=text, pending=PENDING in text)
+    adr = Adr(number=number, path=path, title=title[2], text=text)
 
     headings = [(i, line[3:].strip()) for i, line in unfenced(lines) if line.startswith("## ")]
     adr.sections = [h for _, h in headings]
@@ -239,12 +217,10 @@ def parse_adr(path: Path, report: Report) -> Adr | None:
         adr.links.append((link[1], link[3], i + 1))
         adr.link_texts[link[3]] = link[2]
 
-    if not adr.pending:
-        for required in ("Decision",):
-            if required not in adr.sections:
-                report.error(where, f"a migrated ADR needs a '## {required}' section")
-        if adr.applies_to is None:
-            report.error(where, "a migrated ADR needs an 'Applies to:' line")
+    if "Decision" not in adr.sections:
+        report.error(where, "an ADR needs a '## Decision' section")
+    if adr.applies_to is None:
+        report.error(where, "an ADR needs an 'Applies to:' line")
     return adr
 
 
@@ -290,7 +266,7 @@ def check_adrs(decisions_dir: Path, report: Report) -> dict[int, Adr]:
                 f"dated {later.date}, before ADR {earlier.number} ({earlier.date}); Structurizr orders the "
                 "decision log by date, so a later number needs the same or a later date",
             )
-    report.note(f"{len(adrs)} ADRs, {sum(a.pending for a in adrs.values())} pending migration")
+    report.note(f"{len(adrs)} ADRs")
     return adrs
 
 
@@ -383,7 +359,7 @@ def check_traceability(model: Model, adrs: dict[int, Adr], have_adrs: bool, repo
                 report.error(f"relationship '{label}'", f"decisions names D{number}, which has no ADR")
 
     for number, adr in adrs.items():
-        if adr.pending or adr.applies_to is None:
+        if adr.applies_to is None:
             continue
         where = display(adr.path)
         for identifier in adr.applies_to:
@@ -408,9 +384,8 @@ def crosses_groups(model: Model, relationship: dict) -> bool:
 
 
 def check_forbidden_edges(model: Model, rules_path: Path, adrs: dict[int, Adr], have_adrs: bool,
-                          cutover: bool, report: Report) -> None:
+                          report: Report) -> None:
     rules = json.loads(rules_path.read_text(encoding="utf-8"))["rules"]
-    inactive = 0
     for rule in rules:
         where = f"{display(rules_path)} [{rule['id']}]"
         for reference in rule.get("decisions", []):
@@ -421,9 +396,7 @@ def check_forbidden_edges(model: Model, rules_path: Path, adrs: dict[int, Adr], 
         targets = {model.identifiers[i] for i in rule["to"] if i in model.identifiers}
         missing = [i for i in rule["from"] + rule["to"] if i not in model.identifiers]
         if missing:
-            inactive += 1
-            if cutover:
-                report.error(where, "elements not in the model: " + ", ".join(missing))
+            report.error(where, "elements not in the model: " + ", ".join(missing))
         if not sources or not targets:
             continue
         for relationship in model.relationships:
@@ -441,7 +414,7 @@ def check_forbidden_edges(model: Model, rules_path: Path, adrs: dict[int, Adr], 
                     f"forbidden relationship{implied} {source.get('name')} -> {destination.get('name')} "
                     f"'{relationship.get('description', '')}': {rule['reason']} ({', '.join(rule['decisions'])})",
                 )
-    report.note(f"{len(rules)} forbidden-edge rules, {inactive} not yet fully in the model")
+    report.note(f"{len(rules)} forbidden-edge rules")
 
 
 # --- 4. Overlays ---------------------------------------------------------------------------
@@ -658,78 +631,6 @@ def check_deployment_routing(model: Model, report: Report) -> None:
                          "deployment groups")
 
 
-# --- 9. Cut-over --------------------------------------------------------------------------
-
-
-def check_cutover(root: Path, record: Path, adrs: dict[int, Adr], report: Report) -> None:
-    where = "cut-over"
-    for number in range(1, CUTOVER_DECISIONS + 1):
-        adr = adrs.get(number)
-        if adr is None:
-            report.error(where, f"D{number} has no ADR")
-        elif adr.pending:
-            report.error(where, f"D{number} is still pending migration")
-    partial = {n for n, a in adrs.items() if a.status == "Partial" and n <= CUTOVER_DECISIONS}
-    if partial != CUTOVER_PARTIAL:
-        report.error(where, f"Partial decisions are {sorted(partial)}, expected {sorted(CUTOVER_PARTIAL)}")
-
-    workspace_docs = root / "documentation" / "workspace"
-    open_items = workspace_docs / "07-open-items.md"
-    found = set()
-    if open_items.is_file():
-        found = {int(n) for n in re.findall(r"^#+ S(\d+)\b", open_items.read_text(encoding="utf-8"), re.M)}
-    expected = set(range(1, CUTOVER_OPEN_ITEMS + 1))
-    if not expected <= found:
-        report.error(where, "open items missing: " + ", ".join(f"S{n}" for n in sorted(expected - found)))
-
-    capabilities: dict[str, set[str]] = {family: set() for family in CUTOVER_CAPABILITIES}
-    for path in sorted(workspace_docs.glob("0[3-6]-capabilities-*.md")) if workspace_docs.is_dir() else []:
-        for family, number in re.findall(r"\*\*(CORE|DE|DS|MLE) (\d+\.\d+)\*\*", path.read_text(encoding="utf-8")):
-            capabilities[family].add(number)
-    for family, count in CUTOVER_CAPABILITIES.items():
-        if len(capabilities[family]) != count:
-            report.error(where, f"{family} has {len(capabilities[family])} capability lines, expected {count}")
-
-    # Reasoning items are carried under their bold title, without the record's number; the
-    # titles are read from the record, which still exists when this check runs.
-    if not record.is_file():
-        report.error(where, f"{display(record)} not found; the reasoning items are read from it")
-    else:
-        text = record.read_text(encoding="utf-8")
-        start = text.index("\n## 3. Key reasoning")
-        part = text[start:text.index("\n## 4.", start)]
-        items = re.findall(r"^(\d+)\. \*\*(.+?)\*\*", part, re.M)
-        if len(items) != CUTOVER_REASONING_ITEMS:
-            report.error(where, f"the record has {len(items)} reasoning items, expected {CUTOVER_REASONING_ITEMS}")
-        contexts = {}
-        for number, adr in adrs.items():
-            context = re.search(r"^## Context\n(.*?)(?=^## |\Z)", adr.text, re.M | re.S)
-            contexts[number] = context[1] if context else ""
-        for item, title in items:
-            if int(item) in CUTOVER_DROPPED_REASONING_ITEMS:
-                continue
-            title = CUTOVER_TITLE_CHANGES.get(int(item), title)
-            holders = [f"D{n}" for n, context in sorted(contexts.items()) if f"**{title}**" in context]
-            if len(holders) != 1:
-                placed = ", ".join(holders) or "no ADR"
-                report.error(where, f"reasoning item {item} ('{title}') must be in exactly one Context, found in {placed}")
-
-    # Nothing permanent may refer to the record; the README's migration section is removed with it.
-    readme = root.parent / "README.md"
-    files = sorted(root.rglob("*.md")) + sorted(root.rglob("*.dsl")) + ([readme] if readme.is_file() else [])
-    for path in files:
-        text = path.read_text(encoding="utf-8")
-        if path == readme:
-            start = text.find("\n## Migration from the design record")
-            if start != -1:
-                end = text.find("\n## ", start + 1)
-                text = text[:start] + (text[end:] if end != -1 else "")
-        for i, line in enumerate(text.splitlines()):
-            match = RECORD_REFERENCE.search(line)
-            if match:
-                report.error(f"{display(path)}:{i + 1}", f"refers to the design record ('{match[0]}')")
-
-
 # --- Main ----------------------------------------------------------------------------------
 
 
@@ -738,8 +639,6 @@ def main() -> int:
     parser.add_argument("--root", type=Path, default=Path("docs/architecture"))
     parser.add_argument("--workspace-json", type=Path, default=Path("docs/build/json/workspace.json"))
     parser.add_argument("--rules", type=Path, default=Path(__file__).with_name("forbidden-edges.json"))
-    parser.add_argument("--cutover", action="store_true", help="also run the count check of the cut-over")
-    parser.add_argument("--record", type=Path, default=Path("project-design.md"), help="the design record (cut-over only)")
     args = parser.parse_args()
 
     report = Report()
@@ -750,7 +649,7 @@ def main() -> int:
     if args.workspace_json.is_file():
         model = load_model(args.workspace_json)
         check_traceability(model, adrs, have_adrs, report)
-        check_forbidden_edges(model, args.rules, adrs, have_adrs, args.cutover, report)
+        check_forbidden_edges(model, args.rules, adrs, have_adrs, report)
         check_leader_only(model, report)
         check_deployment_routing(model, report)
         check_container_docs(model, linker.Layout(args.root), report)
@@ -764,8 +663,6 @@ def main() -> int:
         markdown.append(readme)
     check_markdown(markdown, args.root, report)
     check_spelling(args.root.parent, report)
-    if args.cutover:
-        check_cutover(args.root, args.record, adrs, report)
 
     for note in report.notes:
         print(f"note: {note}")

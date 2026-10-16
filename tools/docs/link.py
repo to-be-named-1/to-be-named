@@ -23,9 +23,8 @@ are added, so every link whose text is an ID is recomputed on each run, and a re
 file of another set is rewritten to that file's section.
 
 A reference is linked only when its target file exists, and never to the file it appears in.
-Left alone: inline and fenced code, headings, lines about content pending migration (they refer to
-the design record), and bare "S3", which is also the name of Amazon S3; a reference to open item S3
-is linked by hand and then kept current like any other.
+Left alone: inline and fenced code, headings, and bare "S3", which is also the name of Amazon S3; a
+reference to open item S3 is linked by hand and then kept current like any other.
 
   python tools/docs/link.py            rewrite files in place
   python tools/docs/link.py --check    list references to link or correct; exit status 1 if any
@@ -208,7 +207,7 @@ def process(path: Path, layout: Layout, check: bool) -> list[str]:
             marker = stripped[:3]
             fence = marker if fence is None else (None if marker == fence else fence)
             continue
-        if fence is not None or stripped.startswith("#") or "pending migration" in line:
+        if fence is not None or stripped.startswith("#"):
             continue
         where = f"{path.as_posix()}:{index + 1}"
         status_line = in_decisions and STATUS_LINK_LINE.match(line)
