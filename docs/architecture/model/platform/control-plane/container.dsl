@@ -2,7 +2,7 @@ controlPlane = container "Control-plane server" "Compiles, plans, schedules and 
     !docs docs
 
     properties {
-        "decisions" "D1, D2, D3, D21, D29, D30, D31, D32, D33, D40, D41, D43, D44, D45, D46, D47, D48, D49, D51, D52"
+        "decisions" "D1, D2, D3, D21, D25, D26, D28, D29, D30, D31, D32, D33, D34, D40, D41, D43, D44, D45, D46, D47, D48, D49, D51, D52"
     }
 
     // Groups are the bounded contexts of D47. The roles property names the roles that the component's

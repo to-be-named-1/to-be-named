@@ -3,7 +3,7 @@
 workflowAuthor = person "Workflow author" "Analyst, researcher, data scientist or engineer who builds workflows, tries them on samples and in sandboxes, and commits them." {
     properties {
         "roles" "Developer"
-        "decisions" "D41, D45, D50"
+        "decisions" "D28, D41, D45, D50"
     }
 }
 
@@ -31,7 +31,7 @@ datasetOwner = person "Dataset owner" "Sets a dataset's contract, classification
 tenantAdmin = person "Tenant administrator" "Manages members, service accounts, projects, agent pools, connections, storage targets, catalogs, quotas and fair-share weights." {
     properties {
         "roles" "Admin"
-        "decisions" "D43, D45, D47"
+        "decisions" "D34, D43, D45, D47"
     }
 }
 
