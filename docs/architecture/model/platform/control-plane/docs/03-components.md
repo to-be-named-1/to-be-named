@@ -13,7 +13,7 @@ The actions of each component are listed by the role that performs them. A repli
 | Component | Responsibility | Actions by role |
 |---|---|---|
 | Identity and membership | Manages tenants, principals, memberships and clearance, service accounts, projects, and tenant resources with their grants. | **api:** commands and queries on tenants, principals, memberships and clearance, service accounts, projects, resources and their grants to projects |
-| Authorization layer | Authorizes every API method and every run against roles, project scope and clearance; the policy behind it is an extension point. | **api:** authorizes every API method before its handler runs<br>**worker:** checks a run's access under its project identity while the planner binds resources |
+| Authorization layer | Authorizes every API method and every run against roles, project scope and clearance; the policy behind it is an extension point. | **api:** authorizes every API method before its handler runs<br>**worker:** checks a run's access while the planner binds resources: under its project identity, or the starter's clearance for a development run |
 | Audit | Records the audit trail of user and administrative actions; export to external sinks is an extension point. | **api:** records user and administrative actions, and serves the audit log to Admins<br>**worker:** records acts the platform performs for users, such as deploying commits from the deploy branch |
 
 ### Authoring

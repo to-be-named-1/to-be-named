@@ -10,14 +10,14 @@ workflowAuthor = person "Workflow author" "Analyst, researcher, data scientist o
 operator = person "Operator" "Triggers, backfills, pauses and cancels runs and materialization requests, and monitors them." {
     properties {
         "roles" "Operator"
-        "decisions" "D20, D24, D31, D45"
+        "decisions" "D20, D24, D31, D45, D50"
     }
 }
 
 projectMaintainer = person "Project maintainer" "Manages a project's settings, environment bindings and membership, approves changes to governed fields and deploys." {
     properties {
         "roles" "Maintainer"
-        "decisions" "D41, D45, D47"
+        "decisions" "D41, D45, D47, D50"
     }
 }
 
@@ -31,7 +31,7 @@ datasetOwner = person "Dataset owner" "Sets a dataset's contract, classification
 tenantAdmin = person "Tenant administrator" "Manages members, service accounts, projects, agent pools, connections, storage targets, catalogs, quotas and fair-share weights." {
     properties {
         "roles" "Admin"
-        "decisions" "D18, D34, D43, D45, D47"
+        "decisions" "D18, D34, D43, D45, D47, D50"
     }
 }
 

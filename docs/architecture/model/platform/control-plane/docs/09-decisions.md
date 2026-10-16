@@ -46,6 +46,7 @@
 | [D47]({workspace}/decisions/Platform#47) | The structure: topology, deployment roles, routing to roles, leadership, bounded contexts, the planner, the run driver and the reconciler |
 | [D48]({workspace}/decisions/Platform#48) | Execution mechanics: fencing tokens, write leases held by the task run, the outbox and wake-ups |
 | [D49]({workspace}/decisions/Platform#49) | Source probes resolving external versions at run start |
+| [D50]({workspace}/decisions/Platform#50) | Development runs: sample and full-scale, selection boundaries, sandboxes as lines, reuse across modes, sampling, development bindings and suppressed side effects, reads bounded by clearance, the best-effort class and a development share |
 | [D51]({workspace}/decisions/Platform#51) | Adoption of existing tables and files |
 | [D52]({workspace}/decisions/Platform#52) | Agent identity proven by message signatures on every request and response |
 | [D55]({workspace}/decisions/Platform#55) | Commits to table-format storage targets made after the platform's commit, by publication units, in version order |

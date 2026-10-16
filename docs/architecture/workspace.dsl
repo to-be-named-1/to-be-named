@@ -81,6 +81,7 @@ workspace "Platform architecture" "C4 model, documentation and decision records 
         !include views/dynamic/lease-fencing.dsl
         !include views/dynamic/leader-failover.dsl
         !include views/dynamic/source-probe.dsl
+        !include views/dynamic/sample-run.dsl
         !include views/deployment.dsl
 
         !include views/styles.dsl

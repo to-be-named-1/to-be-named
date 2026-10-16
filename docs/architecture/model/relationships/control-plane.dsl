@@ -184,9 +184,9 @@ platform.controlPlane.runDriver -> platform.controlPlane.planner "Plans runs wit
     }
 }
 
-platform.controlPlane.planner -> platform.controlPlane.authorization "Checks a run's access under its project identity with" {
+platform.controlPlane.planner -> platform.controlPlane.authorization "Checks a run's access with" {
     properties {
-        "decisions" "D45, D47"
+        "decisions" "D45, D47, D50"
     }
 }
 
