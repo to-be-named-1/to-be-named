@@ -26,8 +26,12 @@
 | [D32]({workspace}/decisions/Platform#32) | Units as one container with engine segments; nodes bound to an engine at planning |
 | [D33]({workspace}/decisions/Platform#33) | Fusion separated into deterministic legality and a replaceable policy, with its version recorded on every plan |
 | [D34]({workspace}/decisions/Platform#34) | The capacity check: observed sizes, memory classes, per-unit ceilings and warnings before the run |
+| [D35]({workspace}/decisions/Platform#35) | Ephemeral or copied source reads chosen by the author, source versions recorded on every read |
+| [D37]({workspace}/decisions/Platform#37) | Cursors derived from position records committed with the data, the frontier, bootstrap, resets and queueing on cursor-based sources |
+| [D38]({workspace}/decisions/Platform#38) | As-of queries over commit history, answered only below the commit watermark |
 | [D40]({workspace}/decisions/Platform#40) | The protocol with the data plane: leases with credential scopes and secret references, outage and partition rules, durable commits and message classes |
 | [D41]({workspace}/decisions/Platform#41) | The IR's text form and versioning, semantic-model hashing, port types, and CEL expressions evaluated by the control plane |
+| [D42]({workspace}/decisions/Platform#42) | How the catalog is persisted: partition versions by validity interval, commit ordering and the watermark, the commit transaction, read records, the control-plane boundary, identifiers and external readability |
 | [D43]({workspace}/decisions/Platform#43) | Queues, fair share, admission per capacity domain, scale targets and timings |
 | [D44]({workspace}/decisions/Platform#44) | Go, ConnectRPC and cel-go; the transport of the agent protocol |
 | [D45]({workspace}/decisions/Platform#45) | Row-level security on the tenant, the authorization layer, roles, drafts, deployment and governed fields |
