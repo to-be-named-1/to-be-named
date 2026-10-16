@@ -97,7 +97,7 @@ _BRITISH_IZE_ROOTS = (
     "author|material|normal|optim|special|synchron|serial|initial|priorit|recogn|summar|visual|minim|maxim|"
     "standard|custom|categor|util|parallel|container|canonical|memo|token|random|character|final|organ|real|"
     "capital|central|general|local|global|emphas|apolog|harmon|stabil|neutral|legal|modern|privat|virtual|vector|"
-    "parameter|regular|featur|anonym"
+    "parameter|regular|featur|anonym|session"
 )
 BRITISH_SPELLING = re.compile(
     r"\b(?:\w*(?:" + _BRITISH_IZE_ROOTS + r")is(?:e|ed|es|ing|er|ers|ation|ations|able)"

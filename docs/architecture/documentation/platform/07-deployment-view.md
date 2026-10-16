@@ -39,6 +39,8 @@ Without Kubernetes, processes run by role on virtual machines. Only `api` proces
 
 ![](embed:deployment-hybrid)
 
+An enterprise can adopt the hosted product without moving data out of its own cloud account or HPC cluster. This is a strong argument for regulated and data-sovereign customers, and it exists only because the control plane never touches bulk data.
+
 The vendor hosts the interface and control planes, and the data plane and storage stay in the customer's cloud account or HPC cluster ([D22]({workspace}/decisions/Platform#22)). A hosted control plane scales by cells, each with its own database and set of tenants, and each cell routes to its roles as a self-hosted installation does ([D47]({workspace}/decisions/Platform#47)).
 
 Agents connect outward only; no inbound connection into the customer's network is needed ([D22]({workspace}/decisions/Platform#22)). Credentials are minted, and secrets resolved, inside the customer's environment, so the hosted control plane holds neither ([D40]({workspace}/decisions/Platform#40)). Only metadata, statistics, events and pre-computed previews cross to the hosted planes; previews and samples obey the classification of their source dataset, and a customer may disable them for sensitive datasets ([D22]({workspace}/decisions/Platform#22)). Logs and metrics go to the vendor's observability service or stay in the customer's own stack, with live tailing proxied through the agent ([D22]({workspace}/decisions/Platform#22), [D40]({workspace}/decisions/Platform#40)). Image builds and the image registry may run in the customer's environment ([D22]({workspace}/decisions/Platform#22)).

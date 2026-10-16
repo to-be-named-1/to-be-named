@@ -32,6 +32,7 @@ The model tags as Later the elements the first slice does not build or use: the 
 - The first release targets Postgres and Snowflake for pushdown, after the first development slice ([D25]({workspace}/decisions/Platform#25), [D29]({workspace}/decisions/Platform#29), [DE 2.1](04-capabilities-de.md)).
 - Iceberg metadata is projected from the first slice ([D42]({workspace}/decisions/Platform#42), [DE 3.1](04-capabilities-de.md)).
 - Family extension points are internal in the first release ([D17]({workspace}/decisions/Platform#17), [S12](07-open-items.md#7.12)).
+- Asset-based reconciliation works within a single project in the first release ([D24]({workspace}/decisions/Platform#24)).
 
 ### Beyond
 
