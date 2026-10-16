@@ -62,6 +62,10 @@ workspace "Platform architecture" "C4 model, documentation and decision records 
         !include model/relationships/observability.dsl
         !include model/relationships/external-systems.dsl
 
+        !include model/deployment/single-machine.dsl
+        !include model/deployment/kubernetes.dsl
+        !include model/deployment/hybrid.dsl
+
         !include model/overlays/lifecycle.dsl
     }
 
@@ -75,6 +79,7 @@ workspace "Platform architecture" "C4 model, documentation and decision records 
         !include views/dynamic/lease-fencing.dsl
         !include views/dynamic/leader-failover.dsl
         !include views/dynamic/source-probe.dsl
+        !include views/deployment.dsl
 
         !include views/styles.dsl
         !include views/overlays/lifecycle.dsl

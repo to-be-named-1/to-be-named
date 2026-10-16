@@ -23,7 +23,10 @@ Run by `make docs-check`, after `structurizr validate` and a JSON export of the 
      components gives the model's description in its second column, and an "Actions by role"
      column labels exactly the component's roles; every component has a row; 09-decisions.md
      lists exactly the container's decisions property.
-  8. With --cutover: the count check required before project-design.md is retired, including
+  8. Deployment routing: in an environment with more than one control-plane instance, no web
+     application, CLI or agent instance connects to a control-plane instance directly; traffic
+     reaches the roles through a routing node, so a missing or misspelled deployment group fails.
+  9. With --cutover: the count check required before project-design.md is retired, including
      that each reasoning item of the record sits in exactly one ADR's Context, and that no
      permanent file refers to the record.
 
@@ -629,7 +632,32 @@ def check_container_docs(model: Model, layout: "linker.Layout", report: Report) 
                 report.error(display(decisions_file), f"D{number} is listed but not in the decisions property of '{name}'")
 
 
-# --- 8. Cut-over --------------------------------------------------------------------------
+# --- 8. Deployment routing --------------------------------------------------------------
+
+ROUTED_CLIENTS = ("platform.webApp", "platform.cli", "platform.agent")
+
+
+def check_deployment_routing(model: Model, report: Report) -> None:
+    server = model.identifiers.get("platform.controlPlane")
+    clients = {model.identifiers[c] for c in ROUTED_CLIENTS if c in model.identifiers}
+    instances: dict[str, list[str]] = {}
+    for element_id, element in model.elements.items():
+        if element.get("containerId") == server:
+            instances.setdefault(element.get("environment"), []).append(element_id)
+    for relationship in model.relationships:
+        source = model.elements.get(relationship["sourceId"], {})
+        destination = model.elements.get(relationship["destinationId"], {})
+        environment = destination.get("environment")
+        if (source.get("containerId") in clients and destination.get("containerId") == server
+                and len(instances.get(environment, [])) > 1):
+            node = model.elements.get(model.parent.get(destination["id"]), {}).get("name", "?")
+            report.error(f"deployment environment '{environment}'",
+                         f"{model.elements[source['containerId']]['name']} connects directly to the control-plane "
+                         f"instance in '{node}'; route it through a Service or load balancer, and check the "
+                         "deployment groups")
+
+
+# --- 9. Cut-over --------------------------------------------------------------------------
 
 
 def check_cutover(root: Path, record: Path, adrs: dict[int, Adr], report: Report) -> None:
@@ -723,6 +751,7 @@ def main() -> int:
         check_traceability(model, adrs, have_adrs, report)
         check_forbidden_edges(model, args.rules, adrs, have_adrs, args.cutover, report)
         check_leader_only(model, report)
+        check_deployment_routing(model, report)
         check_container_docs(model, linker.Layout(args.root), report)
     else:
         report.error(display(args.workspace_json), "not found; export the workspace as JSON first (make docs-check)")

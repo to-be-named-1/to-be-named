@@ -80,6 +80,7 @@ This section is temporary. It is removed in the commit that retires `project-des
 
 - Files are included one by one, in a fixed order: people, external systems, the platform and its containers, relationships, deployment, overlays, then views. The DSL allows no forward references.
 - One folder per container, `model/platform/<container>/`, holding `container.dsl` and the container's `docs/`.
+- One file per deployment environment, `model/deployment/<environment>.dsl`. Deployment groups limit which instances the model's relationships connect, and traffic that reaches the control plane's roles through a Service or load balancer is drawn explicitly.
 - Components are modeled only where a decision fixes them or a dynamic view needs them; finer structure is left to the code.
 - Identifiers are hierarchical and lowerCamelCase (`platform.controlPlane.runDriver`). View keys are explicit, kebab-case and prefixed by view type (`context`, `containers`, `components-control-plane-execution`, `dynamic-…`, `deployment-…`).
 - Relationship descriptions are present-tense verb phrases, unique between any pair of elements.
@@ -112,6 +113,7 @@ This section is temporary. It is removed in the commit that retires `project-des
 5. Markdown headings; relative links that resolve and stay within one set; `{workspace}` links that name an existing ADR or section; and the text of links to ADRs.
 6. No British spelling is used anywhere under `docs/` (the patterns are in `tools/docs/check.py`).
 7. Roles and container documentation: a component is tagged `Leader only` exactly when its only role is `leader`; in a container's `03-components.md`, a table row that names one of its components gives the model's description in its second column, an `Actions by role` column labels exactly the component's `roles`, and every component has a row; `09-decisions.md` lists exactly the container's `decisions` property.
+8. Deployment routing: in an environment with more than one control-plane instance, no web application, CLI or agent instance connects to a control-plane instance directly; traffic reaches the roles through a Service or load balancer, so a missing or misspelled deployment group fails the check.
 
 It then runs `tools/docs/link.py --check`, which reports any reference not yet linked.
 
