@@ -100,7 +100,7 @@ _BRITISH_IZE_ROOTS = (
 )
 BRITISH_SPELLING = re.compile(
     r"\b(?:\w*(?:" + _BRITISH_IZE_ROOTS + r")is(?:e|ed|es|ing|er|ers|ation|ations|able)"
-    r"|\w*(?:behavio|colo|favo|hono|labo|neighbo|flavo|harbo|rumo|humo|vapo|endeavo)ur(?:s|ed|ing|able|ite|ites)?"
+    r"|\w*(?:behavio|colo|favo|hono|labo|neighbo|flavo|harbo|rumo|humo|vapo|endeavo)ur(?:s|ed|ing|able|ite|ites|al|ally)?"
     r"|catalogu(?:e|es|ed|ing)|licences?|defence|offence|pretence"
     r"|analys(?:e|ed|ing|able)|paralys(?:e|ed)|catalys(?:e|ed)|centres?|centred|metres?|fibre|theatre"
     r"|artefacts?|labell(?:ed|ing)|modell(?:ed|ing|er|ers)|cancell(?:ed|ing)|travell(?:ed|ing|er)|signall(?:ed|ing)"

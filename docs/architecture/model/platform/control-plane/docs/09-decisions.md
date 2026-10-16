@@ -7,6 +7,10 @@
 | [D3]({workspace}/decisions/Platform#3) | The platform's own IR and orchestrator: the control plane owns control flow and state and dispatches units to backends; a whole workflow without loops can be exported to Argo or Airflow |
 | [D4]({workspace}/decisions/Platform#4) | Datasets as domain objects with versions, partitions and owners; managed or external; storage targets; uploads |
 | [D5]({workspace}/decisions/Platform#5) | Tenant identifier on every entity; capabilities likely to be commercial (authentication, access policy, audit sinks, AI providers) behind extension interfaces |
+| [D7]({workspace}/decisions/Platform#7) | Tiers per run from the weakest node on each path, static ceilings, Reproducible only through verification, decay |
+| [D8]({workspace}/decisions/Platform#8) | Hybrid cache keys chained through nodes, lookups only at unit boundaries, expected reuse before the run and the authoritative lookup at task-run creation |
+| [D9]({workspace}/decisions/Platform#9) | Cache reuse within a project by default, across a tenant's projects by opt-in under the permission check, never across tenants |
+| [D10]({workspace}/decisions/Platform#10) | Column-level lineage derived for SQL and declarative nodes, task-level across custom code, declared mappings labeled |
 | [D12]({workspace}/decisions/Platform#12) | The streaming seams: a neutral execution concept, health from lease renewal, execution modes declared by node types, recorded position ranges, caching as a policy |
 | [D13]({workspace}/decisions/Platform#13) | Partitioning and intervals validated against each other, single producers, partition dependency functions |
 | [D14]({workspace}/decisions/Platform#14) | Inputs resolved once per run under snapshot isolation, pinning and coherent reads, protection of inputs in use |
@@ -29,6 +33,7 @@
 | [D33]({workspace}/decisions/Platform#33) | Fusion separated into deterministic legality and a replaceable policy, with its version recorded on every plan |
 | [D34]({workspace}/decisions/Platform#34) | The capacity check: observed sizes, memory classes, per-unit ceilings and warnings before the run |
 | [D35]({workspace}/decisions/Platform#35) | Ephemeral or copied source reads chosen by the author, source versions recorded on every read |
+| [D36]({workspace}/decisions/Platform#36) | Reproducibility behaviors opt-in through one project setting; ordinary retention governs; guard rails as overridable warnings |
 | [D37]({workspace}/decisions/Platform#37) | Cursors derived from position records committed with the data, the frontier, bootstrap, resets and queueing on cursor-based sources |
 | [D38]({workspace}/decisions/Platform#38) | As-of queries over commit history, answered only below the commit watermark |
 | [D40]({workspace}/decisions/Platform#40) | The protocol with the data plane: leases with credential scopes and secret references, outage and partition rules, durable commits and message classes |

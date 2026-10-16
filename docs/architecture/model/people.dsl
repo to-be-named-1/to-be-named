@@ -3,7 +3,7 @@
 workflowAuthor = person "Workflow author" "Analyst, researcher, data scientist or engineer who builds workflows, tries them on samples and in sandboxes, and commits them." {
     properties {
         "roles" "Developer"
-        "decisions" "D13, D16, D28, D35, D41, D45, D50"
+        "decisions" "D10, D13, D16, D28, D35, D41, D45, D50"
     }
 }
 
