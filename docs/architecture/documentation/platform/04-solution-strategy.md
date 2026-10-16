@@ -10,6 +10,7 @@
 6. **Fine-grained nodes, fused automatically into units** ([D32]({workspace}/decisions/Platform#32), [D33]({workspace}/decisions/Platform#33)). Engines are chosen by where the data lives ([D25]({workspace}/decisions/Platform#25)); built-in nodes are Ibis expressions on DuckDB ([D27]({workspace}/decisions/Platform#27)).
 7. **Cache keys chained through nodes** ([D8]({workspace}/decisions/Platform#8)): input-addressed for every node, with content-addressed early cutoff where outputs are small.
 8. **Isolation enforced from the start** ([D30]({workspace}/decisions/Platform#30), [D45]({workspace}/decisions/Platform#45)): row-level security on the tenant, and a mandatory authorization layer for projects, roles and clearance.
+9. **Domain-driven design** ([D54]({workspace}/decisions/Platform#54)). The control plane is divided into bounded contexts, each owning its schema and package tree, whose aggregates enforce their invariants in the database; contexts integrate through interfaces and domain events, and anti-corruption layers translate external models at the edges.
 
 ### Architecture planes
 

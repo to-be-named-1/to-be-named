@@ -96,13 +96,13 @@ CUTOVER_DROPPED_REASONING_ITEMS = {
 _BRITISH_IZE_ROOTS = (
     "author|material|normal|optim|special|synchron|serial|initial|priorit|recogn|summar|visual|minim|maxim|"
     "standard|custom|categor|util|parallel|container|canonical|memo|token|random|character|final|organ|real|"
-    "capital|central|general|local|global|emphas|apolog|harmon|stabil|neutral|legal|modern|privat|virtual"
+    "capital|central|general|local|global|emphas|apolog|harmon|stabil|neutral|legal|modern|privat|virtual|vector"
 )
 BRITISH_SPELLING = re.compile(
     r"\b(?:\w*(?:" + _BRITISH_IZE_ROOTS + r")is(?:e|ed|es|ing|er|ers|ation|ations|able)"
     r"|\w*(?:behavio|colo|favo|hono|labo|neighbo|flavo|harbo|rumo|humo|vapo|endeavo)ur(?:s|ed|ing|able|ite|ites)?"
     r"|catalogu(?:e|es|ed|ing)|licences?|defence|offence|pretence"
-    r"|analys(?:e|ed|ing)|paralys(?:e|ed)|catalys(?:e|ed)|centres?|centred|metres?|fibre|theatre"
+    r"|analys(?:e|ed|ing|able)|paralys(?:e|ed)|catalys(?:e|ed)|centres?|centred|metres?|fibre|theatre"
     r"|artefacts?|labell(?:ed|ing)|modell(?:ed|ing|er|ers)|cancell(?:ed|ing)|travell(?:ed|ing|er)|signall(?:ed|ing)"
     r"|enrols|enrolment|fulfils?|fulfilment|programmes?|grey|ageing|whilst|amongst|learnt|spelt|practis(?:e|ed|ing))\b",
     re.I,
