@@ -13,6 +13,8 @@ Amended by [36. Data-engineering practice first, reproducibility by choice](0036
 
 **Bit-identical reproducibility was rejected** (D7). It is unattainable with floating point, parallelism and library changes, and users care about the same *result*. Tolerance-based comparators and explained verdicts are the valuable product; byte hashes remain internal accelerators.
 
+**The comparator is explainability, not caching.** Caching trusts keys. Comparators explain why two runs differ; the churn example in the [vocabulary]({workspace}/documentation#2) pinned a missing `random_state` as the first divergence in trace order.
+
 ## Decision
 
 The goal is the same output, not byte-identical files. Bit-identical reproducibility is not a user-facing goal; byte hashes remain an internal tool for fast verification and storage deduplication.
