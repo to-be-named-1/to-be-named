@@ -206,6 +206,22 @@ Nodes whose output columns depend on the data — a pivot or one-hot encoding ov
 
 - **Outcome.** Static, derived and dynamic output-schema modes; dynamic nodes may declare expected columns, otherwise downstream schemas are pending until a sample run; contracts are checked at publication and authoring never refuses. See [D41]({workspace}/decisions/Platform#41).
 
+### S26 · Plugin identity and distribution
+
+**Status:** Open
+
+Third-party plugins provide node types, format types and their implementations ([D18]({workspace}/decisions/Platform#18), [CORE 1.9](03-capabilities-core.md)), and tools may add keys of their own to IR documents. Both need names that cannot collide with one another or with the platform's own. The names the IR specification and the platform define never contain `.` or `/` ([D56]({workspace}/decisions/Platform#56)), so names qualified by a publisher can be added without colliding with them.
+
+- **To settle.** Publishers and packages, such as a publisher account unique within a registry and packages named after it. A public registry, private registries per installation, and mirrors for installations without internet access ([D22]({workspace}/decisions/Platform#22)). Uniqueness of publishers across registries used by one installation. Publisher verification and package signing. How a package version relates to node-type versions and image digests ([D18]({workspace}/decisions/Platform#18), [D41]({workspace}/decisions/Platform#41)). Where the registry protocol and a hosted registry fall relative to the open-core line ([D53]({workspace}/decisions/Platform#53)). What a package may declare, including keys added to IR documents and the namespaced annotations on ports ([D41]({workspace}/decisions/Platform#41)).
+
+### S27 · Name of the loop scope in expressions
+
+**Status:** Open
+
+Expressions inside a loop may reference `loop.index`, `loop.carried.<name>` and the current iteration's value outputs ([D41]({workspace}/decisions/Platform#41), [D46]({workspace}/decisions/Platform#46)). `loop` is a reserved word in CEL, and cel-go 0.32.0 rejects it as a variable name, so such expressions cannot compile as decided.
+
+- **To settle.** A root name for the loop scope that CEL accepts, such as `iteration`, settled with the expression environment of the IR specification, with [D41]({workspace}/decisions/Platform#41) and [D46]({workspace}/decisions/Platform#46) amended in place.
+
 **Deployment**
 
 ### S25 · Single-machine object storage

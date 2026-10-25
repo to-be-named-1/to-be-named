@@ -1,0 +1,5 @@
+# Invalid: directives (docs/ir/02-yaml-subset.md).
+%YAML 1.2
+---
+ir_version: 0
+kind: workflow

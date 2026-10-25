@@ -3,7 +3,7 @@
 This folder holds the formal documentation of the platform.
 
 - [`architecture/`](architecture/workspace.dsl) is the architecture record: a C4 model written in the Structurizr DSL, its Markdown documentation and the architecture decision records (ADRs).
-- Other formal documentation, such as the IR specification, sits beside it in a folder of its own and is linked from the architecture documentation.
+- [`ir/`](ir/README.md) is the IR specification: the normative detail of the documents a project commits as IR. Its machine-readable schema and conformance corpus live with the code that owns them, in `controlplane/internal/authoring/ir/`. The specification is read on GitHub; Structurizr does not serve it, so the architecture documentation names it by its path.
 
 ## Viewing
 
@@ -12,7 +12,8 @@ This folder holds the formal documentation of the platform.
 | `make docs-up` | Starts Structurizr local on <http://localhost:8080> (`STRUCTURIZR_PORT` overrides the port). It writes `architecture/workspace.json`, which is derived and never committed. |
 | `make docs-down` | Stops it |
 | `make docs-export` | Writes the workspace as JSON and as a static site to `docs/build/` (not committed); the static site holds the diagrams only |
-| `make docs-check` | Runs every check a commit must pass (below) |
+| `make docs-check` | Runs every documentation check a commit must pass (below) |
+| `make ir-check` | Checks the IR schema and its conformance corpus (below) |
 
 The static site built by CI is attached to each run as the artifact `architecture-site`. The documentation and the decisions are read in Structurizr local, the primary reader.
 
@@ -20,13 +21,13 @@ The make targets run Structurizr as the host user, so that on Linux it can write
 
 ## Single source of truth
 
-`docs/architecture/` is the only authoritative record of the platform's architecture: the model, the documentation and the ADRs. Anything not recorded there is not decided.
+`docs/architecture/` is the only authoritative record of the platform's architecture: the model, the documentation and the ADRs. Anything not recorded there is not decided. The IR specification, `docs/ir/`, states the normative detail of the IR's documents: it cites the decisions and never contradicts them, and where the two disagree the decision prevails until it is amended.
 
-1. A decision is recorded only once confirmed, as a new ADR or as an amendment to one. The model and the documentation change in the same commit.
+1. A decision is recorded only once confirmed, as a new ADR or as an amendment to one. The model, the documentation and the IR specification change in the same commit.
 2. Proposals live in the workspace documentation's proposals section until confirmed; open questions live in its open-items section.
 3. IDs are stable and never reused: decisions (D), open items (S) and capability lines (CORE, DE, DS, MLE). CORE 3.8 is unused.
 4. Nothing temporary sits permanently on the diagrams or in the documentation. Temporary marking lives in removable overlays (diagrams) or in the roadmap section (documentation).
-5. Every change passes `make docs-check` before it is committed; CI runs the same check.
+5. Every change passes `make docs-check` and `make ir-check` before it is committed; CI runs the same checks.
 
 ## Conventions
 
@@ -87,6 +88,14 @@ The make targets run Structurizr as the host user, so that on Linux it can write
 - Register: neutral third person, American spelling.
 - The documentation never names comparable software or compares the platform with it. Software the platform runs on, integrates with or exports to is named as technology.
 
+### IR specification
+
+- The specification is read on GitHub. Each file begins with one `#` heading.
+- Its links are relative file links, never `{workspace}` links or heading anchors; `make docs-link` writes them from bare IDs, as in the architecture documentation.
+- Normative statements use the BCP 14 key words (MUST, SHOULD, MAY), defined in its README.
+- The other documentation conventions apply: American spelling, no phasing, no comparable software.
+- The schema is JSON Schema 2020-12, one folder per IR version, without `$id`; the conformance corpus holds, per IR version, valid documents, documents the schema must reject (`invalid/schema/`) documents that break the YAML subset (`invalid/subset/`), which the compiler's tests check, and strings every writer must write back unchanged (`writer/strings.json`), which the writers' tests check.
+
 ### Checks
 
 `make docs-check` validates the workspace with Structurizr, exports it as JSON and runs `tools/docs/check.py`, which checks:
@@ -95,7 +104,7 @@ The make targets run Structurizr as the host user, so that on Linux it can write
 2. `decisions` properties name existing ADRs and agree with each ADR's `Applies to` line.
 3. No forbidden relationship, explicit or implied ([`tools/docs/forbidden-edges.json`](../tools/docs/forbidden-edges.json); each rule cites the decisions it restates).
 4. Every overlay file carries its header.
-5. Markdown headings; relative links that resolve and stay within one set; `{workspace}` links that name an existing ADR or section; and the text of links to ADRs.
+5. Markdown headings; relative links that resolve and stay within one set; `{workspace}` links that name an existing ADR or section; the text of links to ADRs; and, in the IR specification, relative file links without heading anchors.
 6. No British spelling is used anywhere under `docs/` (the patterns are in `tools/docs/check.py`).
 7. Roles and container documentation: a component is tagged `Leader only` exactly when its only role is `leader`; in a container's `03-components.md`, a table row that names one of its components gives the model's description in its second column, an `Actions by role` column labels exactly the component's `roles`, and every component has a row; `09-decisions.md` lists exactly the container's `decisions` property.
 8. Deployment routing: in an environment with more than one control-plane instance, no web application, CLI or agent instance connects to a control-plane instance directly; traffic reaches the roles through a Service or load balancer, so a missing or misspelled deployment group fails the check.
@@ -103,3 +112,5 @@ The make targets run Structurizr as the host user, so that on Linux it can write
 It then runs `tools/docs/link.py --check`, which reports any reference not yet linked.
 
 `make docs-inspect` runs Structurizr's inspections and reports without failing, until the model is complete.
+
+`make ir-check` runs `tools/ir/check.sh` with `jv` in a container: for each IR version, every schema compiles, every valid document passes and every document under `invalid/schema/` fails.

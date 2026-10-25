@@ -1,0 +1,4 @@
+# Invalid: keys are strings (docs/ir/02-yaml-subset.md).
+ir_version: 0
+kind: workflow
+1: one

@@ -15,3 +15,20 @@ services:
       - ./docs/architecture:/usr/local/structurizr
       # Export output (gitignored).
       - ./docs/build:/usr/local/build
+
+  # make ir-check: the IR schema and its conformance corpus, checked with jv (tools/ir/check.sh).
+  ir-check:
+    image: golang:1.25.14
+    profiles: [ir]
+    working_dir: /src
+    entrypoint: ["sh", "tools/ir/check.sh"]
+    volumes:
+      # Read-only: the check writes nothing into the repository.
+      - ./:/src:ro
+      # Go's module and build caches, so that jv is built once.
+      - ir-go:/go
+      - ir-go-build:/root/.cache/go-build
+
+volumes:
+  ir-go:
+  ir-go-build:

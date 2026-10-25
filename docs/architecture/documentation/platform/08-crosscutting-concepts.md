@@ -155,3 +155,9 @@ One dataset, from declaration to deletion, with the figure that illustrates each
 10. **Deprecation.** The dataset is marked deprecated while consumers migrate, then deleted. Consumer lists make the blast radius explicit before deletion occurs.
 
 The model shown here assumes [D4]({workspace}/decisions/Platform#4) (datasets as first-class objects) and the seams recorded in [D12]({workspace}/decisions/Platform#12). Asset-based reconciliation (Figure 7) is recorded in [D24]({workspace}/decisions/Platform#24), within a single project.
+
+### IR
+
+Every definition a project holds, its workflows, layouts, datasets, environments and project settings, is an IR document: a YAML file whose values follow JSON's data model, committed to git in git-connected projects and held by the platform otherwise ([D3]({workspace}/decisions/Platform#3), [D41]({workspace}/decisions/Platform#41)). Each document states its kind and its IR version, and names its nodes by readable keys that keep their identity across renames ([D56]({workspace}/decisions/Platform#56)). The compiler in the control plane checks every document against the YAML subset, the schema of its IR version and its semantic rules before compiling it ([D47]({workspace}/decisions/Platform#47)).
+
+The normative detail is the IR specification, `docs/ir/` in the repository, which this documentation does not render; its schema and conformance corpus are in `controlplane/internal/authoring/ir/`.

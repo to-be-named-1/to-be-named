@@ -1,0 +1,3 @@
+# Invalid: an unquoted date (docs/ir/02-yaml-subset.md).
+ir_version: 0
+kind: 2026-10-01

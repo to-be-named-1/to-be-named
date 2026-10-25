@@ -1,0 +1,30 @@
+name: ir
+
+on:
+  push:
+    paths:
+      - "controlplane/internal/authoring/ir/**"
+      - "tools/ir/**"
+      - "docker-compose.yml"
+      - "Makefile"
+      - ".github/workflows/ir.yml"
+  pull_request:
+    paths:
+      - "controlplane/internal/authoring/ir/**"
+      - "tools/ir/**"
+      - "docker-compose.yml"
+      - "Makefile"
+      - ".github/workflows/ir.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Gate: every schema compiles, every valid document passes, every schema-invalid document fails.
+      - name: Check
+        run: make ir-check

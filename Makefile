@@ -1,5 +1,5 @@
 # Developer tasks.
-# Structurizr runs through Docker Compose, so its pinned image tag lives only in docker-compose.yml.
+# Structurizr and the IR check run through Docker Compose, so their pinned image tags live only in docker-compose.yml.
 
 COMPOSE     ?= docker compose
 STRUCTURIZR := $(COMPOSE) run --rm structurizr
@@ -7,16 +7,17 @@ PYTHON      ?= python
 DOCS_BUILD  := docs/build
 
 # Structurizr runs as the host user, so that on Linux it can write docs/architecture and docs/build; Python on
-# Windows has no getuid, and the image's own user (65532) is kept there.
-export DOCS_UID := $(shell $(PYTHON) -c "import os; print(os.getuid() if hasattr(os, 'getuid') else 65532)")
-export DOCS_GID := $(shell $(PYTHON) -c "import os; print(os.getgid() if hasattr(os, 'getgid') else 65532)")
+# Windows has no getuid, and the image's own user (65532) is kept there. Only the targets that start Structurizr
+STRUCTURIZR_TARGETS := docs-up docs-down docs-validate docs-inspect docs-export docs-check
+$(STRUCTURIZR_TARGETS): export DOCS_UID = $(shell $(PYTHON) -c "import os; print(os.getuid() if hasattr(os, 'getuid') else 65532)")
+$(STRUCTURIZR_TARGETS): export DOCS_GID = $(shell $(PYTHON) -c "import os; print(os.getgid() if hasattr(os, 'getgid') else 65532)")
 
 # Git Bash on Windows rewrites arguments that look like POSIX paths; container paths must pass through unchanged.
 export MSYS_NO_PATHCONV := 1
 
 .DEFAULT_GOAL := help
 
-.PHONY: help docs-up docs-down docs-validate docs-inspect docs-export docs-link docs-check docs-build-dir
+.PHONY: help docs-up docs-down docs-validate docs-inspect docs-export docs-link docs-check docs-build-dir ir-check
 
 help: ## List the available targets
 	@$(PYTHON) -c "import re; [print(f'{m[1]:<15} {m[2]}') for m in re.finditer(r'^([a-z][a-z-]+):.*?## (.+)$$', open('Makefile', encoding='utf-8').read(), re.M)]"
@@ -44,10 +45,15 @@ docs-export: docs-build-dir ## Export the workspace as JSON and as a static site
 	$(STRUCTURIZR) export -workspace workspace.dsl -format json -output /usr/local/build/json
 	$(STRUCTURIZR) export -workspace workspace.dsl -format static -output /usr/local/build/site
 
-docs-link: ## Turn bare references (D29, S25, CORE 2.6) into relative links
+docs-link: ## Turn bare references (D29, S25, CORE 2.6) into links, in docs/architecture and docs/ir
 	$(PYTHON) tools/docs/link.py --root docs/architecture
 
 docs-check: docs-validate ## Validate, then run the documentation checks
 	$(STRUCTURIZR) export -workspace workspace.dsl -format json -output /usr/local/build/json
 	$(PYTHON) tools/docs/check.py --root docs/architecture --workspace-json $(DOCS_BUILD)/json/workspace.json
 	$(PYTHON) tools/docs/link.py --root docs/architecture --check
+
+# --- IR specification (docs/ir) and its schema ---
+
+ir-check: ## Check the IR schema and its conformance corpus
+	$(COMPOSE) run --rm ir-check

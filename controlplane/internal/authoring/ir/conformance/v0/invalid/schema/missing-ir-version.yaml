@@ -1,0 +1,2 @@
+# Invalid: ir_version is required.
+kind: workflow

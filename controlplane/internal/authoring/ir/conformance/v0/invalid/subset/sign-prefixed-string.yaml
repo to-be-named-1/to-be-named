@@ -1,0 +1,3 @@
+# Invalid: a plain value beginning with a sign that is not a number (docs/ir/02-yaml-subset.md).
+ir_version: 0
+kind: -workflow

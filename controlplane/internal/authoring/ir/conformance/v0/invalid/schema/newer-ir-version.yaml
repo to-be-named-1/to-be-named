@@ -1,0 +1,3 @@
+# Invalid: a document of a newer IR version is rejected.
+ir_version: 1
+kind: workflow

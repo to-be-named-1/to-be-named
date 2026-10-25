@@ -19,7 +19,7 @@ Bring-your-own-compute is the primary model: execution runs on the customer's ow
 
 ![](embed:deployment-single-machine)
 
-The complete platform runs on one host as containers, for evaluation, development and small teams ([CORE 2.17]({workspace}/documentation#3)). One control-plane process runs every role (`all`) ([D47]({workspace}/decisions/Platform#47)). The agent launches units as containers on the same Docker engine, exactly as it launches pods elsewhere ([D29]({workspace}/decisions/Platform#29)). The bundled object storage is the default storage target of an installation without object storage of its own, and any S3-compatible or cloud object storage can be configured instead ([D4]({workspace}/decisions/Platform#4), [S25]({workspace}/documentation#7.25)). The built-in secret store holds secrets where no secret manager exists ([D40]({workspace}/decisions/Platform#40)).
+The complete platform runs on one host as containers, for evaluation, development and small teams ([CORE 2.17]({workspace}/documentation#3)). One control-plane process runs every role (`all`) ([D47]({workspace}/decisions/Platform#47)). The agent launches units as containers on the same Docker engine, exactly as it launches pods elsewhere ([D29]({workspace}/decisions/Platform#29)). The bundled object storage is the default storage target of an installation without object storage of its own, and any S3-compatible or cloud object storage can be configured instead ([D4]({workspace}/decisions/Platform#4), [S25]({workspace}/documentation#7.27)). The built-in secret store holds secrets where no secret manager exists ([D40]({workspace}/decisions/Platform#40)).
 
 ### Kubernetes
 

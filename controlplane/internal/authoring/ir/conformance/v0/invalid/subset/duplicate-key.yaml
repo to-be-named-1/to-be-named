@@ -1,0 +1,4 @@
+# Invalid: a key appears once in a mapping (docs/ir/02-yaml-subset.md).
+ir_version: 0
+kind: workflow
+kind: dataset

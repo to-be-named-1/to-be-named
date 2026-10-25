@@ -33,6 +33,7 @@ The model tags as Later the elements the first slice does not build or use: the 
 - Iceberg metadata is projected from the first slice ([D42]({workspace}/decisions/Platform#42), [DE 3.1](04-capabilities-de.md)).
 - Family extension points are internal in the first release ([D17]({workspace}/decisions/Platform#17), [S12](07-open-items.md#7.12)).
 - Asset-based reconciliation works within a single project in the first release ([D24]({workspace}/decisions/Platform#24)).
+- IR version 0 is not frozen: its format changes without migrations until IR version 1, the first frozen version, which is in place before any external user commits IR to git ([D41]({workspace}/decisions/Platform#41), [D56]({workspace}/decisions/Platform#56), [design agenda](09-design-agenda.md)).
 
 ### Beyond
 

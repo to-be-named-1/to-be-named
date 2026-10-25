@@ -1,0 +1,3 @@
+# Invalid: ir_version is an integer.
+ir_version: "0"
+kind: workflow

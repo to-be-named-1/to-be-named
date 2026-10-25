@@ -1,0 +1,3 @@
+# Invalid: a point without a digit after it (docs/ir/02-yaml-subset.md).
+ir_version: 0.
+kind: workflow

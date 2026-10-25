@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Definitions shared by the schemas of IR version 0",
+  "$defs": {
+    "identifier": {
+      "description": "A name chosen for a node, parameter, value output, carried value, workflow, environment or dataset path segment (docs/ir/01-documents.md).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,62}$",
+      "not": {
+        "enum": [
+          "false", "in", "null", "true",
+          "as", "break", "const", "continue", "else", "for", "function", "if", "import", "let", "loop",
+          "package", "namespace", "return", "var", "void", "while",
+          "y", "n", "yes", "no", "on", "off"
+        ]
+      }
+    }
+  }
+}

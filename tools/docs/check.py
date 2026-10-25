@@ -16,6 +16,8 @@ Run by `make docs-check`, after `structurizr validate` and a JSON export of the 
      relative links resolve and stay within one set (an ADR to an ADR, or within one
      documentation set); links across sets use Structurizr's `{workspace}` form and name an
      existing ADR or section; links to ADRs read `Dn` or `N. Title` with the right number.
+     The IR specification, docs/ir/, is read on GitHub: each file begins with one `#` heading,
+     and its links are relative file links, never `{workspace}` links or heading anchors.
      (Bare references and outdated section numbers are reported by tools/docs/link.py --check.)
   6. No British spelling is used anywhere under docs/.
   7. Roles and container documentation: a component is tagged `Leader only` exactly when its only
@@ -437,7 +439,8 @@ def check_markdown(paths: list[Path], root: Path, report: Report) -> None:
 
     Documentation files start with one `##` heading (Structurizr hides `#` and numbers `##`
     as sections); ADR headings are checked by parse_adr; the README outside the workspace
-    starts with one `#` heading, as GitHub renders it.
+    starts with one `#` heading, as GitHub renders it, and so does each file of the IR specification,
+    docs/ir/, whose links are relative file links without heading anchors.
     """
     decisions_dir = (root / "decisions").resolve()
     layout = linker.Layout(root)
@@ -448,6 +451,7 @@ def check_markdown(paths: list[Path], root: Path, report: Report) -> None:
         first = next((i for i, line in enumerate(lines) if line.strip()), None)
         is_adr = path.resolve().parent == decisions_dir
         inside = root.resolve() in path.resolve().parents
+        in_ir = layout.in_ir(path)
         if not is_adr:
             h1 = [i for i, line in content if line.startswith("# ")]
             if inside:
@@ -462,7 +466,11 @@ def check_markdown(paths: list[Path], root: Path, report: Report) -> None:
                 target = match[1]
                 text = re.match(r"!?\[([^\]]*)\]", match[0])[1]
                 if target.startswith("{workspace}"):
-                    check_workspace_link(target, text, f"{where}:{i + 1}", layout, report)
+                    if in_ir:
+                        report.error(f"{where}:{i + 1}", f"{target}: the IR specification is read on GitHub; "
+                                     "use a relative link (make docs-link)")
+                    else:
+                        check_workspace_link(target, text, f"{where}:{i + 1}", layout, report)
                     continue
                 if target.startswith(SKIPPED_LINK_PREFIXES):
                     continue
@@ -472,6 +480,10 @@ def check_markdown(paths: list[Path], root: Path, report: Report) -> None:
                 resolved = (path.parent / relative).resolve()
                 if not resolved.exists():
                     report.error(f"{where}:{i + 1}", f"link target {target} does not exist")
+                    continue
+                if in_ir and "#" in target and resolved.suffix == ".md":
+                    report.error(f"{where}:{i + 1}", f"{target}: links from the IR specification name a file, "
+                                 "never a heading anchor")
                     continue
                 if (inside and resolved.suffix == ".md" and root.resolve() in resolved.parents
                         and resolved.parent != path.resolve().parent):
@@ -657,7 +669,7 @@ def main() -> int:
         report.error(display(args.workspace_json), "not found; export the workspace as JSON first (make docs-check)")
 
     check_overlays(args.root, report)
-    markdown = sorted(args.root.rglob("*.md"))
+    markdown = sorted(args.root.rglob("*.md")) + sorted((args.root.parent / "ir").rglob("*.md"))
     readme = args.root.parent / "README.md"
     if readme.is_file():
         markdown.append(readme)

@@ -22,6 +22,9 @@ heading numbered by its position and its `###` headings numbered within it. They
 are added, so every link whose text is an ID is recomputed on each run, and a relative link to a
 file of another set is rewritten to that file's section.
 
+The IR specification, docs/ir/, is read on GitHub and not by Structurizr: from its files every
+reference is a relative link to the target file, without a section anchor.
+
 A reference is linked only when its target file exists, and never to the file it appears in.
 Left alone: inline and fenced code, headings, and bare "S3", which is also the name of Amazon S3; a
 reference to open item S3 is linked by hand and then kept current like any other.
@@ -94,6 +97,7 @@ class Layout:
         self.decisions_dir = (root / "decisions").resolve()
         self.workspace_dir = (root / "documentation" / "workspace").resolve()
         self.platform_dir = (root / "documentation" / "platform").resolve()
+        self.ir_dir = (root.parent / "ir").resolve()
         dsl = root / "workspace.dsl"
         match = SYSTEM_NAME.search(dsl.read_text(encoding="utf-8")) if dsl.is_file() else None
         self.system = match[1] if match else "Platform"
@@ -136,6 +140,9 @@ class Layout:
                     return directory
         return None
 
+    def in_ir(self, path: Path) -> bool:
+        return self.ir_dir in path.resolve().parents
+
     @staticmethod
     def section(path: Path) -> int:
         names = sorted(p.name for p in path.parent.glob("*.md"))
@@ -163,6 +170,8 @@ class Layout:
     def href(self, source: Path, target: Path, item: str | None = None) -> str | None:
         """The link from `source` to `target` (an ADR or a documentation file), at `item` where given."""
         target = target.resolve()
+        if self.in_ir(source):
+            return relative(source, target)
         same_set = target.parent == source.resolve().parent
         if target.parent == self.decisions_dir:
             if same_set:
@@ -230,7 +239,7 @@ def process(path: Path, layout: Layout, check: bool) -> list[str]:
             reference = layout.resolve_reference(text, current)
             if reference and reference[0].resolve() != path.resolve():
                 desired = layout.href(path, reference[0], reference[1])
-            elif not current.startswith(SKIPPED):
+            elif not current.startswith(SKIPPED) and not layout.in_ir(path):
                 file_part = current.split("#", 1)[0].split("?", 1)[0]
                 resolved = (path.parent / file_part).resolve() if file_part else None
                 if (resolved and resolved.suffix == ".md" and resolved.is_file()
@@ -281,7 +290,8 @@ def main() -> int:
     args = parser.parse_args()
     layout = Layout(args.root)
     findings = []
-    for path in sorted(args.root.rglob("*.md")):
+    paths = sorted(args.root.rglob("*.md")) + sorted(layout.ir_dir.rglob("*.md"))
+    for path in paths:
         findings += process(path, layout, args.check)
     if args.check:
         for finding in findings:

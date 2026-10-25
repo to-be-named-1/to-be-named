@@ -1,0 +1,3 @@
+# Invalid: aliases (docs/ir/02-yaml-subset.md).
+ir_version: &v 0
+kind: *v

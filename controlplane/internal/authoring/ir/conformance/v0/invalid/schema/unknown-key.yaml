@@ -1,0 +1,4 @@
+# Invalid: a key the specification does not define.
+ir_version: 0
+kind: workflow
+owner: data_team

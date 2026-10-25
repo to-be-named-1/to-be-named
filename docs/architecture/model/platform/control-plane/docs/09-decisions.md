@@ -50,3 +50,4 @@
 | [D51]({workspace}/decisions/Platform#51) | Adoption of existing tables and files |
 | [D52]({workspace}/decisions/Platform#52) | Agent identity proven by message signatures on every request and response |
 | [D55]({workspace}/decisions/Platform#55) | Commits to table-format storage targets made after the platform's commit, by publication units, in version order |
+| [D56]({workspace}/decisions/Platform#56) | The envelope and IR version of every committed document, identifiers and generated node keys, node identity across renames, the YAML subset and its data model, and the schema the compiler embeds and validates against |

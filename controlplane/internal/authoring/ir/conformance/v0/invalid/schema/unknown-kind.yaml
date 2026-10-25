@@ -1,0 +1,3 @@
+# Invalid: kind is one of the five kinds.
+ir_version: 0
+kind: pipeline
