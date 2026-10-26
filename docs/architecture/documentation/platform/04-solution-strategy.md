@@ -59,4 +59,5 @@ The planes keep four invariants:
 | Event delivery | A transactional outbox in Postgres with one row per event and handler, claimed with `FOR UPDATE SKIP LOCKED` and built in-house; NOTIFY only as a hint sent outside transactions ([D42]({workspace}/decisions/Platform#42), [D48]({workspace}/decisions/Platform#48)) | Chosen |
 | Stateful dependencies | Postgres only; no cache or message broker in the control plane ([D47]({workspace}/decisions/Platform#47)) | Chosen |
 | Module boundaries | One Postgres schema and one Go package tree per bounded context, with import rules checked by depguard in golangci-lint ([D47]({workspace}/decisions/Platform#47)) | Chosen |
+| Code layout and tooling | One repository and one Go module, folders per container; Go 1.27 with golangci-lint; Python 3.14 in a uv workspace with ruff, pyright and pytest; Node 26 with pnpm, Vite, Biome and Vitest ([D60]({workspace}/decisions/Platform#60)) | Chosen |
 | Not yet chosen | Authentication and identity stack, observability stack, image builder and registry tooling | Undecided |

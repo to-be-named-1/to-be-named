@@ -1,0 +1,10 @@
+[project]
+name = "sdk"
+version = "0.0.0"
+description = "The Python SDK: the interfaces node code follows and the generation of node-type documents and IR."
+requires-python = ">=3.14"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14"]
+build-backend = "uv_build"

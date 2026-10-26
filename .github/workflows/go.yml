@@ -1,0 +1,38 @@
+name: go
+
+on:
+  push:
+    paths:
+      - "go.mod"
+      - "go.sum"
+      - "**/*.go"
+      - ".golangci.yml"
+      - "docker-compose.yml"
+      - "Makefile"
+      - ".github/workflows/go.yml"
+  pull_request:
+    paths:
+      - "go.mod"
+      - "go.sum"
+      - "**/*.go"
+      - ".golangci.yml"
+      - "docker-compose.yml"
+      - "Makefile"
+      - ".github/workflows/go.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # The toolchain line in go.mod fixes the exact Go version.
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Check
+        run: make go-check

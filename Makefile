@@ -17,7 +17,7 @@ export MSYS_NO_PATHCONV := 1
 
 .DEFAULT_GOAL := help
 
-.PHONY: help docs-up docs-down docs-validate docs-inspect docs-export docs-link docs-check docs-build-dir ir-check
+.PHONY: help docs-up docs-down docs-validate docs-inspect docs-export docs-link docs-check docs-build-dir ir-check \n	go-test go-lint go-check py-check check
 
 help: ## List the available targets
 	@$(PYTHON) -c "import re; [print(f'{m[1]:<15} {m[2]}') for m in re.finditer(r'^([a-z][a-z-]+):.*?## (.+)$$', open('Makefile', encoding='utf-8').read(), re.M)]"
@@ -57,3 +57,27 @@ docs-check: docs-validate ## Validate, then run the documentation checks
 
 ir-check: ## Check the IR schema and its conformance corpus
 	$(COMPOSE) run --rm ir-check
+
+# --- Go: control plane, agent, CLI ---
+
+go-test: ## Vet and test the Go module
+	go vet ./...
+	go test ./...
+
+go-lint: ## Lint and check formatting with golangci-lint
+	$(COMPOSE) run --rm go-lint
+
+go-check: go-test go-lint ## Run every Go check
+
+# --- Python: unit runtime and SDK ---
+
+py-check: ## Lint, format-check, type-check and test the Python workspace
+	uv sync --locked
+	uv run ruff check
+	uv run ruff format --check
+	uv run pyright
+	uv run pytest
+
+# --- Everything ---
+
+check: docs-check ir-check go-check py-check ## Run every check a commit must pass

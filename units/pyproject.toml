@@ -1,0 +1,13 @@
+[project]
+name = "units"
+version = "0.0.0"
+description = "The unit runtime and the units it runs: execution, derivation, probe, projection, publication and sample building."
+requires-python = ">=3.14"
+dependencies = ["sdk"]
+
+[tool.uv.sources]
+sdk = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14"]
+build-backend = "uv_build"

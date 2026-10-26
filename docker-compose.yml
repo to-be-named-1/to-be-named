@@ -11,24 +11,35 @@ services:
     environment:
       STRUCTURIZR_WORKSPACE_MAXSIZE: "4MB"
     volumes:
-      # Writable: `local` writes workspace.json beside workspace.dsl (gitignored).
       - ./docs/architecture:/usr/local/structurizr
-      # Export output (gitignored).
       - ./docs/build:/usr/local/build
 
-  # make ir-check: the IR schema and its conformance corpus, checked with jv (tools/ir/check.sh).
   ir-check:
     image: golang:1.25.14
     profiles: [ir]
     working_dir: /src
     entrypoint: ["sh", "tools/ir/check.sh"]
     volumes:
-      # Read-only: the check writes nothing into the repository.
       - ./:/src:ro
-      # Go's module and build caches, so that jv is built once.
       - ir-go:/go
       - ir-go-build:/root/.cache/go-build
+
+  go-lint:
+    image: golangci/golangci-lint:v2.14.0
+    profiles: [go]
+    working_dir: /src
+    command: ["golangci-lint", "run", "./..."]
+    environment:
+      GOLANGCI_LINT_CACHE: /cache/golangci-lint
+    volumes:
+      - ./:/src:ro
+      - go-mod:/go/pkg/mod
+      - go-build:/root/.cache/go-build
+      - go-lint-cache:/cache/golangci-lint
 
 volumes:
   ir-go:
   ir-go-build:
+  go-mod:
+  go-build:
+  go-lint-cache:

@@ -1,0 +1,25 @@
+# uv workspace for the Python containers: the unit runtime and the SDK, with one lockfile.
+[tool.uv.workspace]
+members = ["units", "sdk"]
+
+[dependency-groups]
+dev = [
+    "pyright==1.1.414",
+    "pytest==9.1.1",
+    "ruff==0.17.2",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 120
+include = ["units/**/*.py", "sdk/**/*.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+
+[tool.pyright]
+pythonVersion = "3.14"
+include = ["units/src", "units/tests", "sdk/src", "sdk/tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["units/tests", "sdk/tests"]

@@ -39,7 +39,7 @@
       }
     },
     "format_type": {
-      "description": "A format type, such as tabular or genomics/bam@1 (D18, docs/ir/03-node-types.md).",
+      "description": "A format type, such as tabular or genomics/bam@1 (docs/ir/03-node-types.md).",
       "type": "string",
       "pattern": "^[a-z][a-z0-9_]*(/[a-z][a-z0-9_]*)*(@[1-9][0-9]*)?$"
     },
