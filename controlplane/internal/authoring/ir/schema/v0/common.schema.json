@@ -8,12 +8,232 @@
       "pattern": "^[a-z][a-z0-9_]{0,62}$",
       "not": {
         "enum": [
-          "false", "in", "null", "true",
-          "as", "break", "const", "continue", "else", "for", "function", "if", "import", "let", "loop",
-          "package", "namespace", "return", "var", "void", "while",
-          "y", "n", "yes", "no", "on", "off"
+          "false",
+          "in",
+          "null",
+          "true",
+          "as",
+          "break",
+          "const",
+          "continue",
+          "else",
+          "for",
+          "function",
+          "if",
+          "import",
+          "let",
+          "loop",
+          "package",
+          "namespace",
+          "return",
+          "var",
+          "void",
+          "while",
+          "y",
+          "n",
+          "yes",
+          "no",
+          "on",
+          "off"
         ]
       }
+    },
+    "format_type": {
+      "description": "A format type, such as tabular or genomics/bam@1 (D18, docs/ir/03-node-types.md).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(/[a-z][a-z0-9_]*)*(@[1-9][0-9]*)?$"
+    },
+    "parameter": {
+      "description": "A parameter schema: a profile of JSON Schema 2020-12 whose constructs all have a counterpart among CEL's types (docs/ir/03-node-types.md).",
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "string",
+            "integer",
+            "number",
+            "boolean",
+            "array",
+            "object"
+          ]
+        },
+        "format": {
+          "enum": [
+            "date-time",
+            "duration",
+            "date",
+            "column",
+            "binding",
+            "secret",
+            "column_selector"
+          ]
+        },
+        "of": {
+          "$ref": "#/$defs/identifier"
+        },
+        "items": {
+          "$ref": "#/$defs/parameter"
+        },
+        "additionalProperties": {
+          "$ref": "#/$defs/parameter"
+        },
+        "enum": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "minimum": {
+          "type": "number"
+        },
+        "maximum": {
+          "type": "number"
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "default": true,
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "format"
+            ],
+            "properties": {
+              "format": {
+                "enum": [
+                  "date-time",
+                  "duration",
+                  "date",
+                  "column",
+                  "binding",
+                  "secret"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "type": {
+                "const": "string"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "format"
+            ],
+            "properties": {
+              "format": {
+                "const": "column_selector"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "type": {
+                "const": "array"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "format"
+            ],
+            "properties": {
+              "format": {
+                "enum": [
+                  "column",
+                  "column_selector"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "of"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "of"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "array"
+              }
+            }
+          },
+          "else": {
+            "not": {
+              "required": [
+                "items"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "object"
+              }
+            }
+          },
+          "else": {
+            "not": {
+              "required": [
+                "additionalProperties"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "value": {
+      "description": "A value output's schema: the parameter profile without the formats that refer to ports, bindings or secrets (docs/ir/03-node-types.md).",
+      "allOf": [
+        {
+          "$ref": "#/$defs/parameter"
+        },
+        {
+          "not": {
+            "required": [
+              "format"
+            ],
+            "properties": {
+              "format": {
+                "enum": [
+                  "column",
+                  "column_selector",
+                  "binding",
+                  "secret"
+                ]
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

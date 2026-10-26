@@ -1,0 +1,10 @@
+# Invalid: only python node types state a plan; sql is always one.
+ir_version: 0
+kind: node_type
+name: example
+version: 1
+language: command
+image: platform-base
+entry_point: example:run
+modes: [batch]
+plan: ibis

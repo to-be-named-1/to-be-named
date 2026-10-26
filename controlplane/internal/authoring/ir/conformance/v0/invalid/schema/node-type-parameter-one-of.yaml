@@ -1,0 +1,11 @@
+# Invalid: parameter schemas use only the profile of constructs with a CEL counterpart.
+ir_version: 0
+kind: node_type
+name: example
+version: 1
+language: python
+image: platform-base
+entry_point: example:run
+modes: [batch]
+params:
+  limit: { oneOf: [{ type: integer }, { type: string }] }

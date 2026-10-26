@@ -9,6 +9,7 @@ Accepted
 
 Amends [41. IR text form, round-trip and structure](0041-ir-text-form-round-trip-and-structure.md)
 Amends [44. Minimum technology stack](0044-minimum-technology-stack.md)
+Amended by [57. Node-type contract](0057-node-type-contract.md)
 
 ## Context
 
@@ -20,8 +21,8 @@ Git remains authoritative for git-connected projects and the text is written for
 
 The envelope, versioning, keys, identifiers, identity, collections, data model and schema of every IR document. The normative detail is stated in the IR specification (`docs/ir/`) and its machine-readable schema.
 
-- **Documents.** A project commits five kinds of IR document: `project` (`project.yaml`), `workflow` (`workflows/<name>.yaml`), `layout` (the sidecar `workflows/<name>.layout.yaml`), `dataset` (`datasets/<path>.yaml`) and `environment` (`environments/<env>.yaml`). Files under `code/` are referenced by path and are not IR documents. Only the extension `.yaml` is used.
-- **Envelope.** Every document begins with two keys, `ir_version` and `kind`, followed by the fields of its kind at the top level. The kind must match the document's location, so that a single file can be validated on its own and a misplaced file is an error.
+- **Documents.** A project commits five kinds of IR document: `project` (`project.yaml`), `workflow` (`workflows/<name>.yaml`), `layout` (the sidecar `workflows/<name>.layout.yaml`), `dataset` (`datasets/<path>.yaml`) and `environment` (`environments/<env>.yaml`). Files under `code/` are referenced by path and are not IR documents. Node-type documents, of kind `node_type`, are not committed by projects ([D57](0057-node-type-contract.md)). Only the extension `.yaml` is used.
+- **Envelope.** Every document begins with two keys, `ir_version` and `kind`, followed by the fields of its kind at the top level. The kind of a project document must match its location, so that a single file can be validated on its own and a misplaced file is an error.
 - **IR version.** The version of the document format is called the IR version, kept apart from node-type versions, workflow versions, the key-schema version and the unit specification ([D8](0008-cache-keying.md), [D40](0040-protocol-between-the-control-and-data-planes.md), [D41](0041-ir-text-form-round-trip-and-structure.md)). It is a single integer. Once an IR version is frozen its format never changes: any change, additive or not, produces the next version. A reader refuses a document whose IR version is newer than the newest it supports; an older document within the supported window is validated against its own version's schema and migrated on read ([D41](0041-ir-text-form-round-trip-and-structure.md)).
 - **Keys.** Keys defined by the specification are snake_case, so that they can be selected in CEL. A reader rejects any key the specification does not define for its position, which catches misspellings. Keys defined by the specification and the names of built-in node and format types are identifiers, which never contain `.` or `/`, so names qualified by a publisher can be added for plugins later without colliding with them ([S26]({workspace}/documentation#7.25)).
 - **Identifiers.** Names chosen for nodes, parameters, value outputs, carried values, workflows, environments and dataset path segments match `[a-z][a-z0-9_]{0,62}` and are none of the CEL keywords and reserved words, nor `y`, `n`, `yes`, `no`, `on` or `off`, which some YAML parsers read as booleans. Lowercase avoids collisions on file systems that ignore case. A node may carry a free-text `title`, shown in place of its key.

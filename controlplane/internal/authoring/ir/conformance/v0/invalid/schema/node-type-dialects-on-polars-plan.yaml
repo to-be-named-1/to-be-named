@@ -1,0 +1,11 @@
+# Invalid: a Polars plan runs on Polars in process and lists no dialects.
+ir_version: 0
+kind: node_type
+name: example
+version: 1
+language: python
+plan: polars
+image: platform-base
+entry_point: example:build
+modes: [batch]
+dialects: [postgres]

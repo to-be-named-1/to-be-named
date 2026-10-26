@@ -1,0 +1,9 @@
+# Invalid: language is python, sql or command.
+ir_version: 0
+kind: node_type
+name: example
+version: 1
+language: r
+image: platform-base
+entry_point: example:run
+modes: [batch]

@@ -1,0 +1,4 @@
+# Invalid: project documents have no fields beyond the envelope in IR version 0.
+ir_version: 0
+kind: project
+name: sales

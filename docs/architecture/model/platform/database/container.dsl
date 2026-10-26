@@ -2,7 +2,7 @@ database = container "Control-plane database" "The control plane's only stateful
     !docs docs
 
     properties {
-        "decisions" "D5, D12, D30, D42, D44, D45, D47, D48, D50"
+        "decisions" "D5, D12, D30, D42, D44, D45, D47, D48, D50, D59"
     }
 
     // One schema per bounded context (D47), grouped like the control-plane components that own them;

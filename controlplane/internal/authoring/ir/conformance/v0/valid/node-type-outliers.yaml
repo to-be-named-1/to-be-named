@@ -1,0 +1,27 @@
+# Valid: an eager python node type that can use a GPU, with grouping, a seed and a memory floor.
+ir_version: 0
+kind: node_type
+name: outliers
+version: 1
+title: Flag outliers
+language: python
+image: platform-base
+entry_point: platform.nodes.outliers:run
+modes: [batch]
+inputs:
+  data: { type: tabular }
+outputs:
+  flagged: { type: tabular, schema: dynamic }
+params:
+  columns:   { type: array, format: column_selector, of: data }
+  method:    { type: string, enum: [iqr, zscore, isolation_forest], default: iqr }
+  threshold: { type: number, minimum: 0, default: 1.5 }
+  group_by:  { type: array, format: column_selector, of: data, default: [] }
+  seed:      { type: integer, default: 0 }
+values:
+  outlier_count: { type: integer }
+  outlier_rate:  { type: number, minimum: 0, maximum: 1 }
+grouping: { parameter: group_by }
+seed: seed
+gpu: supported
+memory_floor: 1Gi

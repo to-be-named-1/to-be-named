@@ -1,0 +1,9 @@
+# Invalid: a node-type version is at least 1.
+ir_version: 0
+kind: node_type
+name: example
+version: 0
+language: python
+image: platform-base
+entry_point: example:run
+modes: [batch]

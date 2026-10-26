@@ -4,7 +4,9 @@ What every IR document shares: its kind, its envelope and IR version, the form o
 
 ## Kinds of document
 
-A project commits five kinds of IR document, each at a fixed location ([D41](../architecture/decisions/0041-ir-text-form-round-trip-and-structure.md)):
+There are two classes of IR document: the project documents, which a project commits, and node-type documents.
+
+A project commits five kinds of project document, each at a fixed location ([D41](../architecture/decisions/0041-ir-text-form-round-trip-and-structure.md)):
 
 | Kind | Location | Holds |
 |---|---|---|
@@ -16,6 +18,8 @@ A project commits five kinds of IR document, each at a fixed location ([D41](../
 
 `<name>` and `<env>` are identifiers, and `<path>` is one or more identifiers separated by `/`. Files under `code/` are referenced by path from workflows and are not IR documents.
 
+A **node-type document**, of kind `node_type`, describes one version of a node type ([Node types](03-node-types.md)). Projects do not commit node-type documents; they belong to the platform's catalog of built-in node types and to plugins, and the rule of locations does not apply to them.
+
 A document file MUST have the extension `.yaml`. A reader MUST NOT treat a file with any other extension, such as `.yml`, as an IR document.
 
 ## Envelope
@@ -23,7 +27,7 @@ A document file MUST have the extension `.yaml`. A reader MUST NOT treat a file 
 Every document MUST contain the keys `ir_version` and `kind`. The fields of its kind follow at the top level, beside them.
 
 - `ir_version` is the document's IR version.
-- `kind` is one of the five kinds above, and MUST match the document's location; a reader MUST reject a document whose kind does not.
+- `kind` is one of the six kinds above. The kind of a project document MUST match its location; a reader MUST reject a project document whose kind does not.
 
 Writers MUST write `ir_version` and `kind` first, in that order. Readers MUST NOT depend on the order of keys.
 

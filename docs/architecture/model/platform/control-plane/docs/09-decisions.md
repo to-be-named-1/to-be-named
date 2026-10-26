@@ -51,3 +51,5 @@
 | [D52]({workspace}/decisions/Platform#52) | Agent identity proven by message signatures on every request and response |
 | [D55]({workspace}/decisions/Platform#55) | Commits to table-format storage targets made after the platform's commit, by publication units, in version order |
 | [D56]({workspace}/decisions/Platform#56) | The envelope and IR version of every committed document, identifiers and generated node keys, node identity across renames, the YAML subset and its data model, and the schema the compiler embeds and validates against |
+| [D57]({workspace}/decisions/Platform#57) | The node-type contract the compiler and planner read: runtimes, ports, typed parameters and the checks on expressions in them, derived memory behavior, contracts of code nodes derived from their code, derived schemas and compiled plans obtained from the data plane, engine overrides after hard constraints, and how a fused unit's request is combined |
+| [D59]({workspace}/decisions/Platform#59) | Column lineage recorded per run and per column, derived, declared or task-level, which the provenance read model serves |

@@ -55,6 +55,7 @@ Writers MUST quote the empty string and every string that rules 1 and 2 would re
 
 - An integer MUST lie within ±(2^53−1), the range a browser represents exactly. A larger whole value, such as an external identifier, is written as a string.
 - A number is an IEEE 754 double-precision value. Infinities and NaN are not representable.
+- A value typed as a number is never an integer, even when its fraction is zero. A reader MUST reject a number such as `0.0` or `1.0` wherever an integer is required, although a JSON Schema validator accepts it there.
 
 ## Enforcement
 

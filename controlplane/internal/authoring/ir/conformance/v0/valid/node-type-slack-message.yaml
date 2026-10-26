@@ -1,0 +1,14 @@
+# Valid: a node type with an external side effect and no ports.
+ir_version: 0
+kind: node_type
+name: slack_message
+version: 1
+title: Send a Slack message
+language: python
+image: platform-base
+entry_point: platform.nodes.slack:send
+modes: [batch]
+params:
+  channel: { type: string, format: binding }
+  text:    { type: string }
+side_effects: { target: channel }

@@ -11,6 +11,7 @@
 7. **Cache keys chained through nodes** ([D8]({workspace}/decisions/Platform#8)): input-addressed for every node, with content-addressed early cutoff where outputs are small.
 8. **Isolation enforced from the start** ([D30]({workspace}/decisions/Platform#30), [D45]({workspace}/decisions/Platform#45)): row-level security on the tenant, and a mandatory authorization layer for projects, roles and clearance.
 9. **Domain-driven design** ([D54]({workspace}/decisions/Platform#54)). The control plane is divided into bounded contexts, each owning its schema and package tree, whose aggregates enforce their invariants in the database; contexts integrate through interfaces and domain events, and anti-corruption layers translate external models at the edges.
+10. **Behavior follows properties** ([D58]({workspace}/decisions/Platform#58)). The platform's node types, plugins and authors' code follow one path; what anything does depends on what it declares, what is derived or measured of it and what a policy grants it, never on who wrote it.
 
 ### Architecture planes
 

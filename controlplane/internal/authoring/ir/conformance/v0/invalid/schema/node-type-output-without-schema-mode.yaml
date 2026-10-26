@@ -1,0 +1,11 @@
+# Invalid: an output port states its schema mode.
+ir_version: 0
+kind: node_type
+name: example
+version: 1
+language: python
+image: platform-base
+entry_point: example:run
+modes: [batch]
+outputs:
+  result: { type: tabular }

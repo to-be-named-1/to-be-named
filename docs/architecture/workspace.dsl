@@ -19,7 +19,7 @@ workspace "Platform architecture" "C4 model, documentation and decision records 
             !adrs decisions
 
             properties {
-                "decisions" "D5, D6, D11, D21, D22, D36, D39, D53, D54"
+                "decisions" "D5, D6, D11, D21, D22, D36, D39, D53, D54, D58"
             }
 
             // One folder per container: model/platform/<container>/container.dsl, with its docs/ beside it.
@@ -41,6 +41,7 @@ workspace "Platform architecture" "C4 model, documentation and decision records 
                 !include model/platform/projection-unit/container.dsl
                 !include model/platform/publication-unit/container.dsl
                 !include model/platform/probe-unit/container.dsl
+                !include model/platform/derivation-unit/container.dsl
                 !include model/platform/sample-builder/container.dsl
                 !include model/platform/bundled-object-storage/container.dsl
             }
@@ -60,6 +61,7 @@ workspace "Platform architecture" "C4 model, documentation and decision records 
         !include model/relationships/projection-unit.dsl
         !include model/relationships/publication-unit.dsl
         !include model/relationships/probe-unit.dsl
+        !include model/relationships/derivation-unit.dsl
         !include model/relationships/sample-builder.dsl
         !include model/relationships/observability.dsl
         !include model/relationships/external-systems.dsl

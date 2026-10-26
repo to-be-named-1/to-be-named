@@ -1,0 +1,23 @@
+# Valid: a node type of language python and plan polars, in which each row depends on the result computed for the previous row.
+ir_version: 0
+kind: node_type
+name: capped_balance
+version: 1
+title: Running balance with a cap
+category: transform
+language: python
+plan: polars
+image: platform-base
+entry_point: platform.nodes.capped_balance:build
+modes: [batch]
+inputs:
+  movements: { type: tabular }
+outputs:
+  balances: { type: tabular, schema: derived }
+params:
+  amount:   { type: string, format: column, of: movements }
+  time:     { type: string, format: column, of: movements }
+  cap:      { type: number }
+  group_by: { type: array, format: column_selector, of: movements, default: [] }
+grouping: { parameter: group_by }
+order: { parameter: time }

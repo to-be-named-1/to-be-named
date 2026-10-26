@@ -1,0 +1,11 @@
+# Invalid: an eager node's outputs are static or dynamic, never derived.
+ir_version: 0
+kind: node_type
+name: example
+version: 1
+language: python
+image: platform-base
+entry_point: example:run
+modes: [batch]
+outputs:
+  result: { type: tabular, schema: derived }

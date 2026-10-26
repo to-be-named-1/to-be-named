@@ -7,9 +7,11 @@ Applies to: platform.controlPlane, platform.webApp, workflowAuthor
 
 Accepted
 
+Amended by [59. Column lineage](0059-column-lineage.md)
+
 ## Decision
 
-Column-level lineage is derived for SQL and built-in declarative nodes, whose transformation logic can be parsed. Across custom code nodes lineage is task-level only, and the interface shows it as such rather than implying finer detail.
+Column-level lineage is derived wherever the work of a node has a representation the platform can analyze, and is otherwise declared or task-level ([D59](0059-column-lineage.md)). Where it is task-level, the interface shows it as such rather than implying finer detail.
 
-- **Declared mappings.** The author of a custom code node may declare column mappings by hand. The interface labels these as **declared** rather than **derived**, since the platform cannot verify them.
+- **Declared mappings.** Column mappings may be declared by hand for any node, on its type, in its code or on the node itself ([D59](0059-column-lineage.md)). The interface labels these as **declared** rather than **derived**, since the platform cannot verify them.
 - **Direct only.** Derived lineage covers direct transformations, where an output column's values are computed from identified input columns.

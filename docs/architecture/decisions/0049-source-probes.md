@@ -13,6 +13,7 @@ Amends [35. Ephemeral extraction](0035-ephemeral-extraction.md)
 Amends [37. Incremental extraction state](0037-incremental-extraction-state.md)
 Amends [40. Protocol between the control and data planes](0040-protocol-between-the-control-and-data-planes.md)
 Amended by [51. Adoption of existing data](0051-adoption-of-existing-data.md)
+Amended by [58. Behavior follows properties](0058-behavior-follows-properties.md)
 
 ## Context
 
@@ -36,8 +37,8 @@ External sources are resolved at run start by source probes run in the data plan
 ## Rejected alternatives
 
 - Discovering versions only when units read, which let two units of one run read different snapshots, left such nodes without keys before the run and let retries read different data.
-- Probing inside the agent, which would duplicate connector logic in Go and tie its fixes to customers' agent upgrades, as [D44](0044-minimum-technology-stack.md) found for the projection; native probes for a few built-in source kinds remain possible if measured latency calls for them.
+- Probing inside the agent, which would duplicate connector logic in Go and tie its fixes to customers' agent upgrades, as [D44](0044-minimum-technology-stack.md) found for the projection.
 
 ## Follow-ups
 
-- Native probes in the agent for built-in source kinds, if measured probe latency matters; how the pool for a probe is chosen when a source's connection is bound to several pools.
+- Faster probes, for every source kind alike, if measured probe latency matters ([D58](0058-behavior-follows-properties.md)); how the pool for a probe is chosen when a source's connection is bound to several pools.

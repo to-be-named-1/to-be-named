@@ -1,0 +1,3 @@
+# Invalid: a value typed as a number is not an integer, even with a zero fraction; a JSON Schema validator accepts it (docs/ir/02-yaml-subset.md).
+ir_version: 0.0
+kind: workflow

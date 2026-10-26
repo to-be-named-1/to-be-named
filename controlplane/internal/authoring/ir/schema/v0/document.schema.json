@@ -1,12 +1,17 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "IR document, IR version 0",
-  "description": "The envelope every IR document carries (docs/ir/01-documents.md).",
+  "description": "The envelope every IR document carries, and the schema of each kind (docs/ir/01-documents.md).",
   "type": "object",
   "required": ["ir_version", "kind"],
   "properties": {
     "ir_version": { "const": 0 },
-    "kind": { "enum": ["project", "workflow", "layout", "dataset", "environment"] }
+    "kind": { "enum": ["project", "workflow", "layout", "dataset", "environment", "node_type"] }
   },
-  "additionalProperties": false
+  "if": { "properties": { "kind": { "const": "node_type" } } },
+  "then": { "$ref": "node_type.schema.json" },
+  "else": {
+    "properties": { "ir_version": true, "kind": true },
+    "additionalProperties": false
+  }
 }

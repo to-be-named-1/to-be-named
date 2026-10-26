@@ -1,0 +1,8 @@
+# Invalid: entry_point is required.
+ir_version: 0
+kind: node_type
+name: example
+version: 1
+language: python
+image: platform-base
+modes: [batch]

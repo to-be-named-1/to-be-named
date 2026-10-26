@@ -115,9 +115,9 @@ Both the schema contract and the freshness expectation are declared by the datas
 
 Because reads and writes are declared, the lineage graph is derived rather than maintained by hand, and it records position ranges rather than only identities.
 
-> *Diagram: Lineage alternating between datasets and runs, with reads and writes labeled, and a second row showing column-level lineage limited to declarative nodes.*
+> *Diagram: Lineage alternating between datasets and runs, with reads and writes labeled, and a second row showing column-level lineage labeled derived, declared or task-level per column.*
 >
-> **Figure 6.** **Lineage.** Because nodes declare what they read and write, lineage is derived rather than documented. Reads record the range of positions consumed, so the graph answers both “what produced this” and “what must change if this changes”. Column-level detail is available where transformation logic can be parsed.
+> **Figure 6.** **Lineage.** Because nodes declare what they read and write, lineage is derived rather than documented. Reads record the range of positions consumed, so the graph answers both “what produced this” and “what must change if this changes”. Column-level detail is derived wherever the work of a node can be analyzed, and is otherwise declared or shown as task-level ([D59]({workspace}/decisions/Platform#59)).
 
 #### 6 · Reconciliation
 

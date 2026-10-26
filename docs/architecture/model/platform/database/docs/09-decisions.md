@@ -11,3 +11,4 @@
 | [D47]({workspace}/decisions/Platform#47) | One schema per bounded context, a shared schema, invariants enforced by the database, and the leader's lock and epoch |
 | [D48]({workspace}/decisions/Platform#48) | The outbox: one row per subscribed handler, delivery, retries and dead letters |
 | [D50]({workspace}/decisions/Platform#50) | Heads, versions and partition versions keyed by line; development run records in separate time partitions |
+| [D59]({workspace}/decisions/Platform#59) | Column lineage stored per run and per column with its label, lineage that does not change between runs stored once |

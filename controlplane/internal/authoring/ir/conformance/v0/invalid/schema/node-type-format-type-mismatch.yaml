@@ -1,0 +1,13 @@
+# Invalid: the column_selector format applies to arrays.
+ir_version: 0
+kind: node_type
+name: example
+version: 1
+language: python
+image: platform-base
+entry_point: example:run
+modes: [batch]
+inputs:
+  data: { type: tabular }
+params:
+  key: { type: string, format: column_selector, of: data }

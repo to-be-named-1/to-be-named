@@ -31,6 +31,7 @@ singleMachine = deploymentEnvironment "Single machine" {
         units = deploymentNode "Unit containers" "Launched by the agent, one per attempt, probe or session." "Docker container" "" "0..N" {
             unitRuntime = containerInstance platform.unitRuntime
             probeUnit = containerInstance platform.probeUnit
+            derivationUnit = containerInstance platform.derivationUnit
             projectionUnit = containerInstance platform.projectionUnit
             publicationUnit = containerInstance platform.publicationUnit
             sampleBuilder = containerInstance platform.sampleBuilder

@@ -8,6 +8,7 @@ Applies to: platform.controlPlane, platform.unitRuntime
 Accepted
 
 Amended by [29. First development slice](0029-first-development-slice.md)
+Amended by [58. Behavior follows properties](0058-behavior-follows-properties.md)
 
 ## Decision
 
@@ -19,7 +20,7 @@ Datasets are grouped into families whose behavior on the platform is the same, r
 - **Follows.** Supporting these families requires five structural capabilities: file groups whose members travel together ([CORE 6.16]({workspace}/documentation#3)), linked items such as paired reads ([CORE 6.17]({workspace}/documentation#3)), sharded collections of many small items ([CORE 6.18]({workspace}/documentation#3)), declared splittability ([CORE 6.19]({workspace}/documentation#3)), and classification that reaches metadata embedded inside files ([DE 5.10]({workspace}/documentation#4)).
 - **Models.** Models are a specialized dataset type rather than a separate registry. They share identity, versioning, lineage, publication, retention, classification and erasure with every other dataset, and add a signature, a lifecycle stage, evaluation metrics and approval state. The registry interface presents them as models; underneath they are the same aggregate, so one lineage graph runs from source data to model.
 - **Extension point.** Each family is implemented through one interface covering nine responsibilities: describe (file groups and links), contract, validate and metadata, which are required; and profile, preview, compare, canonicalize and access, which are optional and degrade gracefully when absent. The platform core never interprets a format directly.
-- **Placement.** Family plugins read bulk data and therefore run in the data plane, inside execution units; only their results reach the control plane. Third-party plugins are sandboxed like any other user code.
+- **Placement.** Family plugins read bulk data and therefore run in the data plane, inside execution units; only their results reach the control plane. Family plugins are isolated as all code in units is, whoever wrote it ([D58](0058-behavior-follows-properties.md)).
 - **Release.** The interface is internal in the first release. The six built-in families are implemented against it, and it is published as a stable plugin API only once it has held up.
 
 ## Follow-ups

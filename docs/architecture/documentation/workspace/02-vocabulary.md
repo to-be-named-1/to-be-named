@@ -23,7 +23,7 @@ Terms used throughout that are not given their own entry in the key terms below.
 | Pushdown | Running a relational node inside the warehouse that holds its inputs, instead of extracting the data. |
 | Extraction cap | A configurable limit on data extracted from a warehouse; exceeding it stops the plan and asks the author. |
 | Single-node guideline | A threshold beyond which work is flagged as exceeding in-process capacity. Made concrete as the planner's capacity check ([D34]({workspace}/decisions/Platform#34)). |
-| Memory class | A node type's declared memory behavior: streaming, blocking and spilling, or blocking and non-spilling ([D34]({workspace}/decisions/Platform#34)). |
+| Memory class | A node's memory behavior: streaming, blocking and spilling, or blocking and non-spilling; derived from its compiled expression where possible, otherwise defaulted, and declared only as a hint ([D34]({workspace}/decisions/Platform#34), [D57]({workspace}/decisions/Platform#57)). |
 | Repartition step | A unit that rewrites data hash-bucketed by a key, so that a node can fan out by a key other than the input's partitioning. |
 | Conformance matrix | Built-in relational nodes × engines (DuckDB, Postgres, Snowflake); each cell is a fixture suite checking that the node gives the same answer on that engine. |
 | Connection policy | Settings on a warehouse connection, set by the warehouse's owner: whether the platform may compute there, which compute cluster it uses, and an optional credit budget. |
@@ -49,6 +49,7 @@ Terms used throughout that are not given their own entry in the key terms below.
 | Selection boundary | The edges where unselected nodes feed the nodes a run is asked to execute; unchanged upstream outputs are read there and, in a sample run, sampled there ([D50]({workspace}/decisions/Platform#50)). |
 | Referential subsetting | Sampling one driving input by a hash of its key and keeping, in every input joined to it, only the rows whose join key matches, so that joins on the sample keep their matches ([D50]({workspace}/decisions/Platform#50)). |
 | Session unit | A warm container for one author, project, image and pool that runs successive interactive sample runs, each unit in a fresh process ([D50]({workspace}/decisions/Platform#50)). |
+| Derivation unit | A unit, run through the agent in a node type's own image, that builds the plans of plan nodes on inputs holding no data, without credentials or network, and returns their output schemas and compiled plans ([D57]({workspace}/decisions/Platform#57)). |
 
 ### Key terms
 
@@ -200,7 +201,7 @@ The platform's ability to re-execute a recorded run and state precisely **how cl
 >
 > How a run moves between tiers. Solid arrows raise a run's tier; dashed arrows are **decay**: once a run's inputs are garbage-collected it can no longer be re-executed, whatever tier it had reached.
 
-The workflow definition can prove a **ceiling** — network access caps a run at Re-executable — but only a verification run can establish Reproducible. Custom code nodes default to Re-executable until verified. A run's tier is set by the weakest node on each path.
+The workflow definition can prove a **ceiling** — network access caps a run at Re-executable — but only a verification run can establish Reproducible. Every node, whoever wrote it, is at most Re-executable until verified ([D58]({workspace}/decisions/Platform#58)). A run's tier is set by the weakest node on each path.
 
 - **Verification run.** A deliberate re-execution of a recorded run that bypasses the cache and replays recorded inputs rather than re-fetching them, then compares every output with the original.
 - **Comparator.** Judges whether two versions of an output are the same result and explains the verdict: tables ignoring row order with float tolerance, models by predictions on a probe dataset, metrics within a tolerance, figures by their underlying data. Returns a status, the tolerance used, the maximum deviation and a diff report. Outputs with no comparator can only be compared byte for byte.

@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Node-type document, IR version 0",
+  "description": "One version of one node type: its contract and a reference to its implementation (docs/ir/03-node-types.md).",
+  "type": "object",
+  "required": [
+    "ir_version",
+    "kind",
+    "name",
+    "version",
+    "language",
+    "image",
+    "entry_point",
+    "modes"
+  ],
+  "properties": {
+    "ir_version": true,
+    "kind": {
+      "const": "node_type"
+    },
+    "name": {
+      "$ref": "common.schema.json#/$defs/identifier"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "language": {
+      "enum": [
+        "python",
+        "sql",
+        "command"
+      ]
+    },
+    "plan": {
+      "enum": [
+        "ibis",
+        "polars"
+      ]
+    },
+    "image": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entry_point": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dialects": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/identifier"
+      },
+      "uniqueItems": true
+    },
+    "modes": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "batch"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "inputs": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "common.schema.json#/$defs/identifier"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/input_port"
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "common.schema.json#/$defs/identifier"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/output_port"
+      }
+    },
+    "params": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "common.schema.json#/$defs/identifier"
+      },
+      "additionalProperties": {
+        "$ref": "common.schema.json#/$defs/parameter"
+      }
+    },
+    "values": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "common.schema.json#/$defs/identifier"
+      },
+      "additionalProperties": {
+        "$ref": "common.schema.json#/$defs/value"
+      }
+    },
+    "grouping": {
+      "$ref": "#/$defs/parameter_reference"
+    },
+    "order": {
+      "$ref": "#/$defs/parameter_reference"
+    },
+    "seed": {
+      "$ref": "common.schema.json#/$defs/identifier"
+    },
+    "side_effects": {
+      "type": "object",
+      "required": [
+        "target"
+      ],
+      "properties": {
+        "target": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        }
+      },
+      "additionalProperties": false
+    },
+    "gpu": {
+      "enum": [
+        "none",
+        "supported",
+        "required"
+      ]
+    },
+    "memory_floor": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*(Ki|Mi|Gi|Ti)$"
+    },
+    "memory": {
+      "enum": [
+        "streaming",
+        "blocking_spilling",
+        "blocking_non_spilling"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "input_port": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "$ref": "common.schema.json#/$defs/format_type"
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "many": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "output_port": {
+      "type": "object",
+      "required": [
+        "type",
+        "schema"
+      ],
+      "properties": {
+        "type": {
+          "$ref": "common.schema.json#/$defs/format_type"
+        },
+        "schema": {
+          "enum": [
+            "static",
+            "derived",
+            "dynamic"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "parameter_reference": {
+      "type": "object",
+      "required": [
+        "parameter"
+      ],
+      "properties": {
+        "parameter": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "plan"
+        ]
+      },
+      "then": {
+        "properties": {
+          "language": {
+            "const": "python"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "anyOf": [
+          {
+            "required": [
+              "plan"
+            ]
+          },
+          {
+            "properties": {
+              "language": {
+                "const": "sql"
+              }
+            }
+          }
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "dialects"
+          ]
+        },
+        "properties": {
+          "outputs": {
+            "additionalProperties": {
+              "properties": {
+                "schema": {
+                  "enum": [
+                    "static",
+                    "dynamic"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "plan"
+        ],
+        "properties": {
+          "plan": {
+            "const": "polars"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": [
+            "dialects"
+          ]
+        }
+      }
+    }
+  ]
+}

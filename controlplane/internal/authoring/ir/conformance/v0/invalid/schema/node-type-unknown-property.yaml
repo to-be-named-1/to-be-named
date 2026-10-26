@@ -1,0 +1,10 @@
+# Invalid: a node type declares only the properties the specification defines.
+ir_version: 0
+kind: node_type
+name: example
+version: 1
+language: python
+image: platform-base
+entry_point: example:run
+modes: [batch]
+determinism: deterministic

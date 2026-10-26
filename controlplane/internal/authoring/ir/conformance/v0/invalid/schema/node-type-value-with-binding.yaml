@@ -1,0 +1,11 @@
+# Invalid: value outputs cannot refer to bindings.
+ir_version: 0
+kind: node_type
+name: example
+version: 1
+language: python
+image: platform-base
+entry_point: example:run
+modes: [batch]
+values:
+  target: { type: string, format: binding }

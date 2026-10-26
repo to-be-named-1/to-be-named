@@ -8,6 +8,7 @@ Applies to: platform.controlPlane, platform.webApp
 Accepted
 
 Amended by [36. Data-engineering practice first, reproducibility by choice](0036-data-engineering-practice-first-reproducibility-by-choice.md)
+Amended by [58. Behavior follows properties](0058-behavior-follows-properties.md)
 
 ## Context
 
@@ -20,7 +21,7 @@ Amended by [36. Data-engineering practice first, reproducibility by choice](0036
 The goal is the same output, not byte-identical files. Bit-identical reproducibility is not a user-facing goal; byte hashes remain an internal tool for fast verification and storage deduplication.
 
 - **Tiers.** **Traceable** — a complete record of what ran and on what; re-execution is not assured. **Re-executable** — same code, inputs and environment; outputs may differ. **Reproducible** — same outputs, confirmed by comparators within recorded tolerances.
-- **Ceiling.** The definition can prove a ceiling statically — network access, for example, caps a run at Re-executable — but Reproducible is reached only through a passing verification run. Custom code nodes default to Re-executable until verified.
+- **Ceiling.** The definition can prove a ceiling statically — network access, for example, caps a run at Re-executable — but Reproducible is reached only through a passing verification run. Every node, whoever wrote it, is at most Re-executable until verified ([D58](0058-behavior-follows-properties.md)).
 - **Weakest link.** A run's tier is set by the weakest node on each path.
 - **Decay.** A run drops to Traceable when its inputs are garbage-collected; where the reproducibility setting is on, the interface warns before this happens ([D36](0036-data-engineering-practice-first-reproducibility-by-choice.md)). Inputs of runs still in progress are protected ([D14](0014-input-version-resolution.md)).
 - **Per run.** A tier belongs to a run, not a workflow. Fixing a workflow makes future runs more reproducible, never past ones.

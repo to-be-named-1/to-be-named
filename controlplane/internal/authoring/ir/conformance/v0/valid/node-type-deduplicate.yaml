@@ -1,0 +1,24 @@
+# Valid: a built-in node type of language python and plan ibis, whose result depends on order.
+ir_version: 0
+kind: node_type
+name: deduplicate
+version: 2
+title: Deduplicate rows
+category: transform
+language: python
+plan: ibis
+image: platform-base
+entry_point: platform.nodes.deduplicate:build
+dialects: [postgres, snowflake]
+modes: [batch]
+inputs:
+  data: { type: tabular }
+outputs:
+  result: { type: tabular, schema: derived }
+params:
+  keys:     { type: array, format: column_selector, of: data }
+  order_by: { type: array, format: column_selector, of: data }
+  keep:     { type: string, enum: [first, last], default: first }
+order: { parameter: order_by }
+values:
+  removed_rows: { type: integer }

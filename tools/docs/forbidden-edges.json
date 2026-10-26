@@ -24,6 +24,28 @@
       "reason": "The control plane never handles bulk data and holds no storage credentials or secret values; whatever touches customer data or credentials runs in the data plane."
     },
     {
+      "id": "derivation-units-no-data-or-credentials",
+      "from": [
+        "platform.derivationUnit"
+      ],
+      "to": [
+        "objectStorage",
+        "platform.bundledObjectStorage",
+        "secretManager",
+        "platform.secretStore",
+        "credentialIssuer",
+        "dataSources",
+        "warehouses",
+        "icebergCatalog",
+        "lakehouseCatalog",
+        "sideEffectTargets"
+      ],
+      "decisions": [
+        "D57"
+      ],
+      "reason": "A derivation unit builds plans on inputs that hold no data; it receives schemas and parameter values only, and holds no data, credentials or network access."
+    },
+    {
       "id": "control-plane-no-backend-calls",
       "from": [
         "platform.controlPlane"
@@ -47,6 +69,7 @@
         "platform.commandUnit",
         "platform.projectionUnit",
         "platform.probeUnit",
+        "platform.derivationUnit",
         "platform.sampleBuilder"
       ],
       "to": [

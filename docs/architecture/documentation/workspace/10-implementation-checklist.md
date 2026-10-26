@@ -29,6 +29,7 @@ An item blocks the start of development only if the first code would build it in
 - Phase, sub-state and outcome columns with their check constraints, the held attempt outcome, timestamps per key transition, write leases held by task runs, and outbox rows per event and handler carrying an ordering key and aggregate version ([D48]({workspace}/decisions/Platform#48))
 - Probed positions on external source declarations and read records ([D49]({workspace}/decisions/Platform#49))
 - The development fields on runs, run, task-run and attempt tables partitioned by mode as well as time, lines on heads, versions, partition versions, write leases and outbox rows with the line in their unique constraints, a sandbox table, mode and pool on cache-index entries, sample artifacts keyed by their sample specification, and session leases in the agent protocol ([D50]({workspace}/decisions/Platform#50))
+- Column lineage recorded per run and per column, with its label: derived, declared or task-level ([D59]({workspace}/decisions/Platform#59))
 - Extension interfaces for authentication, policy, audit and AI ([D5]({workspace}/decisions/Platform#5))
 
 ### Settled when the work reaches them
@@ -49,7 +50,7 @@ An item blocks the start of development only if the first code would build it in
 | Engine family in the cache key ([D25]({workspace}/decisions/Platform#25)) | Cache implementation; an error only causes extra misses |
 | Split semantics for leakage prevention ([DS 2.8](05-capabilities-ds.md)) | The data-science palette; the IR leaves room for it |
 | Broker or cache behind the event-relay, change-feed or rate-limiter seams ([D47]({workspace}/decisions/Platform#47)) | Load tests missing the targets of [D43]({workspace}/decisions/Platform#43), or a hosted control plane at scale |
-| Native agent probes for built-in source kinds ([D49]({workspace}/decisions/Platform#49)) | Measured probe latency |
+| Faster probes, for every source kind alike ([D49]({workspace}/decisions/Platform#49), [D58]({workspace}/decisions/Platform#58)) | Measured probe latency |
 | Session units and their concurrency ([D50]({workspace}/decisions/Platform#50)) | Measured preview latency on the first slice |
 | Two-level warehouse policy, pinned-plan behavior, repartition key (proposals) | Warehouse pushdown and planner work, outside the first slice |
 

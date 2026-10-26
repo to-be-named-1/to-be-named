@@ -10,6 +10,7 @@ This specification describes IR version 0.
 |---|---|
 | [Documents](01-documents.md) | The kinds of document, the envelope, the IR version, keys, identifiers, identity and collections |
 | [YAML subset](02-yaml-subset.md) | The data model, the YAML accepted, the typing of unquoted values, and numbers |
+| [Node types](03-node-types.md) | Node-type documents, languages and plans, ports, parameters and expressions in them, value outputs, execution properties and code nodes |
 
 ## Machine-readable schema
 
