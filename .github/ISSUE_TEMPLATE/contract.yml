@@ -1,0 +1,38 @@
+name: Contract
+description: A schema or API shared by streams; others are blocked by it.
+type: Contract
+projects: ["to-be-named-1/1"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - IR schema and conformance corpus
+        - Protobuf package
+        - Node-type documents
+        - Derivation request and result
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: Change
+      description: What the contract gains or loses, and the recorded decision it implements.
+    validations:
+      required: true
+  - type: textarea
+    id: sides
+    attributes:
+      label: Sides
+      description: Who produces it and who consumes it.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before closing
+      options:
+        - label: Conformance cases or examples cover the change.
+        - label: Both sides are changed in the same pull request, or each consumer has a task blocked by this issue.

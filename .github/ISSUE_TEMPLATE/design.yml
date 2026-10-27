@@ -1,0 +1,28 @@
+name: Design
+description: Propose a decision, written as a decision sheet.
+type: Design
+projects: ["to-be-named-1/1"]
+body:
+  - type: input
+    id: topic
+    attributes:
+      label: Topic
+      description: One topic per proposal.
+    validations:
+      required: true
+  - type: textarea
+    id: fixed
+    attributes:
+      label: What is already fixed
+      description: Recorded decisions this proposal builds on.
+  - type: textarea
+    id: points
+    attributes:
+      label: Points
+      description: Each point with its options, a recommendation and the deciding constraint. Include choices made by omission.
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary table

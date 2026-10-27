@@ -1,0 +1,20 @@
+name: Initiative
+description: A milestone's goal, closed by an end-to-end demo.
+type: Initiative
+projects: ["to-be-named-1/1"]
+body:
+  - type: textarea
+    id: demo
+    attributes:
+      label: Demo that closes it
+      description: What runs end to end when this milestone is done.
+    validations:
+      required: true
+  - type: textarea
+    id: in-scope
+    attributes:
+      label: In scope
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope

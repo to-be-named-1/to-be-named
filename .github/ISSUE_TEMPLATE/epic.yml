@@ -1,0 +1,23 @@
+name: Epic
+description: One stream's share of an initiative.
+type: Epic
+projects: ["to-be-named-1/1"]
+body:
+  - type: textarea
+    id: delivers
+    attributes:
+      label: What this stream delivers
+    validations:
+      required: true
+  - type: textarea
+    id: contracts
+    attributes:
+      label: Contracts it depends on
+      description: Link the contract issues; mark them as blocking this epic's tasks.
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: The checks or the part of the demo that show it is done.
+    validations:
+      required: true
