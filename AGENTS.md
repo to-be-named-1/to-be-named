@@ -79,9 +79,29 @@ IR and lint checks.
 
 ## Git
 
-- Commit messages are prefixed with the area, for example `docs: ...`.
-- Keep it clean, no co-author trailers.
-- Commit or push only when asked.
+- **Branches.** `main` holds the stable state and `dev` integrates work. Every change starts from an issue, on a
+  short-lived branch from `dev` named `<type>/<issue>-<slug>`, such as `feat/21-ir-reader`;
+  `gh issue develop 21 --base dev --name feat/21-ir-reader` creates it and links it to the issue.
+- **Pull requests.** A work branch merges into `dev` through a pull request, usually squashed, so that the pull
+  request's title becomes the commit message. Review and merging are left to the author's judgment; open a draft
+  for work in progress.
+- **Promotion.** `dev` is promoted to `main` at the end of each iteration, once verified, through a pull request
+  merged with a merge commit. Never squash or rebase a promotion: `dev` would lack the commits it put on `main`,
+  and every later promotion would conflict. A fix that cannot wait branches from `main` as `fix/<issue>-<slug>`
+  and merges into `main`, which is then merged back into `dev`.
+- **Keeping a branch current.** Rebase it onto `dev` and push with `--force-with-lease`, or merge `dev` into it
+  when others share the branch. Never force-push `dev`, `main` or another person's branch.
+- **Commit messages.** [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/), on one line:
+  `<type>(<scope>): <description>`. Types: `feat`, `fix`, `docs`, `refactor`, `test`, `perf`, `build`, `ci`,
+  `chore`, `style` and `revert`, the same as in branch names. The scope is optional: a top-level folder or a
+  contract, such as `controlplane` or `ir`. `!` before the colon marks a breaking change to a contract. No
+  co-author trailers.
+- **Project status.** Move the issue to In Progress when its branch is created and to In Review when its pull
+  request leaves draft. An issue is Done once its change is on `main`: the promotion pull request lists
+  `Closes #<issue>` for every issue it carries, since GitHub reads the keyword only in pull requests into the
+  default branch, and merging it closes them.
+- **Release tags.** Once platform releases are versioned, each is tagged `v<version>` on `main`.
+- Agents commit only on a work branch, never on `dev` or `main`, and commit or push only when asked.
 
 ## Environment notes
 
