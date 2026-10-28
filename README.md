@@ -30,7 +30,7 @@ GNU Make.
 
 | Command | Runs |
 |---|---|
-| `make go-check` | `go vet`, `go test` and golangci-lint |
+| `make go-check` | `go test` and golangci-lint, which includes `go vet` |
 | `make py-check` | `uv sync --locked`, ruff, pyright and pytest |
 | `make docs-check` | Structurizr validation and the documentation checks |
 | `make ir-check` | The IR schema and its conformance corpus |

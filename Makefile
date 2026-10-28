@@ -60,8 +60,7 @@ ir-check: ## Check the IR schema and its conformance corpus
 
 # --- Go: control plane, agent, CLI ---
 
-go-test: ## Vet and test the Go module
-	go vet ./...
+go-test: ## test the Go module
 	go test ./...
 
 go-lint: ## Lint and check formatting with golangci-lint

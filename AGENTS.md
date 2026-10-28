@@ -40,7 +40,7 @@ request, and add conformance cases with every schema change.
 
 | Command | Runs |
 |---|---|
-| `make go-check` | `go vet`, `go test`, golangci-lint (pinned image) |
+| `make go-check` | `go test`, golangci-lint (pinned image), whose standard linters include `go vet` |
 | `make py-check` | `uv sync --locked`, ruff, pyright, pytest |
 | `make docs-link` | Turns bare decision and open-item references in `docs/` into links |
 | `make docs-check` | Structurizr validation and the documentation checks |
