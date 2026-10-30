@@ -1,0 +1,36 @@
+name: web
+
+on:
+  push:
+    paths:
+      - "webapp/**"
+      - "Makefile"
+      - ".github/workflows/web.yml"
+  pull_request:
+    paths:
+      - "webapp/**"
+      - "Makefile"
+      - ".github/workflows/web.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # The packageManager field in webapp/package.json fixes pnpm's version, and webapp/.nvmrc Node's.
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: webapp/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: webapp/.nvmrc
+          cache: pnpm
+          cache-dependency-path: webapp/pnpm-lock.yaml
+
+      - name: Check
+        run: make web-check
