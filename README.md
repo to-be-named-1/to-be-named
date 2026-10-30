@@ -25,17 +25,20 @@ layout and tooling are recorded there.
 ## Development
 
 Prerequisites: Git, Docker, [Go](https://go.dev/dl/) (any recent version; `go.mod` fetches the exact toolchain),
-[uv](https://docs.astral.sh/uv/) (it installs Python 3.14 itself), Python 3 for the documentation scripts, and
-GNU Make.
+[uv](https://docs.astral.sh/uv/) (it installs Python 3.14 itself), [Node 26](https://nodejs.org/) (`webapp/.nvmrc`) with
+[pnpm](https://pnpm.io/installation) (any recent version; it switches to the one `webapp/package.json` fixes),
+Python 3 for the documentation scripts, and GNU Make.
 
 | Command | Runs |
 |---|---|
 | `make go-check` | `go test` and golangci-lint, which includes `go vet` |
 | `make py-check` | `uv sync --locked`, ruff, pyright and pytest |
+| `make web-check` | `pnpm install --frozen-lockfile`, Biome, `tsc`, Vitest and the Vite build |
 | `make docs-check` | Structurizr validation and the documentation checks |
 | `make ir-check` | The IR schema and its conformance corpus |
 | `make check` | All of the above |
 | `make help` | Every target |
 
-Pinned image tags live in `docker-compose.yml`; tool versions otherwise come from `go.mod`, `uv.lock` and
-`.python-version`. CI runs the same targets, one workflow per stack, on changes to that stack's files.
+Pinned image tags live in `docker-compose.yml`; tool versions otherwise come from `go.mod`, `uv.lock`,
+`webapp/pnpm-lock.yaml`, `webapp/.nvmrc` and `.python-version`. CI runs the same targets, one workflow per stack,
+on changes to that stack's files.
