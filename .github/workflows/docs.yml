@@ -21,6 +21,7 @@ permissions:
 
 jobs:
   architecture:
+    name: architecture-check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
