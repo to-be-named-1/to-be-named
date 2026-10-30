@@ -21,6 +21,7 @@ permissions:
 
 jobs:
   schema:
+    name: ir-schema-check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
