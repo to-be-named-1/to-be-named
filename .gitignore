@@ -225,3 +225,7 @@ CLAUDE.md
 docs/architecture/workspace.json
 docs/architecture/.structurizr/
 docs/build/
+
+# Web application
+node_modules/
+*.tsbuildinfo

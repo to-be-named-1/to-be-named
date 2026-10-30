@@ -17,7 +17,7 @@ export MSYS_NO_PATHCONV := 1
 
 .DEFAULT_GOAL := help
 
-.PHONY: help docs-up docs-down docs-validate docs-inspect docs-export docs-link docs-check docs-build-dir ir-check \n	go-test go-lint go-check py-check check
+.PHONY: help docs-up docs-down docs-validate docs-inspect docs-export docs-link docs-check docs-build-dir ir-check \n	go-test go-lint go-check py-check web-check check
 
 help: ## List the available targets
 	@$(PYTHON) -c "import re; [print(f'{m[1]:<15} {m[2]}') for m in re.finditer(r'^([a-z][a-z-]+):.*?## (.+)$$', open('Makefile', encoding='utf-8').read(), re.M)]"
@@ -77,6 +77,17 @@ py-check: ## Lint, format-check, type-check and test the Python workspace
 	uv run pyright
 	uv run pytest
 
+# --- TypeScript: web application ---
+
+WEB := pnpm --dir webapp
+
+web-check: ## Install, lint, type-check, test and build the web application
+	$(WEB) install --frozen-lockfile
+	$(WEB) lint
+	$(WEB) typecheck
+	$(WEB) test
+	$(WEB) build
+
 # --- Everything ---
 
-check: docs-check ir-check go-check py-check ## Run every check a commit must pass
+check: docs-check ir-check go-check py-check web-check ## Run every check a commit must pass

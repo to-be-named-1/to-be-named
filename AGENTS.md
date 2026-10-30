@@ -42,6 +42,7 @@ request, and add conformance cases with every schema change.
 |---|---|
 | `make go-check` | `go test`, golangci-lint (pinned image), whose standard linters include `go vet` |
 | `make py-check` | `uv sync --locked`, ruff, pyright, pytest |
+| `make web-check` | `pnpm install --frozen-lockfile`, Biome, `tsc`, Vitest, the Vite build |
 | `make docs-link` | Turns bare decision and open-item references in `docs/` into links |
 | `make docs-check` | Structurizr validation and the documentation checks |
 | `make ir-check` | The IR schema against its conformance corpus |
@@ -58,8 +59,8 @@ IR and lint checks.
 - **Python.** A uv workspace (`units`, `sdk`), Python 3.14, src layout. ruff for lint and format, pyright for
   types, pytest for tests. Give test files unique names across packages. Node code reaches the runtime only
   through the interfaces in `sdk`, built-in node types included.
-- **TypeScript.** Node 26, pnpm, React, Vite, TypeScript, Vitest and Biome, once the web application is
-  scaffolded.
+- **TypeScript.** Node 26, pnpm, React, Vite, TypeScript, Vitest and Biome, in `webapp/`. Biome lints and
+  formats (`pnpm --dir webapp format` applies its fixes), `tsc` checks types and Vitest runs the tests in jsdom.
 - **Comments only where needed.** Add a comment only when something is non-obvious: a reason the code cannot
   show, a constraint, a workaround or a surprising behavior. Do not restate what the code already says.
   Doc comments on exported Go identifiers and Python public APIs are the exception, since tools and readers
