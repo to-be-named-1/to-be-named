@@ -1,0 +1,16 @@
+# Valid: a built-in node type of language python and plan ibis with no input port, which reads Parquet files.
+ir_version: 0
+kind: node_type
+name: read_parquet
+version: 1
+title: Read Parquet
+category: source
+language: python
+plan: ibis
+image: platform-base
+entry_point: units.read_parquet:build
+modes: [batch]
+outputs:
+  data: { type: tabular, schema: derived }
+params:
+  path: { type: string }
