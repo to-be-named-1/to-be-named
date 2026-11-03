@@ -1,5 +1,9 @@
 ## Configuration
 
+### Sources
+
+The server reads its settings from its defaults, then from the YAML file named by `--config`, if one is given, then from environment variables prefixed `CONTROLPLANE_`, each overriding the one before ([D61]({workspace}/decisions/Platform#61)). Secrets, such as the database's credentials, come only from the environment or from files the environment names. The server reports every invalid setting when it starts and does not start until they are fixed.
+
 ### Roles
 
 The server is one binary. Each process is configured with one or more roles, and the elected one also holds `leader` ([D47]({workspace}/decisions/Platform#47)).
