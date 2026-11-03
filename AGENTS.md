@@ -30,7 +30,7 @@ package names `units` and `sdk` are placeholders. Do not invent a product name.
 | `units/` | Unit runtime and the units it runs | Data |
 | `sdk/` | Python SDK: interfaces node code follows, generation of node-type documents and IR | Data |
 | `webapp/` | Web application | Frontend |
-| `tools/` | Scripts behind the documentation and IR checks | Shared |
+| `tools/` | Scripts behind the documentation, IR and CI checks | Shared |
 | `docs/` | Architecture record and IR specification | Design |
 
 Contracts (the IR schema and corpus, `proto/`) are shared: change both sides of a contract in the same pull
@@ -50,6 +50,13 @@ request, and add conformance cases with every schema change.
 
 Run the checks for every area you touched before proposing a commit. Docker is required for the Structurizr,
 IR and lint checks.
+
+In CI, every workflow starts on every pull request, and on nothing else, since `main` and `dev` require all
+five checks (`go-check`, `python-check`, `web-check`, `architecture-check`, `ir-schema-check`). A first job
+compares the change with the pull request's base (`tools/ci/changed.sh`), and a check whose files did not
+change is skipped, which counts as passing. Filter by paths inside a job, never in a workflow's `on:` trigger:
+a workflow that never starts leaves its required check waiting, and the pull request cannot merge. Do not add a
+push trigger either: a second run on the same commit reports checks of the same names against another base.
 
 ## Code conventions
 
@@ -89,7 +96,9 @@ IR and lint checks.
 - **Promotion.** `dev` is promoted to `main` at the end of each iteration, once verified, through a pull request
   merged with a merge commit. Never squash or rebase a promotion: `dev` would lack the commits it put on `main`,
   and every later promotion would conflict. A fix that cannot wait branches from `main` as `fix/<issue>-<slug>`
-  and merges into `main`, which is then merged back into `dev`.
+  and is squashed into `main`. Its commit is then cherry-picked onto a branch from `dev` and merged into `dev`
+  through a pull request, since `dev` keeps a linear history and accepts no merge commits; the next promotion
+  carries the same change on both sides and merges cleanly.
 - **Keeping a branch current.** Rebase it onto `dev` and push with `--force-with-lease`, or merge `dev` into it
   when others share the branch. Never force-push `dev`, `main` or another person's branch.
 - **Commit messages.** [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/), on one line:
