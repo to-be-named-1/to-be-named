@@ -1,9 +1,9 @@
 name: web
 
-# Runs on every push and pull request, so that the required check always reports; the check job itself runs
-# only when files it covers changed (tools/ci/changed.sh).
+# Runs on every pull request, so that the required check always reports; the check job itself runs only
+# when files it covers changed since the pull request's base (tools/ci/changed.sh). There is no push trigger:
+# a second run on the same commit would report a check of the same name, compared with a different base.
 on:
-  push:
   pull_request:
 
 permissions:
@@ -22,7 +22,7 @@ jobs:
 
       - id: diff
         env:
-          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE: ${{ github.event.pull_request.base.sha }}
         run: echo "run=$(sh tools/ci/changed.sh '^(webapp/.*|Makefile|\.github/workflows/web\.yml|tools/ci/.*)$')" >> "$GITHUB_OUTPUT"
 
   check:

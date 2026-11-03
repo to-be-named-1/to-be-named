@@ -4,8 +4,7 @@
 # skipped by its condition reports success, while a workflow skipped by path filters never reports, which
 # would leave a required check waiting.
 #
-# Without a usable base, such as on a branch's first push or after a force-push, it prints true so that the
-# check runs.
+# Without a usable base, such as an empty or unknown commit, it prints true so that the check runs.
 set -eu
 
 pattern=$1

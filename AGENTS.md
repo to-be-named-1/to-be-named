@@ -51,11 +51,12 @@ request, and add conformance cases with every schema change.
 Run the checks for every area you touched before proposing a commit. Docker is required for the Structurizr,
 IR and lint checks.
 
-In CI, every workflow starts on every push and pull request, since `main` and `dev` require all five checks
-(`go-check`, `python-check`, `web-check`, `architecture-check`, `ir-schema-check`). A first job compares the
-change with its base (`tools/ci/changed.sh`), and a check whose files did not change is skipped, which counts
-as passing. Filter by paths inside a job, never in a workflow's `on:` trigger: a workflow that never starts
-leaves its required check waiting, and the pull request cannot merge.
+In CI, every workflow starts on every pull request, and on nothing else, since `main` and `dev` require all
+five checks (`go-check`, `python-check`, `web-check`, `architecture-check`, `ir-schema-check`). A first job
+compares the change with the pull request's base (`tools/ci/changed.sh`), and a check whose files did not
+change is skipped, which counts as passing. Filter by paths inside a job, never in a workflow's `on:` trigger:
+a workflow that never starts leaves its required check waiting, and the pull request cannot merge. Do not add a
+push trigger either: a second run on the same commit reports checks of the same names against another base.
 
 ## Code conventions
 
