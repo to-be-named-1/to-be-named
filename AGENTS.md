@@ -113,7 +113,8 @@ push trigger either: a second run on the same commit reports checks of the same 
 - **Project status.** Move the issue to In Progress when its branch is created and to In Review when its pull
   request leaves draft. An issue is Done once its change is on `main`: the promotion pull request lists
   `Closes #<issue>` for every issue it carries, since GitHub reads the keyword only in pull requests into the
-  default branch, and merging it closes them.
+  default branch, and merging it closes them. A task that needs a design choice not yet recorded is blocked by a
+  Design issue for that choice; open the Design issue first if none exists.
 - **Release tags.** Once platform releases are versioned, each is tagged `v<version>` on `main`.
 - Agents commit only on a work branch, never on `dev` or `main`, and commit or push only when asked.
 

@@ -16,3 +16,10 @@ body:
       description: The test or check that shows it is done.
     validations:
       required: true
+  - type: checkboxes
+    id: design
+    attributes:
+      label: Design
+      options:
+        - label: Every design choice this work needs is recorded in `docs/architecture/`, or a Design issue for it blocks this issue.
+          required: true
