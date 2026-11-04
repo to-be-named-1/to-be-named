@@ -8,7 +8,7 @@ category: transform
 language: python
 plan: polars
 image: platform-base
-entry_point: platform.nodes.capped_balance:build
+entry_point: nodes.capped_balance:build
 modes: [batch]
 inputs:
   movements: { type: tabular }

@@ -18,6 +18,7 @@ layout and tooling are recorded there.
 | `proto/` | Protobuf contracts | Protobuf |
 | `units/` | Unit runtime and the units it runs | Python |
 | `sdk/` | Python SDK | Python |
+| `nodes/` | Node types and connectors the platform publishes | Python |
 | `webapp/` | Web application | TypeScript |
 | `tools/` | Scripts behind the documentation and IR checks | Python, shell |
 | `docs/` | Architecture record and IR specification | Markdown, Structurizr DSL |

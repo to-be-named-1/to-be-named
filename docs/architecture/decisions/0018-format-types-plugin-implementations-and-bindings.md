@@ -8,12 +8,13 @@ Applies to: platform.controlPlane, platform.unitRuntime, tenantAdmin
 Accepted
 
 Amended by [49. Source probes](0049-source-probes.md)
+Amended by [62. Source reads and publication](0062-source-reads-and-publication.md)
 
 ## Decision
 
 A data format is a **type** defined once by the platform; plugins are **implementations** of a type. Every dataset is bound to exactly one pinned implementation. Several implementations and versions of a type may coexist in the architecture, but by policy a project uses one per type unless an administrator allows more.
 
-- **Plugin kinds.** Two kinds of plugin exist, both of which may come from third parties: **dataset-family plugins**, which describe what data is, and **node plugins**, which describe what is done to it. Connectors to source and target systems are node plugins.
+- **Plugin kinds.** Three kinds of plugin exist, all of which may come from third parties: **dataset-family plugins**, which describe what data is; **node plugins**, which describe what is done to it, deliveries to target systems included as nodes with side effects; and **connectors** to source systems, which implement a reader interface that probe and execution units call and derivation never does ([D62](0062-source-reads-and-publication.md)).
 - **Type.** A namespaced identifier with a specification version, such as `genomics/bam` v1, reusing established vocabularies such as the EDAM format ontology where they exist. The type owns three things: the **contract schema** (what a contract for this format may state), the **reader protocol** nodes program against, and a **conformance suite** of files that must validate, files that must fail, and pairs a comparator must judge equivalent or different.
 - **Manifest.** A plugin declares its identity and version, the type and type version it implements, its pinned runtime image, the file-group layout of one item (roles and filename patterns), any linked items, and which optional capabilities it provides — including splittability.
 - **Functions.** A plugin implements `validate` and `metadata`, which are required, and optionally `profile`, `preview`, `compare`, `canonicalize`, `open` (a reader conforming to the type's protocol) and `splits`. A plugin providing only the required functions is fully usable; absent capabilities degrade to file listings, byte-level comparison, input-addressed caching and whole-file processing.
@@ -24,7 +25,7 @@ A data format is a **type** defined once by the platform; plugins are **implemen
 - **Conformance.** A plugin must pass the type's conformance suite to claim the type. The suite bounds how far implementations may disagree about validity and equivalence; they may still differ in performance, preview quality and additional statistics.
 - **Upgrades.** Upgrading a binding to a newer plugin version is explicit but inexpensive: a bulk action revalidates the selected datasets and reports any whose outcome would change before the switch is committed.
 - **Later.** Taking presentation capabilities (preview, profile) from a different implementation than the semantic ones (contract, validation, comparison, hashing) is excluded from the first release.
-- **Probes.** Amended by [D49](0049-source-probes.md): a connector, as a node plugin, may implement an optional `probe` function that returns a source's current version or position without reading its data.
+- **Probes.** Amended by [D49](0049-source-probes.md): a connector may implement an optional `probe` function that returns a source's current version or position without reading its data. A connector to a source system also implements `schema`, which returns the source's schema from metadata, and `open`, which makes its data available to a unit under the name a compiled plan gives it ([D62](0062-source-reads-and-publication.md)).
 
 ## Follow-ups
 

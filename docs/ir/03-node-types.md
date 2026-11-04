@@ -4,7 +4,7 @@ What a node type declares, how its parameters are typed and checked, what the pl
 
 ## Node-type documents
 
-A node-type document, of kind `node_type`, describes one version of one node type: its contract and a reference to its implementation. The SDK generates node-type documents from a node type's code, for built-in node types and plugins alike. Built-in node types, plugins and code nodes are compiled, planned and run in the same way; none has a path of its own.
+A node-type document, of kind `node_type`, describes one version of one node type: its contract and a reference to its implementation. The SDK generates node-type documents from a node type's code, for built-in node types and plugins alike. A node-type document MAY also be written by hand, and a reader holds it to the same rules. Built-in node types, plugins and code nodes are compiled, planned and run in the same way; none has a path of its own.
 
 ```yaml
 ir_version: 0
@@ -14,7 +14,7 @@ version: 1
 title: Flag outliers
 language: python
 image: platform-base
-entry_point: platform.nodes.outliers:run
+entry_point: example_nodes.outliers:run
 modes: [batch]
 inputs:
   data: { type: tabular }
@@ -59,14 +59,14 @@ A plan can be fused with its neighbors into one query or lazy plan, and its outp
 
 - The builder receives only inputs that hold no data: unbound Ibis tables, or Polars lazy frames whose sources fail when read. Code that needs data therefore fails as it is built, and the reader MUST reject the node.
 - The builder MUST return the kind of plan that `plan` names: an Ibis expression or a Polars lazy frame. Otherwise the reader MUST reject the node, stating what the builder returned.
-- Every leaf of the returned plan MUST be one of the inputs given to the builder, or a constant.
+- Every leaf of the returned plan MUST be one of the inputs given to the builder, which the derivation request names, or a constant that travels inside the compiled plan: a literal of an Ibis plan, or a frame held inside a serialized Polars plan. A table that an Ibis builder creates in memory compiles into a reference to a table registered in the builder's own session, and the reader MUST reject it ([D62](../architecture/decisions/0062-source-reads-and-publication.md)).
 - A builder's result MUST depend only on the input schemas and parameter values, by which built plans are cached. A value that varies between runs, such as the time of the run, is passed as a parameter.
 - A plan MAY call functions that run inside the engine, over columns or over batches of rows. The platform cannot analyze them, so each capability they hide degrades on its own: the columns they produce have task-level lineage, for example.
 - A SQL node's query MUST parse and compile in its dialect.
 
 A reader reports these errors when the node is edited and when the SDK generates the node type, so that none first appears in a run.
 
-Plans are built only in the data plane, in units that receive schemas and parameter values but no data, credentials or network. The result is the plan's output schemas and its compiled plan: the query in the dialect of the engine chosen for it, or the serialized lazy plan. A unit that runs the node runs the compiled plan and never calls the builder. Results are cached per tenant by node-type version and image, input schemas, parameter values and, for a compiled plan, its dialect. The control plane never runs a node's code.
+Plans are built only in the data plane, in units that receive schemas and parameter values but no data, credentials or network. The result is the plan's output schemas and its compiled plan, the query in the dialect of the engine chosen for it or the serialized lazy plan, with the expressions of its value outputs. A unit that runs the node runs the compiled plan and never calls the builder. Results are cached per tenant by node-type version and image, input schemas, parameter values and, for a compiled plan, its dialect. The control plane never runs a node's code.
 
 `image` is `platform-base`, the platform's base image, or an image digest. `entry_point` is a Python callable written `module:function` for `python`, the query for `sql`, and an executable for `command`.
 
@@ -124,6 +124,8 @@ A node in a workflow gives each parameter a fixed value or a CEL expression, and
 
 `values` maps value-output names, which are identifiers, to schemas of the same profile, without the formats `column`, `column_selector`, `binding` and `secret`.
 
+A plan node's value outputs are expressions over its plan, which derivation compiles with the plan and the unit that runs the node evaluates over its output; an eager node's code returns them. The row count of every output is available to expressions without being declared ([D63](../architecture/decisions/0063-python-node-sdk.md)).
+
 ## Execution properties
 
 | Field | Meaning |
@@ -144,6 +146,6 @@ The memory class of an Ibis or SQL plan is derived from its compiled query. Ever
 
 ## Code nodes
 
-A code node runs a file under `code/` written in one of the languages and following an interface of that language: for Python, the plan interfaces of Ibis and Polars, or an eager interface. A reader derives the node's contract, its inputs, outputs, value outputs and parameter schemas, and whether it is a plan, from the file's signature and annotations by static analysis, without executing it. A workflow therefore gives a code node only its file, its wiring and its parameter values. Annotations MUST be literal and map onto the parameter profile.
+A code node runs a file under `code/` written in one of the languages and following an interface of that language: for Python, the plan interfaces of Ibis and Polars, or an eager interface ([D63](../architecture/decisions/0063-python-node-sdk.md)). A reader derives the node's contract, its inputs, outputs, value outputs and parameter schemas, and whether it is a plan, from the file's signature and annotations by static analysis, without executing it. A workflow therefore gives a code node only its file, its wiring and its parameter values. Annotations MUST be literal and map onto the parameter profile.
 
 A `command` code node declares its contract in the workflow, and that declaration is its interface, since a command has no signature to analyze.
