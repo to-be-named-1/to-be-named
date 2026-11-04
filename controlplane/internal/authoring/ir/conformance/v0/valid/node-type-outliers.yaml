@@ -6,7 +6,7 @@ version: 1
 title: Flag outliers
 language: python
 image: platform-base
-entry_point: platform.nodes.outliers:run
+entry_point: nodes.outliers:run
 modes: [batch]
 inputs:
   data: { type: tabular }

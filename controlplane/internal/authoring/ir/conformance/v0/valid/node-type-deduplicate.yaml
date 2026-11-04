@@ -8,7 +8,7 @@ category: transform
 language: python
 plan: ibis
 image: platform-base
-entry_point: platform.nodes.deduplicate:build
+entry_point: nodes.deduplicate:build
 dialects: [postgres, snowflake]
 modes: [batch]
 inputs:

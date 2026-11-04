@@ -28,7 +28,10 @@ package names `units` and `sdk` are placeholders. Do not invent a product name.
 | `internal/` | Go code shared between containers | Backend |
 | `proto/` | Protobuf contracts | Shared |
 | `units/` | Unit runtime and the units it runs | Data |
-| `sdk/` | Python SDK: interfaces node code follows, generation of node-type documents and IR | Data |
+| `sdk/` | Python SDK: interfaces node code follows, derivation and execution of plans, generation of node-type documents and IR | Data |
+| `nodes/` | Node types the platform publishes, reaching the runtime only through `sdk` | Data |
+| `connectors/` | Connectors to source systems the platform publishes, reaching the runtime only through `sdk` | Data |
+| `families/` | Dataset-family implementations the platform publishes, reaching the runtime only through `sdk` | Data |
 | `webapp/` | Web application | Frontend |
 | `tools/` | Scripts behind the documentation, IR and CI checks | Shared |
 | `docs/` | Architecture record and IR specification | Design |
@@ -63,9 +66,10 @@ push trigger either: a second run on the same commit reports checks of the same 
 - **Go.** One module at the root. Packages follow bounded contexts; never import another container's
   `internal/`. Tests use the standard library and go-cmp; the IR reader's tests are driven by the conformance
   corpus. Formatting and lint come from `.golangci.yml`.
-- **Python.** A uv workspace (`units`, `sdk`), Python 3.14, src layout. ruff for lint and format, pyright for
-  types, pytest for tests. Give test files unique names across packages. Node code reaches the runtime only
-  through the interfaces in `sdk`, built-in node types included.
+- **Python.** A uv workspace (`units`, `sdk`, `nodes`, `connectors`, `families`), Python 3.14, src layout. ruff
+  for lint and format, pyright for types, pytest for tests. Give test files unique names across packages. Node
+  code reaches the runtime only through the interfaces in `sdk`, built-in node types included; `units`, `nodes`,
+  `connectors` and `families` never import one another.
 - **TypeScript.** Node 26, pnpm, React, Vite, TypeScript, Vitest and Biome, in `webapp/`. Biome lints and
   formats (`pnpm --dir webapp format` applies its fixes), `tsc` checks types and Vitest runs the tests in jsdom.
 - **Comments only where needed.** Add a comment only when something is non-obvious: a reason the code cannot
@@ -109,7 +113,8 @@ push trigger either: a second run on the same commit reports checks of the same 
 - **Project status.** Move the issue to In Progress when its branch is created and to In Review when its pull
   request leaves draft. An issue is Done once its change is on `main`: the promotion pull request lists
   `Closes #<issue>` for every issue it carries, since GitHub reads the keyword only in pull requests into the
-  default branch, and merging it closes them.
+  default branch, and merging it closes them. A task that needs a design choice not yet recorded is blocked by a
+  Design issue for that choice; open the Design issue first if none exists.
 - **Release tags.** Once platform releases are versioned, each is tagged `v<version>` on `main`.
 - Agents commit only on a work branch, never on `dev` or `main`, and commit or push only when asked.
 
