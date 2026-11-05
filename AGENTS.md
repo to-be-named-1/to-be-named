@@ -28,9 +28,12 @@ package names `units` and `sdk` are placeholders. Do not invent a product name.
 | `internal/` | Go code shared between containers | Backend |
 | `proto/` | Protobuf contracts | Shared |
 | `units/` | Unit runtime and the units it runs | Data |
-| `sdk/` | Python SDK: interfaces node code follows, generation of node-type documents and IR | Data |
+| `sdk/` | Python SDK: interfaces node code follows, derivation and execution of plans, generation of node-type documents and IR | Data |
+| `nodes/` | Node types the platform publishes, reaching the runtime only through `sdk` | Data |
+| `connectors/` | Connectors to source systems the platform publishes, reaching the runtime only through `sdk` | Data |
+| `families/` | Dataset-family implementations the platform publishes, reaching the runtime only through `sdk` | Data |
 | `webapp/` | Web application | Frontend |
-| `tools/` | Scripts behind the documentation and IR checks | Shared |
+| `tools/` | Scripts behind the documentation, IR and CI checks | Shared |
 | `docs/` | Architecture record and IR specification | Design |
 
 Contracts (the IR schema and corpus, `proto/`) are shared: change both sides of a contract in the same pull
@@ -51,14 +54,22 @@ request, and add conformance cases with every schema change.
 Run the checks for every area you touched before proposing a commit. Docker is required for the Structurizr,
 IR and lint checks.
 
+In CI, every workflow starts on every pull request, and on nothing else, since `main` and `dev` require all
+five checks (`go-check`, `python-check`, `web-check`, `architecture-check`, `ir-schema-check`). A first job
+compares the change with the pull request's base (`tools/ci/changed.sh`), and a check whose files did not
+change is skipped, which counts as passing. Filter by paths inside a job, never in a workflow's `on:` trigger:
+a workflow that never starts leaves its required check waiting, and the pull request cannot merge. Do not add a
+push trigger either: a second run on the same commit reports checks of the same names against another base.
+
 ## Code conventions
 
 - **Go.** One module at the root. Packages follow bounded contexts; never import another container's
   `internal/`. Tests use the standard library and go-cmp; the IR reader's tests are driven by the conformance
   corpus. Formatting and lint come from `.golangci.yml`.
-- **Python.** A uv workspace (`units`, `sdk`), Python 3.14, src layout. ruff for lint and format, pyright for
-  types, pytest for tests. Give test files unique names across packages. Node code reaches the runtime only
-  through the interfaces in `sdk`, built-in node types included.
+- **Python.** A uv workspace (`units`, `sdk`, `nodes`, `connectors`, `families`), Python 3.14, src layout. ruff
+  for lint and format, pyright for types, pytest for tests. Give test files unique names across packages. Node
+  code reaches the runtime only through the interfaces in `sdk`, built-in node types included; `units`, `nodes`,
+  `connectors` and `families` never import one another.
 - **TypeScript.** Node 26, pnpm, React, Vite, TypeScript, Vitest and Biome, in `webapp/`. Biome lints and
   formats (`pnpm --dir webapp format` applies its fixes), `tsc` checks types and Vitest runs the tests in jsdom.
 - **Comments only where needed.** Add a comment only when something is non-obvious: a reason the code cannot
@@ -89,7 +100,9 @@ IR and lint checks.
 - **Promotion.** `dev` is promoted to `main` at the end of each iteration, once verified, through a pull request
   merged with a merge commit. Never squash or rebase a promotion: `dev` would lack the commits it put on `main`,
   and every later promotion would conflict. A fix that cannot wait branches from `main` as `fix/<issue>-<slug>`
-  and merges into `main`, which is then merged back into `dev`.
+  and is squashed into `main`. Its commit is then cherry-picked onto a branch from `dev` and merged into `dev`
+  through a pull request, since `dev` keeps a linear history and accepts no merge commits; the next promotion
+  carries the same change on both sides and merges cleanly.
 - **Keeping a branch current.** Rebase it onto `dev` and push with `--force-with-lease`, or merge `dev` into it
   when others share the branch. Never force-push `dev`, `main` or another person's branch.
 - **Commit messages.** [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/), on one line:
@@ -100,7 +113,8 @@ IR and lint checks.
 - **Project status.** Move the issue to In Progress when its branch is created and to In Review when its pull
   request leaves draft. An issue is Done once its change is on `main`: the promotion pull request lists
   `Closes #<issue>` for every issue it carries, since GitHub reads the keyword only in pull requests into the
-  default branch, and merging it closes them.
+  default branch, and merging it closes them. A task that needs a design choice not yet recorded is blocked by a
+  Design issue for that choice; open the Design issue first if none exists.
 - **Release tags.** Once platform releases are versioned, each is tagged `v<version>` on `main`.
 - Agents commit only on a work branch, never on `dev` or `main`, and commit or push only when asked.
 
