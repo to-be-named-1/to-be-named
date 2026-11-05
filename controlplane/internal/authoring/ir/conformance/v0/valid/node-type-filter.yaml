@@ -1,0 +1,18 @@
+ir_version: 0
+kind: node_type
+name: filter
+version: 1
+title: Filter rows
+language: python
+plan: ibis
+image: platform-base
+entry_point: platform.nodes.filter:build
+modes: [batch]
+inputs:
+  data: { type: tabular }
+outputs:
+  result: { type: tabular, schema: derived }
+params:
+  column: { type: string, format: column, of: data }
+  operator: { type: string, enum: [eq, ne, lt, le, gt, ge], default: ge }
+  threshold: { type: number, default: 0 }

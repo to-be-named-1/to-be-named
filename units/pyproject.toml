@@ -3,8 +3,7 @@ name = "units"
 version = "0.0.0"
 description = "The unit runtime and the units it runs: execution, derivation, probe, projection, publication and sample building."
 requires-python = ">=3.14"
-dependencies = ["sdk"]
-
+dependencies = ["ibis-framework[duckdb]>=12.0.0", "sdk"]
 [tool.uv.sources]
 sdk = { workspace = true }
 

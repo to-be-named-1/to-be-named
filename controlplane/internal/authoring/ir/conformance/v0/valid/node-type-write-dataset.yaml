@@ -1,0 +1,19 @@
+# Valid: a built-in eager node type with an external side effect, which writes its input to a dataset.
+ir_version: 0
+kind: node_type
+name: write_dataset
+version: 1
+title: Write dataset
+category: sink
+language: python
+image: platform-base
+entry_point: units.write_dataset:run
+modes: [batch]
+inputs:
+  data: { type: tabular }
+params:
+  target: { type: string, format: binding }
+  mode: { type: string, enum: [append, overwrite], default: append }
+values:
+  rows_written: { type: integer }
+side_effects: { target: target }
