@@ -12,7 +12,7 @@
 !element platform.commandUnit {
     tags "Later"
 }
-!element platform.publicationUnit {
+!element platform.maintenanceUnit.publication {
     tags "Later"
 }
 

@@ -14,6 +14,7 @@ Amends [40. Protocol between the control and data planes](0040-protocol-between-
 Amends [42. Catalog persistence](0042-catalog-persistence.md)
 Amends [43. Scheduling and capacity](0043-scheduling-and-capacity.md)
 Amended by [50. Development mode](0050-development-mode.md)
+Amended by [64. Agent protocol](0064-agent-protocol.md)
 
 ## Context
 
@@ -28,7 +29,7 @@ Amended by [50. Development mode](0050-development-mode.md)
 How leases are renewed and ended, how commits are fenced, how write leases are held, how the state machines of [D31](0031-execution-state-model.md) are encoded, and how events reach their handlers.
 
 - **Lease renewals.** The leader holds each lease's last renewal in memory, timed by its monotonic clock; Postgres records only the grant, as the attempt row, and the end. A new leader treats every active attempt as renewed at takeover, which is the grace period of [D40](0040-protocol-between-the-control-and-data-planes.md), so nothing is lost by not persisting renewals. Persisting them would write a row for every running attempt at every heartbeat.
-- **Offers and claims.** An attempt row is committed before the attempt is offered on any long-poll, so a failover never loses an attempt an agent is running. An offer not claimed within a timeout is offered again, and a claim is a conditional update on the attempt that only one replica can win.
+- **Offers and claims.** An attempt row is committed before the attempt is offered on any long-poll, so a failover never loses an attempt an agent is running. An offer not claimed within a timeout, one heartbeat interval by default ([D64](0064-agent-protocol.md)), is offered again, and a claim is a conditional update on the attempt that only one replica can win.
 - **Stop set.** A heartbeat lists the attempts the agent is renewing; the response lists those the control plane no longer recognizes — lost, fenced, canceled or superseded — and the agent stops them, so orphaned containers stop within one heartbeat rather than at the hard limit.
 - **Lost attempts.** When a lease expires, the leader records the attempt's end with the outcome lost in an epoch-fenced transaction ([D47](0047-control-plane-structure.md)), and the run driver applies the platform retry budget ([D31](0031-execution-state-model.md)).
 - **Sequence numbers.** A state-bearing message numbered at or below the last one applied receives the recorded answer; the next number is applied; anything further ahead is refused and resent ([D40](0040-protocol-between-the-control-and-data-planes.md)).
@@ -55,4 +56,4 @@ How leases are renewed and ended, how commits are fenced, how write leases are h
 
 ## Follow-ups
 
-- Defaults for the offer timeout, the delivery attempts before a dead letter and their back-off; how many times a restatement re-stages conflicting intervals before reporting them.
+- Defaults for the delivery attempts before a dead letter and their back-off; how many times a restatement re-stages conflicting intervals before reporting them.

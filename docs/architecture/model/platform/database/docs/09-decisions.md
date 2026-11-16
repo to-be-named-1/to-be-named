@@ -13,3 +13,5 @@
 | [D50]({workspace}/decisions/Platform#50) | Heads, versions and partition versions keyed by line; development run records in separate time partitions |
 | [D59]({workspace}/decisions/Platform#59) | Column lineage stored per run and per column with its label, lineage that does not change between runs stored once |
 | [D62]({workspace}/decisions/Platform#62) | Observed schemas of external datasets stored per environment binding |
+| [D64]({workspace}/decisions/Platform#64) | Enrollments, replica keys and their rotation lineage; the last message of each attempt with its digest and answer, and the enrollment and replica behind each claim, renewal and commit |
+| [D65]({workspace}/decisions/Platform#65) | The hash of each attempt's token, and the intents recorded before side-effecting steps |

@@ -20,7 +20,7 @@ Development begins with the slice set by [D29]({workspace}/decisions/Platform#29
 
 From [D29]({workspace}/decisions/Platform#29): the other five dataset families, HPC agents and cloud batch, warehouse pushdown with connection policy, and the remaining deployment topologies. The license is chosen before the repository is made public ([D5]({workspace}/decisions/Platform#5)).
 
-The model tags as Later the elements the first slice does not build or use: the CLI, the session unit, the command unit and the publication unit; the HPC scheduler, the cloud batch service, warehouses, the lakehouse catalog, notification channels and the CI system.
+The model tags as Later the elements the first slice does not build or use: the CLI, the session unit, the command unit and the maintenance unit's publication job; the HPC scheduler, the cloud batch service, warehouses, the lakehouse catalog, notification channels and the CI system.
 
 ### Phasing set by decisions
 

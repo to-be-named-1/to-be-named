@@ -138,7 +138,8 @@ The substrate all three disciplines run on. Everything here is discipline-agnost
   - *Note:* Development runs are attributed to their triggering principal and project and marked as development ([D50]({workspace}/decisions/Platform#50)).
 - **CORE 4.6** — Retain task metrics as time series over the life of a task rather than as end-of-run summaries.
   - *Note:* Supports straggler and skew analysis now, and lag, watermark skew and backpressure without schema change later ([D12]({workspace}/decisions/Platform#12), Seam 10).
-- **CORE 4.7** — Keep logs and metrics within the customer's environment in hybrid deployments, with live tailing proxied through the execution agent.
+- **CORE 4.7** — Keep logs and metrics within the customer's environment in hybrid deployments, with logs read live and afterwards from the customer's own storage.
+  - *Note:* The web application reads logs from customer storage, so their content never passes through the control plane; where browsers cannot reach that storage, logs are relayed through the agent and the control plane by an Admin's choice for the pool ([D65]({workspace}/decisions/Platform#65)).
 - **CORE 4.8** — Tag every query the platform runs in a warehouse, and every job it runs on a customer backend, with the platform, workflow and run, and report usage per workflow.
   - *Note:* Makes spend caused by the platform visible in the customer's own query history and infrastructure accounting ([D22]({workspace}/decisions/Platform#22), [D28]({workspace}/decisions/Platform#28), [S22](07-open-items.md#7.22)). Tags carry the run's mode, so development spend is separable ([D50]({workspace}/decisions/Platform#50)).
 

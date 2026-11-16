@@ -2,7 +2,7 @@ database = container "Control-plane database" "The control plane's only stateful
     !docs docs
 
     properties {
-        "decisions" "D5, D12, D30, D42, D44, D45, D47, D48, D50, D59, D62"
+        "decisions" "D5, D12, D30, D42, D44, D45, D47, D48, D50, D59, D62, D64, D65"
     }
 
     // One schema per bounded context (D47), grouped like the control-plane components that own them;
@@ -21,10 +21,10 @@ database = container "Control-plane database" "The control plane's only stateful
         catalog = component "Catalog schema" "Datasets, versions, partition versions, manifests, positions, frontiers, read records, the cache index, projection state and collection marks." "Postgres schema" "Database"
     }
     group "Orchestration" {
-        orchestration = component "Orchestration schema" "Triggers, materialization requests, backfills, runs and their plans, task runs, attempts, map groups and work rows." "Postgres schema" "Database"
+        orchestration = component "Orchestration schema" "Triggers, materialization requests, backfills, runs and their plans, task runs, attempts with their side-effect intents, map groups and work rows." "Postgres schema" "Database"
     }
     group "Dispatch" {
-        dispatch = component "Dispatch schema" "Agent pools, capacity domains, agents and their keys, queues and write leases." "Postgres schema" "Database"
+        dispatch = component "Dispatch schema" "Agent pools, capacity domains, enrollments, replica keys and their rotation lineage, queues and write leases." "Postgres schema" "Database"
     }
     group "Provenance" {
         provenance = component "Provenance schema" "Lineage, reproducibility tiers, verification claims and comparator verdicts." "Postgres schema" "Database"

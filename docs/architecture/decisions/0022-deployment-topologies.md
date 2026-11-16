@@ -9,6 +9,7 @@ Accepted
 
 Amended by [29. First development slice](0029-first-development-slice.md)
 Amended by [40. Protocol between the control and data planes](0040-protocol-between-the-control-and-data-planes.md)
+Amended by [65. Unit specification and agent–unit contract](0065-unit-specification-and-agent-unit-contract.md)
 
 ## Context
 
@@ -24,7 +25,7 @@ Four options are supported, ordered by how much the customer controls: **fully m
 - **Outbound only.** Data-plane execution agents connect outward to the control plane and pull work. No inbound connectivity into a customer network is ever required. The control-to-data protocol must therefore work across networks, tolerate latency and interruption, and be pull-based. Amended by [D29](0029-first-development-slice.md): the same pull-based agent is used in every topology, including self-hosted and single-machine deployments.
 - **Credentials.** In the hybrid topology, credentials for customer storage are minted inside the customer's environment by the agent. The hosted control plane never holds them. Amended by [D40](0040-protocol-between-the-control-and-data-planes.md): this applies in every deployment, not only hybrid, together with secrets, which the agent resolves from references.
 - **What crosses.** Only metadata, statistics, events and pre-computed previews cross to the hosted planes. Previews and samples obey the classification of their source dataset, and a customer may disable them for sensitive datasets.
-- **Telemetry.** A customer may keep logs and metrics within its own environment, with live tailing proxied through the agent, because logs may contain sensitive content.
+- **Telemetry.** A customer may keep logs and metrics within its own environment, because logs may contain sensitive content. Amended by [D65](0065-unit-specification-and-agent-unit-contract.md): logs are kept in customer storage and read from it by the web application, or relayed through the agent where browsers cannot reach that storage.
 - **Primary model.** Bring-your-own-compute is the primary model: execution runs on the customer's own infrastructure and the vendor coordinates. Hybrid and self-hosted are the first-class topologies. Fully managed serves trials and organizations that do not want to manage their own data-plane infrastructure, and managed with customer storage is retained unchanged.
 - **Compute.** A bring-your-own-compute deployment provides a container-capable backend: Kubernetes, cloud batch or an HPC cluster. A warehouse alone runs only pushdown work; in-process nodes on DuckDB or Polars, Python code nodes and command-line tools require container compute. A warehouse-native container service may later serve as a backend for customers whose only compute is a warehouse.
 - **Images.** Image builds and the image registry may run in the customer's environment, and images are referenced by digest wherever they are stored ([CORE 1.10]({workspace}/documentation#3), [CORE 5.1]({workspace}/documentation#3)). HPC clusters commonly run images through Apptainer rather than Docker.

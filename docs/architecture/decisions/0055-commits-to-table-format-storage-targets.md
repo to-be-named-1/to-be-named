@@ -1,7 +1,7 @@
 # 55. Commits to table-format storage targets
 
 Date: 2026-10-16
-Applies to: platform.controlPlane, platform.publicationUnit, lakehouseCatalog
+Applies to: platform.controlPlane, platform.maintenanceUnit.publication, lakehouseCatalog
 
 ## Status
 

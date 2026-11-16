@@ -40,11 +40,8 @@ kubernetesEnvironment = deploymentEnvironment "Kubernetes" {
             }
             unitPods = deploymentNode "unit pods" "Launched by the agent, one per attempt, probe or session." "Pod" "" "0..N" {
                 unitRuntime = containerInstance platform.unitRuntime dataplane
-                probeUnit = containerInstance platform.probeUnit dataplane
+                maintenanceUnit = containerInstance platform.maintenanceUnit dataplane
                 derivationUnit = containerInstance platform.derivationUnit dataplane
-                projectionUnit = containerInstance platform.projectionUnit dataplane
-                publicationUnit = containerInstance platform.publicationUnit dataplane
-                sampleBuilder = containerInstance platform.sampleBuilder dataplane
                 sessionUnit = containerInstance platform.sessionUnit dataplane
                 commandUnit = containerInstance platform.commandUnit dataplane
             }
