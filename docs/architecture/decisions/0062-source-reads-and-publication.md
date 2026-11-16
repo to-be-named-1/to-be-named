@@ -1,7 +1,7 @@
 # 62. Source reads and publication
 
 Date: 2026-11-04
-Applies to: platform.webApp, platform.controlPlane, platform.database, platform.unitRuntime, platform.derivationUnit, platform.probeUnit
+Applies to: platform.webApp, platform.controlPlane, platform.database, platform.unitRuntime, platform.derivationUnit, platform.maintenanceUnit.probe
 
 ## Status
 

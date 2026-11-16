@@ -9,6 +9,7 @@ Accepted
 
 Amends [40. Protocol between the control and data planes](0040-protocol-between-the-control-and-data-planes.md)
 Amends [44. Minimum technology stack](0044-minimum-technology-stack.md)
+Amended by [64. Agent protocol](0064-agent-protocol.md)
 
 ## Context
 
@@ -16,7 +17,7 @@ Amends [44. Minimum technology stack](0044-minimum-technology-stack.md)
 
 ## Decision
 
-In every deployment, the agent signs every request and the control plane signs every response with HTTP Message Signatures (RFC 9421), using Ed25519; message bodies are covered through Content-Digest (RFC 9530), and a response signature also covers the request it answers. Enrollment registers the agent's public key, bound to its tenant and pool, and the agent pins the control plane's signing key ([D44](0044-minimum-technology-stack.md)); keys are rotated and revoked in place of certificates. TLS still carries every connection, for confidentiality; mutual TLS and client certificates are not used. Replays are handled as [D44](0044-minimum-technology-stack.md) provides: idempotency, per-attempt sequence numbers and server-issued nonces, never wall-clock time.
+In every deployment, the agent signs every request and the control plane signs every response with HTTP Message Signatures (RFC 9421), using Ed25519; message bodies are covered through Content-Digest (RFC 9530), and a response signature also covers the request it answers. Enrollment registers an enrollment key, bound to its tenant and pool, with which each replica registers a key of its own that signs its traffic, and the agent pins the control plane's root key, which delegates the keys that sign responses ([D44](0044-minimum-technology-stack.md), [D64](0064-agent-protocol.md)); keys are rotated and revoked in place of certificates. TLS still carries every connection, for confidentiality; mutual TLS and client certificates are not used. Replays are handled as [D44](0044-minimum-technology-stack.md) provides: idempotency, per-attempt sequence numbers and server-issued nonces, never wall-clock time.
 
 ## Consequences
 

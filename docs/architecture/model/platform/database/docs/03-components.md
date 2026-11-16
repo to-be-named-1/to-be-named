@@ -10,8 +10,8 @@ Each bounded context of the control plane owns one schema, grouped on the diagra
 | Authoring schema | Definitions, drafts, platform-held versions, compiled workflows, deployments and environment bindings. | Authoring | Definitions and drafts, compiler, git synchronization, deployment |
 | Plugin registry schema | Format types, implementations, node types, allowed implementations and images. | Plugin registry | Plugin registry |
 | Catalog schema | Datasets, versions, partition versions, manifests, positions, frontiers, read records, the cache index, projection state and collection marks. | Catalog | Dataset catalog, cache index, projection and publication scheduling, collection marking, probe scheduling, adoption |
-| Orchestration schema | Triggers, materialization requests, backfills, runs and their plans, task runs, attempts, map groups and work rows. | Orchestration | Run driver, reconciler |
-| Dispatch schema | Agent pools, capacity domains, agents and their keys, queues and write leases. | Dispatch | Scheduler, dispatcher |
+| Orchestration schema | Triggers, materialization requests, backfills, runs and their plans, task runs, attempts with their side-effect intents, map groups and work rows. | Orchestration | Run driver, reconciler |
+| Dispatch schema | Agent pools, capacity domains, enrollments, replica keys and their rotation lineage, queues and write leases. | Dispatch | Scheduler, dispatcher |
 | Provenance schema | Lineage, reproducibility tiers, verification claims and comparator verdicts. | Provenance | Provenance read model |
 | Shared schema | Tables owned by no context: the outbox and the leader epoch. | None | Outbox and work-row delivery and leadership; the dataset catalog and the run driver write outbox rows in their own transactions |
 

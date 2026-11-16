@@ -2,7 +2,7 @@
 
 ### Leader failure
 
-The leader's hot state — queues and fair-share usage per capacity domain, lease renewals, and the counters of map groups and of each run's outstanding task runs — lives in its memory. A standby that takes leadership increments the epoch, waits one transaction timeout and a margin so that the old leader's transactions have ended, rebuilds that state from Postgres and treats every active attempt as renewed; agents' retries then reach it ([D47]({workspace}/decisions/Platform#47)). The [leader failover](05-key-flows.md#5.6) flow shows the sequence.
+The leader's hot state — queues and fair-share usage per capacity domain, lease renewals, replicas' liveness and the owners of attempts, nonces, and the counters of map groups and of each run's outstanding task runs — lives in its memory. A standby that takes leadership increments the epoch, waits one transaction timeout and a margin so that the old leader's transactions have ended, rebuilds that state from Postgres and treats every active attempt as renewed; agents' retries then reach it ([D47]({workspace}/decisions/Platform#47)). The [leader failover](05-key-flows.md#5.6) flow shows the sequence.
 
 ### Invariants in the database
 
@@ -10,7 +10,7 @@ Nothing correct depends on leadership being exclusive. Row locks, conditional up
 
 ### Control-plane outage
 
-An outage of the whole control plane stops new dispatch and commits, but not running work ([D21]({workspace}/decisions/Platform#21)). Side-effecting steps pause, since they cannot confirm their leases, and agents buffer their commit requests ([D40]({workspace}/decisions/Platform#40)). After a restart, no lease is declared lost until a grace period of at least one lease duration has passed, so the outage itself fails no work ([D40]({workspace}/decisions/Platform#40), [D43]({workspace}/decisions/Platform#43)).
+An outage of the whole control plane stops new dispatch and commits, but not running work ([D21]({workspace}/decisions/Platform#21)). Side-effecting steps pause, since they cannot confirm their leases, and agents hold their commit requests, of which units have already staged a durable copy ([D40]({workspace}/decisions/Platform#40), [D64]({workspace}/decisions/Platform#64)). After a restart, no lease is declared lost until a grace period of at least one lease duration has passed, so the outage itself fails no work ([D40]({workspace}/decisions/Platform#40), [D43]({workspace}/decisions/Platform#43)).
 
 ### Lost events
 

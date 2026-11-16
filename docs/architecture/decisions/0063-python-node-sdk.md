@@ -1,7 +1,7 @@
 # 63. Python node SDK
 
 Date: 2026-11-04
-Applies to: platform.controlPlane, platform.unitRuntime, platform.derivationUnit, platform.probeUnit
+Applies to: platform.controlPlane, platform.unitRuntime, platform.derivationUnit, platform.maintenanceUnit.probe
 
 ## Status
 

@@ -34,7 +34,7 @@ Previews and node-level inspection data must be sampled and generated at write t
 
 Large fan-out places load on the control plane rather than the data path: 10,000 task runs means 10,000 state records and lease renewals. Batched state transitions, leases and fair queuing are the mechanisms that absorb this.
 
-- **Outcome.** Scale targets, batched state writes, per-agent lease renewal and windowed creation of map task runs. See [D43]({workspace}/decisions/Platform#43).
+- **Outcome.** Scale targets, batched state writes, per-replica lease renewal and windowed creation of map task runs. See [D43]({workspace}/decisions/Platform#43).
 
 ### S5 · Metadata and log growth
 

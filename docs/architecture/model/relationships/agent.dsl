@@ -48,18 +48,6 @@ platform.agent -> credentialIssuer "Mints short-lived storage credentials with" 
     }
 }
 
-platform.agent -> objectStorage "Deletes collected files from, and checks integrity in" "S3 API" {
-    properties {
-        "decisions" "D42"
-    }
-}
-
-platform.agent -> platform.bundledObjectStorage "Deletes collected files from, and checks integrity in" "S3 API" {
-    properties {
-        "decisions" "D42"
-    }
-}
-
 platform.agent -> platform.observability "Forwards logs and metrics to" "" {
     properties {
         "decisions" "D21, D40"
