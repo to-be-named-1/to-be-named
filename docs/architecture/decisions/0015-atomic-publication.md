@@ -1,7 +1,7 @@
 # 15. Atomic publication
 
 Date: 2026-10-11
-Applies to: platform.controlPlane, platform.unitRuntime, platform.publicationUnit, lakehouseCatalog
+Applies to: platform.controlPlane, platform.unitRuntime, platform.maintenanceUnit.publication, lakehouseCatalog
 
 ## Status
 

@@ -67,10 +67,8 @@
         "platform.unitRuntime",
         "platform.sessionUnit",
         "platform.commandUnit",
-        "platform.projectionUnit",
-        "platform.probeUnit",
-        "platform.derivationUnit",
-        "platform.sampleBuilder"
+        "platform.maintenanceUnit",
+        "platform.derivationUnit"
       ],
       "to": [
         "platform.controlPlane",

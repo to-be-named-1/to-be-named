@@ -1,7 +1,7 @@
 # 49. Source probes
 
 Date: 2026-10-11
-Applies to: platform.controlPlane, platform.agent, platform.unitRuntime, platform.probeUnit, dataSources
+Applies to: platform.controlPlane, platform.agent, platform.unitRuntime, platform.maintenanceUnit.probe, dataSources
 
 ## Status
 

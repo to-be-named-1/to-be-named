@@ -7,6 +7,8 @@ Applies to: platform
 
 Accepted
 
+Amended by [65. Unit specification and agent–unit contract](0065-unit-specification-and-agent-unit-contract.md)
+
 ## Context
 
 The control plane and the agent are long-running Go processes that operators install and configure themselves, on a single machine or on Kubernetes ([D22](0022-deployment-topologies.md), [D47](0047-control-plane-structure.md)). Units are not configured that way: a unit fetches its specification from the agent's local endpoint, with its resources, credential scopes and secret references, and secrets are resolved in the data plane ([D40](0040-protocol-between-the-control-and-data-planes.md)). Telemetry is best effort and goes to a configurable sink, a customer may keep logs in its own environment because they may hold sensitive content, and credentials never appear in them ([D22](0022-deployment-topologies.md), [D40](0040-protocol-between-the-control-and-data-planes.md), [CORE 7.3]({workspace}/documentation#3)). The observability stack that ships and stores logs is not chosen; every process still has to write them, in one form, before any of it is.
@@ -24,7 +26,7 @@ The Go processes read their settings from defaults, a file and the environment, 
 - **No named modes.** No setting selects a mode such as development or production that changes several behaviors at once; each behavior, such as the log format, is a setting of its own ([D58](0058-behavior-follows-properties.md)). The binaries read no `.env` files.
 - **Go logging.** `log/slog`, writing one JSON object per line to standard error, or text as a setting. Components receive their logger; the attributes of a request or attempt, such as `tenant_id`, `project_id`, `run_id`, `attempt_id` and `request_id`, are added from its context to every line written for it. Keys are snake_case.
 - **Python logging.** The standard library's `logging`, with a JSON formatter of the platform's own that writes the same keys as the Go processes: `time`, `level` and `msg`, followed by the attributes. The unit runtime configures it; the SDK, a library, never configures handlers.
-- **Shipping.** Processes only write to standard error. Collecting, shipping and storing logs is left to the observability stack ([D40](0040-protocol-between-the-control-and-data-planes.md)).
+- **Shipping.** Processes only write to standard error; units also keep their log stream in customer storage, from which it is read ([D65](0065-unit-specification-and-agent-unit-contract.md)). Collecting, shipping and storing logs is left to the observability stack ([D40](0040-protocol-between-the-control-and-data-planes.md)).
 - **Libraries.** goccy/go-yaml, already used for the IR, reads the file; caarlos0/env reads the environment. Both versions are fixed in `go.mod` ([D60](0060-code-layout-and-tooling.md)).
 
 ## Consequences
@@ -45,6 +47,5 @@ The Go processes read their settings from defaults, a file and the environment, 
 
 ## Follow-ups
 
-- How the output and logs of node code reach the agent, with the agent–unit contract ([D40](0040-protocol-between-the-control-and-data-planes.md)).
 - Configuration of the CLI and the SDK, with their designs (design agenda).
 - Metrics and tracing, with the observability stack (design agenda).

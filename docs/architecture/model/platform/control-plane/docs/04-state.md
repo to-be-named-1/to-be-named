@@ -13,7 +13,10 @@ The leader holds the state of scheduling and leases in memory, so that renewals 
 | State | Rebuilt from |
 |---|---|
 | Queues and fair-share usage per capacity domain | Ready task runs, and usage persisted or derived from attempts, so that a failover does not reset fair share ([D43]({workspace}/decisions/Platform#43)) |
-| Lease renewals | Active attempts, each treated as renewed at takeover; a lease is declared lost only after a grace period of at least one lease duration ([D40]({workspace}/decisions/Platform#40), [D48]({workspace}/decisions/Platform#48)) |
+| Lease renewals, of attempts and sessions | Active attempts and sessions, each treated as renewed at takeover; a lease is declared lost only after a grace period of at least one lease duration ([D40]({workspace}/decisions/Platform#40), [D48]({workspace}/decisions/Platform#48), [D65]({workspace}/decisions/Platform#65)) |
+| Replicas' liveness and capabilities, the owner of each attempt and each pool's capacity reporter | The first heartbeats and calls after takeover; an attempt no replica lists by the end of the grace period is reassigned ([D64]({workspace}/decisions/Platform#64)) |
+| Nonces and their counter windows | Issued afresh at takeover, so that every earlier nonce is stale ([D64]({workspace}/decisions/Platform#64)) |
+| The latest progress of each attempt | The next progress reports; nothing depends on it ([D65]({workspace}/decisions/Platform#65)) |
 | Map-group counters and each run's count of outstanding task runs | Recounted at takeover; the counters are written in batches while the leader runs ([D47]({workspace}/decisions/Platform#47)) |
 
 Correctness never depends on this state: the database's row locks, conditional updates and unique constraints enforce the invariants ([D47]({workspace}/decisions/Platform#47)).

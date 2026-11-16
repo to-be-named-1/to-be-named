@@ -21,3 +21,8 @@ component platform.database "components-database" "The database's schemas: one p
     include *
     autoLayout lr
 }
+
+component platform.maintenanceUnit "components-maintenance-unit" "The platform's own jobs in the data plane, each a component of the one maintenance unit, with what each reads, writes and reports to." {
+    include *
+    autoLayout lr
+}

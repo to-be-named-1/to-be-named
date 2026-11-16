@@ -21,7 +21,7 @@ An item blocks the start of development only if the first code would build it in
 - Placement and its reason recorded by the planner ([D26]({workspace}/decisions/Platform#26) Seam 3)
 - Query and job tagging ([D28]({workspace}/decisions/Platform#28))
 - Byte and row counts per partition on every manifest, and capacity ceilings per backend ([D34]({workspace}/decisions/Platform#34))
-- Commentable IR collections keyed by stable identifier, partition keys stored as columns in managed tabular data, and agent identity checked as possession of the enrolled key ([D44]({workspace}/decisions/Platform#44))
+- Commentable IR collections keyed by stable identifier, partition keys stored as columns in managed tabular data, and agent identity checked as possession of the enrollment and replica keys ([D44]({workspace}/decisions/Platform#44), [D64]({workspace}/decisions/Platform#64))
 - Row-level security enabled and forced on every table, the tenant in every unique constraint and foreign key, owner, application and system database roles, a permission annotation on every API method, clearance on memberships, and drafts held apart from committed definitions ([D45]({workspace}/decisions/Platform#45))
 - An execution-mode field and declared carried state on loop frames, and the loop scope in expressions ([D46]({workspace}/decisions/Platform#46))
 - The tenant on every agent message and agent internals keyed by tenant ([D43]({workspace}/decisions/Platform#43))
