@@ -1,0 +1,21 @@
+[project]
+name = "nodes"
+version = "0.0.0"
+description = "The node types the platform publishes."
+requires-python = ">=3.14"
+dependencies = ["sdk"]
+
+[tool.uv.sources]
+sdk = { workspace = true }
+
+[tool.ruff]
+extend = "../pyproject.toml"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"units".msg = "nodes never imports units: plugins reach the runtime only through the sdk."
+"connectors".msg = "nodes never imports connectors: each kind of plugin depends only on the sdk."
+"families".msg = "nodes never imports families: each kind of plugin depends only on the sdk."
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14"]
+build-backend = "uv_build"

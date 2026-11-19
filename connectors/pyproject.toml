@@ -1,0 +1,21 @@
+[project]
+name = "connectors"
+version = "0.0.0"
+description = "The connectors to source systems the platform publishes."
+requires-python = ">=3.14"
+dependencies = ["sdk"]
+
+[tool.uv.sources]
+sdk = { workspace = true }
+
+[tool.ruff]
+extend = "../pyproject.toml"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"units".msg = "connectors never imports units: plugins reach the runtime only through the sdk."
+"nodes".msg = "connectors never imports nodes: each kind of plugin depends only on the sdk."
+"families".msg = "connectors never imports families: each kind of plugin depends only on the sdk."
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14"]
+build-backend = "uv_build"
