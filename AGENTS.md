@@ -69,7 +69,7 @@ push trigger either: a second run on the same commit reports checks of the same 
 - **Python.** A uv workspace (`units`, `sdk`, `nodes`, `connectors`, `families`), Python 3.14, src layout. ruff
   for lint and format, pyright for types, pytest for tests. Give test files unique names across packages. Node
   code reaches the runtime only through the interfaces in `sdk`, built-in node types included; `units`, `nodes`,
-  `connectors` and `families` never import one another.
+  `connectors` and `families` never import one another, and `sdk` imports none of them.
 - **TypeScript.** Node 26, pnpm, React, Vite, TypeScript, Vitest and Biome, in `webapp/`. Biome lints and
   formats (`pnpm --dir webapp format` applies its fixes), `tsc` checks types and Vitest runs the tests in jsdom.
 - **Comments only where needed.** Add a comment only when something is non-obvious: a reason the code cannot

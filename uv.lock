@@ -4,6 +4,9 @@ requires-python = ">=3.14"
 
 [manifest]
 members = [
+    "connectors",
+    "families",
+    "nodes",
     "sdk",
     "units",
 ]
@@ -25,6 +28,28 @@ wheels = [
 ]
 
 [[package]]
+name = "connectors"
+version = "0.0.0"
+source = { editable = "connectors" }
+dependencies = [
+    { name = "sdk" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "sdk", editable = "sdk" }]
+
+[[package]]
+name = "families"
+version = "0.0.0"
+source = { editable = "families" }
+dependencies = [
+    { name = "sdk" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "sdk", editable = "sdk" }]
+
+[[package]]
 name = "iniconfig"
 version = "2.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -41,6 +66,17 @@ sdist = { url = "https://files.pythonhosted.org/packages/9a/8e/105de02c1322cfada
 wheels = [
     { url = "https://files.pythonhosted.org/packages/54/c8/12811c9b48fde162bb72b6f2e78fada9a247a09d7bb5be2050a5d099c77b/nodeenv-1.11.0-py2.py3-none-any.whl", hash = "sha256:edaa16e6c14d7cf395d75d4bbd5a26390f4dc06501a33b4e76282b02cc688a25", size = 34277, upload-time = "2026-09-26T11:29:19.933Z" },
 ]
+
+[[package]]
+name = "nodes"
+version = "0.0.0"
+source = { editable = "nodes" }
+dependencies = [
+    { name = "sdk" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "sdk", editable = "sdk" }]
 
 [[package]]
 name = "packaging"

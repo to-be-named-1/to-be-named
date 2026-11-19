@@ -23,7 +23,7 @@ jobs:
       - id: diff
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
-        run: echo "run=$(sh tools/ci/changed.sh '^(pyproject\.toml|uv\.lock|\.python-version|units/.*|sdk/.*|Makefile|\.github/workflows/python\.yml|tools/ci/.*)$')" >> "$GITHUB_OUTPUT"
+        run: echo "run=$(sh tools/ci/changed.sh '^(pyproject\.toml|uv\.lock|\.python-version|units/.*|sdk/.*|nodes/.*|connectors/.*|families/.*|Makefile|\.github/workflows/python\.yml|tools/ci/.*)$')" >> "$GITHUB_OUTPUT"
 
   check:
     name: python-check
