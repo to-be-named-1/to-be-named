@@ -4,7 +4,7 @@ kind: node_type
 name: deduplicate
 version: 2
 title: Deduplicate rows
-category: transform
+tags: [distinct]
 language: python
 plan: ibis
 image: platform-base

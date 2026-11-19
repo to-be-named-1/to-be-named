@@ -31,8 +31,12 @@
     "description": {
       "type": "string"
     },
-    "category": {
-      "type": "string"
+    "tags": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/identifier"
+      },
+      "uniqueItems": true
     },
     "language": {
       "enum": [

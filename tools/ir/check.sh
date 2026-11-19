@@ -3,7 +3,8 @@
 #
 # For every IR version: each schema compiles, every document under valid/ passes and every document
 # under invalid/schema/ fails. Documents under invalid/subset/ break the YAML subset, which a JSON Schema
-# validator cannot see; the compiler's tests check them.
+# validator cannot see; the compiler's tests check them. The node-type documents that the Python node files
+# under python/valid/ must produce are valid documents too; the readers' tests check the rest of python/.
 set -eu
 
 JV_VERSION=v0.7.0
@@ -27,7 +28,7 @@ for schema_dir in "$IR"/src/ir/schema/v*/; do
 		fi
 	done
 
-	for file in "$corpus"/valid/*.yaml; do
+	for file in "$corpus"/valid/*.yaml "$corpus"/python/valid/*/expected/*.yaml; do
 		[ -e "$file" ] || continue
 		if ! jv -q "$document" "$file" >/dev/null; then
 			echo "error: $file should be valid"
