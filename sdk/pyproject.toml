@@ -5,6 +5,15 @@ description = "The Python SDK: the interfaces node code follows and the generati
 requires-python = ">=3.14"
 dependencies = []
 
+[tool.ruff]
+extend = "../pyproject.toml"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"units".msg = "sdk never imports units: the runtime depends on the sdk."
+"nodes".msg = "sdk never imports nodes: plugins depend on the sdk."
+"connectors".msg = "sdk never imports connectors: plugins depend on the sdk."
+"families".msg = "sdk never imports families: plugins depend on the sdk."
+
 [build-system]
 requires = ["uv_build>=0.13.5,<0.14"]
 build-backend = "uv_build"

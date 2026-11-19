@@ -1,0 +1,21 @@
+[project]
+name = "families"
+version = "0.0.0"
+description = "The dataset-family implementations the platform publishes."
+requires-python = ">=3.14"
+dependencies = ["sdk"]
+
+[tool.uv.sources]
+sdk = { workspace = true }
+
+[tool.ruff]
+extend = "../pyproject.toml"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"units".msg = "families never imports units: plugins reach the runtime only through the sdk."
+"nodes".msg = "families never imports nodes: each kind of plugin depends only on the sdk."
+"connectors".msg = "families never imports connectors: each kind of plugin depends only on the sdk."
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14"]
+build-backend = "uv_build"

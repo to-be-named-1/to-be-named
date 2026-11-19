@@ -1,6 +1,6 @@
-# uv workspace for the Python containers: the unit runtime and the SDK, with one lockfile.
+# uv workspace for the Python containers: the unit runtime, the SDK and the platform's plugins, with one lockfile.
 [tool.uv.workspace]
-members = ["units", "sdk"]
+members = ["units", "sdk", "nodes", "connectors", "families"]
 
 [dependency-groups]
 dev = [
@@ -12,14 +12,25 @@ dev = [
 [tool.ruff]
 target-version = "py314"
 line-length = 120
-include = ["units/**/*.py", "sdk/**/*.py"]
+include = [
+    "units/**/*.py", "sdk/**/*.py", "nodes/**/*.py", "connectors/**/*.py", "families/**/*.py", "tools/python/**/*.py",
+]
 
+# Each member's own pyproject.toml extends this one and lists the packages it must not import. Ruff uses only
+# the closest configuration, so a member's [tool.ruff] without `extend` would silently drop these rules.
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP", "B"]
+select = ["E", "F", "W", "I", "UP", "B", "TID251"]
 
 [tool.pyright]
 pythonVersion = "3.14"
-include = ["units/src", "units/tests", "sdk/src", "sdk/tests"]
+include = [
+    "units/src", "units/tests",
+    "sdk/src", "sdk/tests",
+    "nodes/src", "nodes/tests",
+    "connectors/src", "connectors/tests",
+    "families/src", "families/tests",
+    "tools/python",
+]
 
 [tool.pytest.ini_options]
-testpaths = ["units/tests", "sdk/tests"]
+testpaths = ["units/tests", "sdk/tests", "nodes/tests", "connectors/tests", "families/tests", "tools/python"]

@@ -8,6 +8,14 @@ dependencies = ["sdk"]
 [tool.uv.sources]
 sdk = { workspace = true }
 
+[tool.ruff]
+extend = "../pyproject.toml"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"nodes".msg = "units never imports nodes: it loads node code through node-type entry points."
+"connectors".msg = "units never imports connectors: it reaches them only through the sdk's interfaces."
+"families".msg = "units never imports families: it reaches them only through the sdk's interfaces."
+
 [build-system]
 requires = ["uv_build>=0.13.5,<0.14"]
 build-backend = "uv_build"
