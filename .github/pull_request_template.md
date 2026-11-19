@@ -1,5 +1,7 @@
 <!-- Title: <type>(<scope>): <description>, which becomes the commit message when squashed. -->
 
+<!-- A promotion from dev to main lists "Closes #<issue>" instead, once for every issue it carries: GitHub closes issues
+only from pull requests into main, and an issue is done once its change is on main. -->
 Issue: #
 
 ## Changes
