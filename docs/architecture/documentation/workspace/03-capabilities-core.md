@@ -91,7 +91,7 @@ The substrate all three disciplines run on. Everything here is discipline-agnost
 - **CORE 2.25** — Operate entirely on customer-provided compute: a container-capable backend for execution units and the customer's warehouse for pushdown, with the vendor hosting only the interface and control planes. `[shapes the core]`
   - *Note:* Bring-your-own-compute is the primary deployment model ([D22]({workspace}/decisions/Platform#22)). A warehouse alone runs only pushdown work; every other node needs the container backend.
 - **CORE 2.26** — Insert a repartition step when a node groups by a key other than its input's partitioning: rewrite the data hash-bucketed by that key, then fan the node out per bucket. `[shapes the core]`
-  - *Note:* Lets in-process engines scale partition-local work by any key without a distributed engine. Work that no key can divide remains flagged by the capacity check ([D34]({workspace}/decisions/Platform#34)).
+  - *Note:* Lets in-process engines scale partition-local work by any key without a distributed engine, though without rebalancing skewed keys or stragglers ([S7](07-open-items.md#7.7)). Work that no key can divide remains flagged by the capacity check ([D34]({workspace}/decisions/Platform#34)), and Spark against customer-operated clusters serves work this leaves flagged or slow ([D25]({workspace}/decisions/Platform#25)).
 
 ### 3 · Scheduling & triggering
 
