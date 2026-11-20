@@ -1,9 +1,11 @@
-# uv workspace for the Python containers: the unit runtime, the SDK and the platform's plugins, with one lockfile.
+# uv workspace for the Python containers: the unit runtime, the SDK, the platform's plugins and the IR schema, with one
+# lockfile.
 [tool.uv.workspace]
-members = ["units", "sdk", "nodes", "connectors", "families"]
+members = ["units", "sdk", "nodes", "connectors", "families", "ir"]
 
 [dependency-groups]
 dev = [
+    "packaging==26.3",
     "pyright==1.1.414",
     "pytest==9.1.1",
     "ruff==0.17.2",
@@ -13,7 +15,8 @@ dev = [
 target-version = "py314"
 line-length = 120
 include = [
-    "units/**/*.py", "sdk/**/*.py", "nodes/**/*.py", "connectors/**/*.py", "families/**/*.py", "tools/python/**/*.py",
+    "units/**/*.py", "sdk/**/*.py", "nodes/**/*.py", "connectors/**/*.py", "families/**/*.py", "ir/**/*.py",
+    "tools/python/**/*.py",
 ]
 
 # Each member's own pyproject.toml extends this one and lists the packages it must not import. Ruff uses only
@@ -29,8 +32,9 @@ include = [
     "nodes/src", "nodes/tests",
     "connectors/src", "connectors/tests",
     "families/src", "families/tests",
+    "ir/src", "ir/tests",
     "tools/python",
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["units/tests", "sdk/tests", "nodes/tests", "connectors/tests", "families/tests", "tools/python"]
+testpaths = ["units/tests", "sdk/tests", "nodes/tests", "connectors/tests", "families/tests", "ir/tests", "tools/python"]

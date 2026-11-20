@@ -7,7 +7,7 @@
 set -eu
 
 JV_VERSION=v0.7.0
-IR=controlplane/internal/authoring/ir
+IR=ir
 
 if ! go install "github.com/santhosh-tekuri/jsonschema/cmd/jv@${JV_VERSION}" >/tmp/jv-install.log 2>&1; then
 	cat /tmp/jv-install.log
@@ -15,7 +15,7 @@ if ! go install "github.com/santhosh-tekuri/jsonschema/cmd/jv@${JV_VERSION}" >/t
 fi
 
 failures=0
-for schema_dir in "$IR"/schema/v*/; do
+for schema_dir in "$IR"/src/ir/schema/v*/; do
 	version=$(basename "$schema_dir")
 	document="$schema_dir/document.schema.json"
 	corpus="$IR/conformance/$version"

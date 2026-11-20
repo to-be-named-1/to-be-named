@@ -13,8 +13,7 @@ package names `units` and `sdk` are placeholders. Do not invent a product name.
 
 - `docs/architecture/` is the only authoritative record of the architecture: the C4 model (Structurizr DSL),
   its documentation and the architecture decision records. Anything not recorded there is not decided.
-- `docs/ir/` is the normative specification of the IR. Its schema and conformance corpus live in
-  `controlplane/internal/authoring/ir/`.
+- `docs/ir/` is the normative specification of the IR. Its schema and conformance corpus live in `ir/`.
 - Read `docs/README.md` before changing anything under `docs/`; it states every convention and check.
 - Code implements recorded decisions. If a change needs a design choice that is not recorded, stop and raise it
   instead of deciding it in code. Design proposals are written as decision sheets and recorded once confirmed.
@@ -27,6 +26,7 @@ package names `units` and `sdk` are placeholders. Do not invent a product name.
 | `agent/`, `cli/` | Data-plane agent and command-line interface | Backend |
 | `internal/` | Go code shared between containers | Backend |
 | `proto/` | Protobuf contracts | Shared |
+| `ir/` | IR schema, published as a Go and a Python package, and its conformance corpus | Shared |
 | `units/` | Unit runtime and the units it runs | Data |
 | `sdk/` | Python SDK: interfaces node code follows, derivation and execution of plans, generation of node-type documents and IR | Data |
 | `nodes/` | Node types the platform publishes, reaching the runtime only through `sdk` | Data |
@@ -36,7 +36,7 @@ package names `units` and `sdk` are placeholders. Do not invent a product name.
 | `tools/` | Scripts behind the documentation, IR and CI checks | Shared |
 | `docs/` | Architecture record and IR specification | Design |
 
-Contracts (the IR schema and corpus, `proto/`) are shared: change both sides of a contract in the same pull
+Contracts (the IR schema and corpus in `ir/`, `proto/`) are shared: change both sides of a contract in the same pull
 request, and add conformance cases with every schema change.
 
 ## Commands
@@ -66,10 +66,11 @@ push trigger either: a second run on the same commit reports checks of the same 
 - **Go.** One module at the root. Packages follow bounded contexts; never import another container's
   `internal/`. Tests use the standard library and go-cmp; the IR reader's tests are driven by the conformance
   corpus. Formatting and lint come from `.golangci.yml`.
-- **Python.** A uv workspace (`units`, `sdk`, `nodes`, `connectors`, `families`), Python 3.14, src layout. ruff
+- **Python.** A uv workspace (`units`, `sdk`, `nodes`, `connectors`, `families`, `ir`), Python 3.14, src layout. ruff
   for lint and format, pyright for types, pytest for tests. Give test files unique names across packages. Node
   code reaches the runtime only through the interfaces in `sdk`, built-in node types included; `units`, `nodes`,
-  `connectors` and `families` never import one another, and `sdk` imports none of them.
+  `connectors` and `families` never import one another, `sdk` imports none of them, and only `sdk` imports `ir`,
+  which imports none of them.
 - **TypeScript.** Node 26, pnpm, React, Vite, TypeScript, Vitest and Biome, in `webapp/`. Biome lints and
   formats (`pnpm --dir webapp format` applies its fixes), `tsc` checks types and Vitest runs the tests in jsdom.
 - **Comments only where needed.** Add a comment only when something is non-obvious: a reason the code cannot
