@@ -1,4 +1,7 @@
-"""The linter rejects any import of one workspace member by another, except imports of sdk by the others."""
+"""The linter rejects any import of one workspace member by another, except of the members it depends on.
+
+A member's dependencies on other members are those its pyproject.toml declares.
+"""
 
 import json
 import subprocess
@@ -7,16 +10,24 @@ import tomllib
 from pathlib import Path
 
 import pytest
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 
 ROOT = Path(__file__).parents[2]
-WORKSPACE = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-MEMBERS: list[str] = WORKSPACE["tool"]["uv"]["workspace"]["members"]
-SDK = "sdk"
+MEMBERS: list[str] = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["tool"]["uv"]["workspace"][
+    "members"
+]
 FORMS = ["import {0}", "from {0}.module import name", "from {0} import name"]
 
 
+def allowed(member: str) -> set[str]:
+    project = tomllib.loads((ROOT / member / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    names = {canonicalize_name(Requirement(requirement).name) for requirement in project["dependencies"]}
+    return {other for other in MEMBERS if canonicalize_name(other) in names}
+
+
 def banned(member: str) -> list[str]:
-    return [other for other in MEMBERS if other != member and (member == SDK or other != SDK)]
+    return [other for other in MEMBERS if other != member and other not in allowed(member)]
 
 
 def ban_messages(member: str, source: str) -> list[str]:
@@ -41,6 +52,6 @@ def test_rejects_banned_import(member: str, name: str, form: str) -> None:
     assert ban_messages(member, form.format(name) + "\n")
 
 
-@pytest.mark.parametrize("member", [member for member in MEMBERS if member != SDK])
-def test_allows_sdk(member: str) -> None:
-    assert ban_messages(member, "import sdk\n") == []
+@pytest.mark.parametrize(("member", "name"), [(member, name) for member in MEMBERS for name in allowed(member)])
+def test_allows_dependency(member: str, name: str) -> None:
+    assert ban_messages(member, f"import {name}\n") == []

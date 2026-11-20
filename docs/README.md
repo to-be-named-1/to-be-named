@@ -3,7 +3,7 @@
 This folder holds the formal documentation of the platform.
 
 - [`architecture/`](architecture/workspace.dsl) is the architecture record: a C4 model written in the Structurizr DSL, its Markdown documentation and the architecture decision records (ADRs).
-- [`ir/`](ir/README.md) is the IR specification: the normative detail of the documents a project commits as IR. Its machine-readable schema and conformance corpus live with the code that owns them, in `controlplane/internal/authoring/ir/`. The specification is read on GitHub; Structurizr does not serve it, so the architecture documentation names it by its path.
+- [`ir/`](ir/README.md) is the IR specification: the normative detail of the documents a project commits as IR. Its machine-readable schema and conformance corpus live in `ir/`, a contract shared by the control plane and the SDK. The specification is read on GitHub; Structurizr does not serve it, so the architecture documentation names it by its path.
 
 ## Viewing
 

@@ -12,6 +12,7 @@ sdk = { workspace = true }
 extend = "../pyproject.toml"
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
+"ir".msg = "families never imports ir: it reaches the IR schema only through the sdk."
 "units".msg = "families never imports units: plugins reach the runtime only through the sdk."
 "nodes".msg = "families never imports nodes: each kind of plugin depends only on the sdk."
 "connectors".msg = "families never imports connectors: each kind of plugin depends only on the sdk."
