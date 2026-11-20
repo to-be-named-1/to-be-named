@@ -59,7 +59,7 @@ Execution units should be scheduled in the region and availability zone where th
 
 A single partition an order of magnitude larger than its peers determines the runtime of an entire stage. Per-shard timing and the option to rebalance must be visible to the user.
 
-- **To settle.** Whether rebalancing is automatic or advisory, and what skew diagnostics are surfaced on the canvas and in run history.
+- **To settle.** Whether rebalancing is automatic or advisory, what skew diagnostics are surfaced on the canvas and in run history, and which of these cases are served instead by Spark against customer-operated clusters ([D25]({workspace}/decisions/Platform#25)).
 
 ### S8 · Out-of-memory escalation
 
