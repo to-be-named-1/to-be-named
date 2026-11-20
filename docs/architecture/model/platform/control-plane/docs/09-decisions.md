@@ -57,3 +57,4 @@
 | [D63]({workspace}/decisions/Platform#63) | The Python interface the compiler reads statically, value outputs of plan nodes as expressions, and every output's row count available to expressions |
 | [D64]({workspace}/decisions/Platform#64) | The agent protocol in detail: enrollment and replica keys, sessions and freshness, offers, claims, heartbeats and adoption, sequence numbers and answers, commits, end reports, errors and the version window |
 | [D65]({workspace}/decisions/Platform#65) | The unit specification's launch and execution parts, the image labels the dispatcher reads, each pool's certificate authority, side-effect intents, relayed logs and progress for the web application, and sessions as lease holders |
+| [D67]({workspace}/decisions/Platform#67) | The IR schema it embeds and validates against, through the shared `ir` package that the SDK also depends on |

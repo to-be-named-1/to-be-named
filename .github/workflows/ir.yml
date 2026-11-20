@@ -23,7 +23,7 @@ jobs:
       - id: diff
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
-        run: echo "run=$(sh tools/ci/changed.sh '^(controlplane/internal/authoring/ir/.*|tools/ir/.*|docker-compose\.yml|Makefile|\.github/workflows/ir\.yml|tools/ci/.*)$')" >> "$GITHUB_OUTPUT"
+        run: echo "run=$(sh tools/ci/changed.sh '^(ir/.*|tools/ir/.*|docker-compose\.yml|Makefile|\.github/workflows/ir\.yml|tools/ci/.*)$')" >> "$GITHUB_OUTPUT"
 
   schema:
     name: ir-schema-check
