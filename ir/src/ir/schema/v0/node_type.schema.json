@@ -144,7 +144,7 @@
       "type": "string",
       "pattern": "^[1-9][0-9]*(Ki|Mi|Gi|Ti)$"
     },
-    "memory": {
+    "memory_class": {
       "enum": [
         "streaming",
         "blocking_spilling",

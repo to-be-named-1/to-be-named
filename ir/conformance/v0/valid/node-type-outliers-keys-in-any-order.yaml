@@ -1,0 +1,27 @@
+# Valid: node-type-outliers.yaml with its keys out of the schema's order at every level, which readers MUST read as the same document.
+memory_floor: 1Gi
+gpu: supported
+seed: seed
+grouping: { parameter: group_by }
+values:
+  outlier_rate:  { maximum: 1, minimum: 0, type: number }
+  outlier_count: { type: integer }
+params:
+  seed:      { default: 0, type: integer }
+  group_by:  { default: [], of: data, format: column_selector, type: array }
+  threshold: { default: 1.5, minimum: 0, type: number }
+  method:    { default: iqr, enum: [iqr, zscore, isolation_forest], type: string }
+  columns:   { of: data, format: column_selector, type: array }
+outputs:
+  flagged: { schema: dynamic, type: tabular }
+inputs:
+  data: { type: tabular }
+modes: [batch]
+entry_point: nodes.outliers:outliers
+image: platform-base
+language: python
+title: Flag outliers
+version: 1
+name: outliers
+kind: node_type
+ir_version: 0

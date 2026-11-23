@@ -14,6 +14,9 @@ Terms used throughout that are not given their own entry in the key terms below.
 | Partition dependency function | How output partitions depend on input partitions: identity, time window, all, latest, specific values, or discovered at run time by a merge node. |
 | Dataset family | A group of formats that behave alike on the platform (tabular, semi-structured, text and documents, images, genomics, ML artifacts). |
 | Format type, plugin, binding | The platform defines a format type (for example `genomics/bam` v1); plugins implement types; each dataset is bound to one pinned implementation. |
+| Node | One step of a workflow, under a key chosen in the workflow, with its wiring and parameter values; an instance of a node type, or a code node ([D56]({workspace}/decisions/Platform#56)). |
+| Node type | A reusable definition of nodes, referenced as `name@version`: a contract and an implementation, described by a node-type document. Built-in node types and plugins are node types; grouping them for display is done by tags, never by the type ([D57]({workspace}/decisions/Platform#57), [D66]({workspace}/decisions/Platform#66)). |
+| Code node | A node whose contract is read from a file under `code/` rather than taken from a node type; it has no node-type document, name or version ([D57]({workspace}/decisions/Platform#57), [D66]({workspace}/decisions/Platform#66)). |
 | Data commit | The atomic act by which the control plane makes an attempt's staged outputs current; defined in the catalog's Key terms. Distinct from a git commit, a database transaction and a table-format commit. |
 | Materialization request | A declarative request to make a dataset current through a given time, for which the reconciler plans the minimum work. |
 | Engine segment | Consecutive in-process nodes on the same engine, chained so that one optimizer sees them all. The level between node and execution unit ([D32]({workspace}/decisions/Platform#32)). |

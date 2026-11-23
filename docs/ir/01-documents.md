@@ -29,7 +29,7 @@ Every document MUST contain the keys `ir_version` and `kind`. The fields of its 
 - `ir_version` is the document's IR version.
 - `kind` is one of the six kinds above. The kind of a project document MUST match its location; a reader MUST reject a project document whose kind does not.
 
-Writers MUST write `ir_version` and `kind` first, in that order. Readers MUST NOT depend on the order of keys.
+Writers MUST write the keys of each mapping in the order in which the document's schema lists its properties, beginning with `ir_version` and `kind`. Readers MUST NOT depend on the order of keys.
 
 ```yaml
 ir_version: 0

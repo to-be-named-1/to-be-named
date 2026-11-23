@@ -137,11 +137,11 @@ A plan node's value outputs are expressions over its plan, which derivation comp
 | `side_effects: { target: <name> }` | The `binding` parameter naming the external target of the node's side effect |
 | `gpu` | `none`, the default, `supported` or `required` |
 | `memory_floor` | Memory the implementation needs regardless of its data, such as `1Gi` |
-| `memory` | A hint of the node's memory class: `streaming`, `blocking_spilling` or `blocking_non_spilling` |
+| `memory_class` | A hint of the node's memory class: `streaming`, `blocking_spilling` or `blocking_non_spilling` |
 
 A node with `side_effects` is never served from cache or fused, checks its lease and uses idempotency keys, and in a development run executes only if the run's environment binds its target itself.
 
-The memory class of an Ibis or SQL plan is derived from its compiled query. Every other node's memory class is `blocking_non_spilling` unless `memory` states otherwise. A node type declares no other resource quantity; units are sized from estimates.
+The memory class of an Ibis or SQL plan is derived from its compiled query. Every other node's memory class is `blocking_non_spilling` unless `memory_class` states otherwise. A node type declares no other resource quantity; units are sized from estimates.
 
 `title`, `description` and `tags` are for display and search only and never affect a node's meaning. `tags` lists distinct identifiers ([Documents](01-documents.md)), under which the palette groups and finds node types; their vocabulary is open.
 
@@ -194,14 +194,16 @@ This is the code of the node type whose document opens this page, from which the
 
 A node is a module-level function decorated with the SDK's `node`. Every argument of the decorator MUST be a literal:
 
-| Argument | Field |
-|---|---|
-| `plan` | `plan`: `"ibis"` or `"polars"`; absent for eager code |
-| `version` | `version`; REQUIRED for a published node type |
-| `title`, `tags` | `title`, `tags` |
-| `gpu`, `memory`, `memory_floor`, `dialects` | the fields of the same names |
+| Argument | Field | Stated by |
+|---|---|---|
+| `plan` | `plan`: `"ibis"` or `"polars"`; absent for eager code | every node |
+| `version` | `version`; REQUIRED | node types only |
+| `title`, `tags` | `title`, `tags` | every node |
+| `gpu`, `memory_class`, `memory_floor`, `dialects` | the fields of the same names | every node |
 
-The node type's `name` is the function's name, and its `description` is the function's docstring without its `Args:` section. Code states no other field: the SDK's generator fills in `ir_version`, `kind`, `language`, `modes`, `entry_point`, which names the function's module and the function, and `image`. The decorator returns the function unchanged.
+A reader reads a file either as node types, as the SDK's generator does for a plugin, or as code nodes, as the compiler does for a project's `code/` folder. Read as node types, the arguments stated by node types only are held to their rules, and a REQUIRED one MUST be present. Read as code nodes, those arguments are ignored, so that the file of a node type reads unchanged as a code node.
+
+The node's `name` is the function's name, and its `description` is the function's docstring without its `Args:` section. Code states no other field: `language` is `python` and `modes` is `[batch]`, and the SDK's generator fills in a node type's `ir_version`, `kind`, `entry_point`, which names the function's module and the function, and `image`. The decorator returns the function unchanged.
 
 ### Inputs
 
@@ -277,4 +279,4 @@ A type alias, written as a `type` statement, and an output class MAY be defined 
 
 ### Errors
 
-A reader MUST report every error in a file, not only the first, each with its file, line and column, the function and the parameter or field concerned, a code and a message. Codes are stable and shared by all readers, while each reader words its own messages. The conformance corpus holds node files, under `python/`, with the documents they MUST produce or the codes and locations of the errors they MUST produce.
+A reader MUST report every error in a file, not only the first, each with its file, line and column, the function and the parameter or field concerned, a code and a message. Codes are stable and shared by all readers, while each reader words its own messages. Lines and columns count from 1, and a column counts the bytes of the line's UTF-8 encoding. The conformance corpus holds node files under `python/`. Each valid file, read as node types, MUST produce the documents given for it, and read as code nodes, the same contracts without the fields that belong to the document itself (`ir_version`, `kind`, `image` and `entry_point`) and those stated by node types only. Each invalid file, read as code nodes or as node types according to its folder, MUST produce the codes and locations of the errors given for it, sorted by file, line, column and code. It gives a syntax error by its code and file only, since parsers place syntax errors differently.
