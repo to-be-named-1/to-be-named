@@ -22,6 +22,7 @@ The actions of each component are listed by the role that performs them. A repli
 |---|---|---|
 | Definitions and drafts | Manages workflow and dataset definitions, drafts, platform-held versions and environment bindings. | **api:** drafts, explicit commits, platform-held versions and environment bindings<br>**worker:** records the versions found on the deploy branch |
 | Compiler | Parses, migrates and type-checks each definition version, flattens composites, checks control flow, intervals and single producers, and computes semantic fingerprints. | **api:** compiles versions committed through the API<br>**worker:** compiles versions found on the deploy branch |
+| Node-code reader | Reads Python code nodes into contracts with the reader of node code, in a worker process the server owns, within limits. | **api:** reads the code nodes of versions compiled through the API<br>**worker:** reads the code nodes of versions found on the deploy branch |
 | Git synchronization | Pushes authors' commits to the git host and watches the deploy branch. | **api:** pushes authors' commits, with the author recorded as author and the platform as committer<br>**worker:** watches the deploy branch |
 | Deployment | Deploys committed definitions as an act of the platform, checking governed fields. | **api:** deploys on request, and approves commits that change governed fields<br>**worker:** deploys each new commit on the deploy branch, holding back one that changes a governed field without the permission |
 

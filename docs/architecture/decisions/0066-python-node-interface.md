@@ -8,10 +8,11 @@ Applies to: platform.webApp, platform.controlPlane, platform.unitRuntime, platfo
 Accepted
 
 Amends [63. Python node SDK](0063-python-node-sdk.md)
+Amended by [68. Single reader of Python node code](0068-single-reader-of-python-node-code.md)
 
 ## Context
 
-[D63](0063-python-node-sdk.md) chose the shape of the Python interface: decorated functions read statically, parameters typed as tables as inputs, keyword-only parameters with markers in `Annotated`, output classes and `Value[T]`. It left their exact form open. Two readers read that form, the SDK, which generates node-type documents and derives plans, and the compiler, which reads code nodes, so every rule must be decidable from the source text alone, by both alike. Node code shares its environment with the runtime and with the libraries its authors bring ([D65](0065-unit-specification-and-agent-unit-contract.md)). The palette and the canvas's forms read node-type documents ([D57](0057-node-type-contract.md)), including fields that never affect a node's meaning.
+[D63](0063-python-node-sdk.md) chose the shape of the Python interface: decorated functions read statically, parameters typed as tables as inputs, keyword-only parameters with markers in `Annotated`, output classes and `Value[T]`. It left their exact form open. One reader reads that form, for the SDK, which generates node-type documents and derives plans, and for the compiler, which reads code nodes ([D68](0068-single-reader-of-python-node-code.md)); it never executes the code, so every rule must be decidable from the source text alone. Node code shares its environment with the runtime and with the libraries its authors bring ([D65](0065-unit-specification-and-agent-unit-contract.md)). The palette and the canvas's forms read node-type documents ([D57](0057-node-type-contract.md)), including fields that never affect a node's meaning.
 
 ## Decision
 
@@ -25,12 +26,12 @@ The exact form of the Python interface: what the decorator, the markers, the ann
 - **Outputs.** A function returns one table, an output class or nothing. An output class is a frozen dataclass whose fields are tables or `Value[T]`, with `T` in the parameter profile without the platform's formats. Its fields are fixed: none is optional or has a default.
 - **Tags.** A node type may carry tags, distinct identifiers that the palette shows and searches. They never affect a node's meaning, and their vocabulary is open.
 - **Names.** A reader resolves names through the module's imports, under any alias, and through type aliases and output classes defined in the same file or in a module within the same root. The root is the directory on Python's import path, the source folder of a plugin package or the code folder of a project, with which a code node runs on its import path; a module's name maps onto a file under the root, and relative imports resolve as Python resolves them. A name from anywhere else, other than the libraries the interface recognizes, cannot be read and is rejected.
-- **Errors.** A reader reports every error in a file, each with its location, the node and parameter or field concerned, a stable code and a message. Both readers are tested against one corpus of node files with their expected documents and errors, compared by code and location, so that each may word its messages differently.
+- **Errors.** A reader reports every error in a file, each with its location, the node and parameter or field concerned, a stable code and a message. The reader is tested against a corpus of node files with their expected documents and errors, compared by code and location ([D68](0068-single-reader-of-python-node-code.md)).
 - **Amends.** [D63](0063-python-node-sdk.md): an input with several edges is annotated as a sequence, and readers follow type aliases and output classes into modules within the same root.
 
 ## Consequences
 
-- A file that the SDK reads is a valid code node for the compiler, and the reverse, since both are held to one corpus.
+- A file that the SDK reads is a valid code node for the compiler, and the reverse, since both read it with the same reader ([D68](0068-single-reader-of-python-node-code.md)).
 - A change to a type alias that several node types share changes each of their documents, and each needs a new version ([D57](0057-node-type-contract.md)); generating the documents again in CI shows every one of them.
 - Node signatures hold defaults that are mutable objects, such as an empty list for a sequence. This is safe, since the runtime always passes every value.
 - The interface adds no library to the environment that the SDK shares with node code.
@@ -44,7 +45,7 @@ The exact form of the Python interface: what the decorator, the markers, the ann
 - Output classes as models of a validation library. The library would be pinned in every image beside the version an author's code needs, and its validation finds nothing to check in tables and plan expressions. Named tuples invite outputs confused by position.
 - A decorator that registers node types or checks its arguments when a module is imported. It would be a second way of finding node types and a second checker, which could disagree with the readers.
 - Reading only the node's own file. Shared enumerations and output classes would be copied, and the copies would drift apart.
-- Evaluating annotations by importing the module. The SDK would accept signatures that the compiler cannot read.
+- Evaluating annotations by importing the module. Reading would run node code, which runs only in the data plane ([D21](0021-architecture-planes.md)).
 - Telling node types from code nodes by what their code states. A node type that omits a required argument would silently read as a code node, and the error would surface later and without a location.
 - Rejecting, in code nodes, the arguments that only node types state. A node type's file would need edits before it could serve as a code node.
 

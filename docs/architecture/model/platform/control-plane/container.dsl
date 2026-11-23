@@ -1,8 +1,8 @@
-controlPlane = container "Control-plane server" "Compiles, plans, schedules and dispatches work, makes results current and holds the catalog; one binary deployed in roles, with a single active leader." "Go, ConnectRPC, cel-go" {
+controlPlane = container "Control-plane server" "Compiles, plans, schedules and dispatches work, makes results current and holds the catalog; one binary deployed in roles, with a single active leader, and a Python worker that reads node code." "Go, ConnectRPC, cel-go, Python" {
     !docs docs
 
     properties {
-        "decisions" "D1, D2, D3, D4, D5, D7, D8, D9, D10, D12, D13, D14, D15, D16, D17, D18, D19, D20, D21, D23, D24, D25, D26, D28, D29, D30, D31, D32, D33, D34, D35, D36, D37, D38, D40, D41, D42, D43, D44, D45, D46, D47, D48, D49, D50, D51, D52, D55, D56, D57, D59, D62, D63, D64, D65, D66, D67"
+        "decisions" "D1, D2, D3, D4, D5, D7, D8, D9, D10, D12, D13, D14, D15, D16, D17, D18, D19, D20, D21, D23, D24, D25, D26, D28, D29, D30, D31, D32, D33, D34, D35, D36, D37, D38, D40, D41, D42, D43, D44, D45, D46, D47, D48, D49, D50, D51, D52, D55, D56, D57, D59, D62, D63, D64, D65, D66, D67, D68"
     }
 
     // Groups are the bounded contexts of D47. The roles property names the roles that the component's
@@ -36,6 +36,11 @@ controlPlane = container "Control-plane server" "Compiles, plans, schedules and 
             }
         }
         compiler = component "Compiler" "Parses, migrates and type-checks each definition version, flattens composites, checks control flow, intervals and single producers, and computes semantic fingerprints." "Go, goccy/go-yaml, cel-go" {
+            properties {
+                "roles" "api, worker"
+            }
+        }
+        codeReader = component "Node-code reader" "Reads Python code nodes into contracts with the reader of node code, in a worker process the server owns, within limits." "Python, ir.reader" {
             properties {
                 "roles" "api, worker"
             }
