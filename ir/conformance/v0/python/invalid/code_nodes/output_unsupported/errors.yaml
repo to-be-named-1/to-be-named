@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: output.unsupported
+  path: node.py
+  line: 13
+  column: 35
+  node: counts
+  field: null

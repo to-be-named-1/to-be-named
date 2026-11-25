@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: import.cycle
+  path: node.py
+  line: 14
+  column: 41
+  node: cyclic
+  field: mode

@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: decorator.missing_argument
+  path: node.py
+  line: 5
+  column: 2
+  node: rollup
+  field: null

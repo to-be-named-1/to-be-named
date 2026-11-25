@@ -9,6 +9,7 @@ Accepted
 
 Amends [56. IR documents and identifiers](0056-ir-documents-and-identifiers.md)
 Amends [60. Code layout and tooling](0060-code-layout-and-tooling.md)
+Amended by [68. Single reader of Python node code](0068-single-reader-of-python-node-code.md)
 
 ## Context
 
@@ -19,7 +20,7 @@ Amends [60. Code layout and tooling](0060-code-layout-and-tooling.md)
 Where the IR schema and its conformance corpus live, and how the control plane and the SDK obtain the schema.
 
 - **Location.** The schema and its conformance corpus live in a root-level folder, `ir/`, a contract shared by the control plane and the SDK, as `proto/` is.
-- **Package.** The schema is one set of files, published as a Python package and a Go package, both named `ir`. The control plane embeds it through the Go package; the SDK depends on the Python package, so installing the SDK installs the schema of its release. The corpus is not part of the published package; the readers' tests read it from the repository.
+- **Package.** The schema is one set of files in `ir/schema/`, published as the Python package `ir.schema` and the Go package `schema` ([D68](0068-single-reader-of-python-node-code.md)). The control plane embeds it through the Go package; the SDK depends on the Python package, so installing the SDK installs the schema of its release. The corpus is not part of the published package; the readers' tests read it from the repository.
 - **Ownership.** The control plane remains the authority that validates documents against the schema ([D47](0047-control-plane-structure.md)); the schema's location makes no other container its owner.
 - **Amends.** [D56](0056-ir-documents-and-identifiers.md): the schema is a shared package, which the control plane embeds and the SDK depends on. [D60](0060-code-layout-and-tooling.md): the folders include `ir/`.
 

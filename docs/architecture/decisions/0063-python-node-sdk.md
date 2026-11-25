@@ -10,6 +10,8 @@ Accepted
 Amends [41. IR text form, round-trip and structure](0041-ir-text-form-round-trip-and-structure.md)
 Amends [57. Node-type contract](0057-node-type-contract.md)
 Amends [60. Code layout and tooling](0060-code-layout-and-tooling.md)
+Amended by [66. Python node interface](0066-python-node-interface.md)
+Amended by [68. Single reader of Python node code](0068-single-reader-of-python-node-code.md)
 
 ## Context
 
@@ -19,8 +21,8 @@ Amends [60. Code layout and tooling](0060-code-layout-and-tooling.md)
 
 The interface that Python node code follows, how node-type documents are produced from it, where derivation and execution are implemented, where the platform's own plugins live, and which libraries each part needs.
 
-- **Functions.** A Python node type, plugin or code node is a module-level function marked by the SDK's `node` decorator, whose arguments are literals and state whether the function returns a plan, `plan="ibis"` or `plan="polars"`, or is eager. The compiler and the SDK read the decorator, the signature and the annotations without executing the code ([D57](0057-node-type-contract.md)).
-- **Inputs.** A parameter annotated with a table type is an input port named after the parameter: an Ibis table for an Ibis plan, a Polars lazy frame for a Polars plan, and for eager code an Arrow table, a Polars data frame or a pandas data frame, into which the runtime converts its Arrow input. An input annotated as optional, with `None` as its default, is optional; an input annotated as a list accepts several edges.
+- **Functions.** A Python node type, plugin or code node is a module-level function marked by the SDK's `node` decorator, whose arguments are literals and state whether the function returns a plan, `plan="ibis"` or `plan="polars"`, or is eager. The reader of Python node code, a package of its own that the SDK depends on, reads the decorator, the signature and the annotations without executing the code ([D57](0057-node-type-contract.md)), for the SDK and for the compiler alike ([D68](0068-single-reader-of-python-node-code.md)), following type aliases and output classes into modules within the same root ([D66](0066-python-node-interface.md)).
+- **Inputs.** A parameter annotated with a table type is an input port named after the parameter: an Ibis table for an Ibis plan, a Polars lazy frame for a Polars plan, and for eager code an Arrow table, a Polars data frame or a pandas data frame, into which the runtime converts its Arrow input. An input annotated as optional, with `None` as its default, is optional; an input annotated as a sequence accepts several edges ([D66](0066-python-node-interface.md)).
 - **Parameters.** Keyword-only parameters, with literal annotations and defaults, are the node's parameters, mapped onto the parameter profile ([D57](0057-node-type-contract.md)): strings, integers, numbers, booleans, lists, `Literal` for an enum, date-times and durations. Constraints and the platform's formats are markers in `Annotated`, such as a minimum, a column or columns of a named input, a binding or a secret.
 - **Outputs.** A function that returns one table has one output port, `data`. A function with several outputs returns a class declared with typed fields: fields typed as tables are output ports, and fields typed as values are value outputs.
 - **Value outputs.** A plan node's value output is an expression over its plan, an Ibis scalar or a Polars expression, which derivation compiles with the plan and the execution unit evaluates over the node's output once it is computed; an eager node returns the value itself. A DuckDB segment ends at a node with value outputs unless the node's output is stored anyway, while a Polars plan computes a table and its values in one pass. The row count of every output is available to expressions without a declaration ([D41](0041-ir-text-form-round-trip-and-structure.md)).

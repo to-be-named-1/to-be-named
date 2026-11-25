@@ -3,7 +3,7 @@
 This folder holds the formal documentation of the platform.
 
 - [`architecture/`](architecture/workspace.dsl) is the architecture record: a C4 model written in the Structurizr DSL, its Markdown documentation and the architecture decision records (ADRs).
-- [`ir/`](ir/README.md) is the IR specification: the normative detail of the documents a project commits as IR. Its machine-readable schema and conformance corpus live in `ir/`, a contract shared by the control plane and the SDK. The specification is read on GitHub; Structurizr does not serve it, so the architecture documentation names it by its path.
+- [`ir/`](ir/README.md) is the IR specification: the normative detail of the documents a project commits as IR. Its machine-readable schema, the reader of Python node code and their conformance corpus live in `ir/`, a contract shared by the control plane and the SDK. The specification is read on GitHub; Structurizr does not serve it, so the architecture documentation names it by its path.
 
 ## Viewing
 
@@ -95,7 +95,7 @@ The make targets run Structurizr as the host user, so that on Linux it can write
 - Its links are relative file links, never `{workspace}` links or heading anchors; `make docs-link` writes them from bare IDs, as in the architecture documentation.
 - Normative statements use the BCP 14 key words (MUST, SHOULD, MAY), defined in its README.
 - The other documentation conventions apply: American spelling, no phasing, no comparable software.
-- The schema is JSON Schema 2020-12, one folder per IR version, without `$id`; the conformance corpus holds, per IR version, valid documents, documents the schema must reject (`invalid/schema/`) documents that break the YAML subset (`invalid/subset/`), which the compiler's tests check, and strings every writer must write back unchanged (`writer/strings.json`), which the writers' tests check.
+- The schema is JSON Schema 2020-12, one folder per IR version, without `$id`; the conformance corpus holds, per IR version, valid documents, documents the schema must reject (`invalid/schema/`) documents that break the YAML subset (`invalid/subset/`), which the compiler's tests check, and strings every writer must write back unchanged (`writer/strings.json`), which the writers' tests check. It also holds Python node files (`python/`), each case a folder that is its own root: a valid case, read as node types and as code nodes, with the node-type documents it must produce (`expected/<function>.yaml`); an invalid case, read as code nodes (`invalid/code_nodes/`) or as node types (`invalid/node_types/`), with the errors it must produce (`errors.yaml`, by code and location, with lines and columns counted from 1 and columns in UTF-8 bytes; a syntax error by code and file only). The tests of every reader of Python code check them.
 
 ### Checks
 
@@ -114,4 +114,4 @@ It then runs `tools/docs/link.py --check`, which reports any reference not yet l
 
 `make docs-inspect` runs Structurizr's inspections and reports without failing, until the model is complete.
 
-`make ir-check` runs `tools/ir/check.sh` with `jv` in a container: for each IR version, every schema compiles, every valid document passes and every document under `invalid/schema/` fails.
+`make ir-check` runs `tools/ir/check.sh` with `jv` in a container: for each IR version, every schema compiles, every valid document passes, including the documents that Python node files must produce, and every document under `invalid/schema/` fails.

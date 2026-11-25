@@ -12,9 +12,10 @@ kind: node_type
 name: outliers
 version: 1
 title: Flag outliers
+tags: [anomaly]
 language: python
 image: platform-base
-entry_point: example_nodes.outliers:run
+entry_point: example_nodes.outliers:outliers
 modes: [batch]
 inputs:
   data: { type: tabular }
@@ -136,16 +137,146 @@ A plan node's value outputs are expressions over its plan, which derivation comp
 | `side_effects: { target: <name> }` | The `binding` parameter naming the external target of the node's side effect |
 | `gpu` | `none`, the default, `supported` or `required` |
 | `memory_floor` | Memory the implementation needs regardless of its data, such as `1Gi` |
-| `memory` | A hint of the node's memory class: `streaming`, `blocking_spilling` or `blocking_non_spilling` |
+| `memory_class` | A hint of the node's memory class: `streaming`, `blocking_spilling` or `blocking_non_spilling` |
 
 A node with `side_effects` is never served from cache or fused, checks its lease and uses idempotency keys, and in a development run executes only if the run's environment binds its target itself.
 
-The memory class of an Ibis or SQL plan is derived from its compiled query. Every other node's memory class is `blocking_non_spilling` unless `memory` states otherwise. A node type declares no other resource quantity; units are sized from estimates.
+The memory class of an Ibis or SQL plan is derived from its compiled query. Every other node's memory class is `blocking_non_spilling` unless `memory_class` states otherwise. A node type declares no other resource quantity; units are sized from estimates.
 
-`title`, `description` and `category` are for display only and never affect a node's meaning.
+`title`, `description` and `tags` are for display and search only and never affect a node's meaning. `tags` lists distinct identifiers ([Documents](01-documents.md)), under which the palette groups and finds node types; their vocabulary is open.
 
 ## Code nodes
 
-A code node runs a file under `code/` written in one of the languages and following an interface of that language: for Python, the plan interfaces of Ibis and Polars, or an eager interface ([D63](../architecture/decisions/0063-python-node-sdk.md)). A reader derives the node's contract, its inputs, outputs, value outputs and parameter schemas, and whether it is a plan, from the file's signature and annotations by static analysis, without executing it. A workflow therefore gives a code node only its file, its wiring and its parameter values. Annotations MUST be literal and map onto the parameter profile.
+A code node runs a file under `code/` written in one of the languages and following an interface of that language: for Python, the interface described below under Python code ([D63](../architecture/decisions/0063-python-node-sdk.md)). A reader derives the node's contract, its inputs, outputs, value outputs and parameter schemas, and whether it is a plan, from the file's signature and annotations by static analysis, without executing it. A workflow therefore gives a code node only its file, its wiring and its parameter values. Annotations MUST be literal and map onto the parameter profile.
 
 A `command` code node declares its contract in the workflow, and that declaration is its interface, since a command has no signature to analyze.
+
+## Python code
+
+Python node types, plugins and code nodes follow one interface ([D63](../architecture/decisions/0063-python-node-sdk.md), [D66](../architecture/decisions/0066-python-node-interface.md)). Every reader reads it from the source text without executing it and holds it to the same rules: the SDK, when it generates a node-type document or derives a plan, and the compiler, when it reads a code node.
+
+```python
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Annotated, Literal
+
+import pandas as pd
+from sdk import ColumnSelector, Grouping, Minimum, Seed, Value, node
+
+
+@dataclass(frozen=True)
+class Flagged:
+    flagged: pd.DataFrame
+    outlier_count: Value[int]
+
+
+@node(version=1, title="Flag outliers", tags=["anomaly"], gpu="supported")
+def outliers(
+    data: pd.DataFrame,
+    *,
+    columns: Annotated[Sequence[str], ColumnSelector(of="data")],
+    method: Literal["iqr", "zscore", "isolation_forest"] = "iqr",
+    threshold: Annotated[float, Minimum(0)] = 1.5,
+    group_by: Annotated[Sequence[str], ColumnSelector(of="data"), Grouping()] = [],
+    seed: Annotated[int, Seed()] = 0,
+) -> Flagged:
+    """Flag rows whose values lie far from the rest.
+
+    Args:
+        columns: The columns to test.
+        threshold: How far a value may lie before it is flagged.
+    """
+```
+
+This is the code of the node type whose document opens this page, from which the SDK generates that document with the description and parameter descriptions added.
+
+### Functions
+
+A node is a module-level function decorated with the SDK's `node`. Every argument of the decorator MUST be a literal:
+
+| Argument | Field | Stated by |
+|---|---|---|
+| `plan` | `plan`: `"ibis"` or `"polars"`; absent for eager code | every node |
+| `version` | `version`; REQUIRED | node types only |
+| `title`, `tags` | `title`, `tags` | every node |
+| `gpu`, `memory_class`, `memory_floor`, `dialects` | the fields of the same names | every node |
+
+A reader reads a file either as node types, as the SDK's generator does for a plugin, or as code nodes, as the compiler does for a project's `code/` folder. Read as node types, the arguments stated by node types only are held to their rules, and a REQUIRED one MUST be present. Read as code nodes, those arguments are ignored, so that the file of a node type reads unchanged as a code node.
+
+The node's `name` is the function's name, and its `description` is the function's docstring without its `Args:` section. Code states no other field: `language` is `python` and `modes` is `[batch]`, and the SDK's generator fills in a node type's `ir_version`, `kind`, `entry_point`, which names the function's module and the function, and `image`. The decorator returns the function unchanged.
+
+### Inputs
+
+The parameters before `*` are the node's inputs, each named after its parameter, and the parameters after `*` are the node's parameters. A reader MUST reject a parameter before `*` that is not annotated with a table type, a table type after `*`, and `*args` or `**kwargs`. Inputs appear in the order written, and each has the port type `tabular`.
+
+| Node | Table type of every input |
+|---|---|
+| `plan="ibis"` | `ibis.Table` |
+| `plan="polars"` | `polars.LazyFrame` |
+| Eager | `pyarrow.Table`, `polars.DataFrame` or `pandas.DataFrame`, chosen for each input |
+
+An input annotated `T | None` with the default `None` is `optional`. An input annotated `Sequence[T]` accepts `many` edges, and is also `optional` when its default is `[]`.
+
+### Parameters
+
+A keyword-only parameter's annotation maps onto the parameter profile:
+
+| Annotation | Parameter schema | The code receives |
+|---|---|---|
+| `str` | `type: string` | `str` |
+| `int` | `type: integer` | `int` |
+| `float` | `type: number` | `float` |
+| `bool` | `type: boolean` | `bool` |
+| `datetime.datetime` | `type: string`, `format: date-time` | an aware `datetime` in UTC |
+| `datetime.timedelta` | `type: string`, `format: duration` | `timedelta` |
+| `datetime.date` | `type: string`, `format: date` | `date` |
+| `Literal[...]` of strings, or of integers | `enum` of the members, of their type | the member |
+| `Sequence[T]` | `type: array`, `items` mapped from `T` | `list` |
+| `Mapping[str, T]` | `type: object`, `additionalProperties` mapped from `T` | `dict` |
+
+A reader MUST reject any other annotation, including unions, enumeration classes, `Literal` members of mixed types, floats or booleans, and classes with fixed fields.
+
+A default MUST be a literal, or a `timedelta` or `date` built from literal arguments, and MUST satisfy the parameter's schema. A `datetime` parameter has no default. A parameter without a default is required.
+
+Markers in `Annotated` add constraints and formats, each at most once on a parameter:
+
+| Marker | On | Adds |
+|---|---|---|
+| `Minimum(n)`, `Maximum(n)` | `int`, `float` | `minimum`, `maximum` |
+| `Pattern(p)` | `str` | `pattern` |
+| `Column(of=...)` | `str` | `format: column` and `of` |
+| `ColumnSelector(of=...)` | `Sequence[str]` | `format: column_selector` and `of` |
+| `Binding()` | `str` | `format: binding` |
+| `Secret()` | `str` | `format: secret` |
+| `Title(t)` | any | `title` |
+
+`of` MUST name an input of the same function that is required and accepts a single edge. A column selector's value reaches the code as the list of column names it selects. Constraint markers MAY also annotate the items of a sequence or the values of a mapping; format markers MUST NOT. A parameter's `description` is its entry in the `Args:` section of the function's docstring, written in the Google style.
+
+A parameter that supplies an execution property carries a marker for that role. Each role marker MAY appear at most once in a function:
+
+| Marker | On a parameter that is | Sets |
+|---|---|---|
+| `Grouping()` | a column or a column selector | `grouping: { parameter: <name> }` |
+| `Order()` | a column or a column selector | `order: { parameter: <name> }` |
+| `Seed()` | an `int` | `seed: <name>` |
+| `SideEffectTarget()` | a binding | `side_effects: { target: <name> }` |
+
+### Outputs
+
+A function returns one table, an output class or `None`:
+
+- A function annotated to return one table has one output, `data`.
+- An output class is a dataclass declared with `frozen=True`. Each field annotated with a table type is an output named after the field, and each field annotated `Value[T]` is a value output, with `T` mapped as a parameter's annotation is, without the formats `column`, `column_selector`, `binding` and `secret`. A reader MUST reject a field of any other type, a field annotated `T | None`, a field with a default and a field of a sequence of tables.
+- A function returning `None` has no outputs.
+
+A plan returns its plan's table type, and its outputs are `derived`; eager code returns any of the eager table types, which the runtime converts to Arrow, and its outputs are `dynamic`.
+
+### Names
+
+A reader resolves the names in decorators and annotations through the module-level imports of the file, under any alias, including imports made only for type checking. It recognizes `node`, the markers and `Value` from `sdk`; `Annotated`, `Literal`, `Sequence` and `Mapping` from `typing`, and `Sequence` and `Mapping` from `collections.abc`; `datetime`, `timedelta` and `date` from `datetime`; `dataclass` from `dataclasses`; and the table types above from `ibis`, `polars`, `pyarrow` and `pandas`.
+
+A type alias, written as a `type` statement, and an output class MAY be defined in the same file or in a module within the same root. The root is the directory on Python's import path: the `src` folder of a plugin package, or the `code/` folder of a project, with which a code node runs on its import path. A module `a.b` is, in the order in which Python looks for it, the package `<root>/a/b/__init__.py`, the file `<root>/a/b.py`, or the directory `<root>/a/b`, a namespace package that binds no names of its own and through which its submodules are reached; and a relative import, where Python allows one, resolves against the package of the file that makes it. An `__init__.py` directly in the root belongs to no module, since Python never imports it, and a reader MUST reject a node defined in it. A reader follows such names from module to module and MUST reject a cycle. A reader MUST reject a name it cannot resolve in this way, a wildcard import, an annotation written as a string, a recognized name bound again in the module, and an alias written as an assignment.
+
+### Errors
+
+A reader MUST report every error in a file, not only the first, each with its file, line and column, the function and the parameter or field concerned, a code and a message. Codes are stable and shared by all readers, while each reader words its own messages. Lines and columns count from 1, and a column counts the bytes of the line's UTF-8 encoding. The conformance corpus holds node files under `python/`. Each valid file, read as node types, MUST produce the documents given for it, and read as code nodes, the same contracts without the fields that belong to the document itself (`ir_version`, `kind`, `image` and `entry_point`) and those stated by node types only. Each invalid file, read as code nodes or as node types according to its folder, MUST produce the codes and locations of the errors given for it, sorted by file, line, column and code. It gives a syntax error by its code and file only, since parsers place syntax errors differently.

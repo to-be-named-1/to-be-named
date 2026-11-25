@@ -1,0 +1,18 @@
+# The document that from_module:from_module produces.
+ir_version: 0
+kind: node_type
+name: from_module
+version: 1
+description: Pick a mode.
+language: python
+image: platform-base
+entry_point: from_module:from_module
+modes:
+- batch
+params:
+  mode:
+    type: string
+    enum:
+    - a
+    - b
+    default: a

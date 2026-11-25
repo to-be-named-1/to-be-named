@@ -1,0 +1,27 @@
+# The document that pkg.sub.nearby:nearby produces.
+ir_version: 0
+kind: node_type
+name: nearby
+version: 1
+language: python
+plan: ibis
+image: platform-base
+entry_point: pkg.sub.nearby:nearby
+modes:
+- batch
+inputs:
+  data:
+    type: tabular
+outputs:
+  data:
+    type: tabular
+    schema: derived
+params:
+  operator:
+    type: string
+    enum:
+    - lt
+    - gt
+values:
+  matched:
+    type: integer

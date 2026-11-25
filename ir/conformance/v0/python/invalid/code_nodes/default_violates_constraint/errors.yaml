@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: default.violates_constraint
+  path: node.py
+  line: 13
+  column: 79
+  node: negative
+  field: threshold

@@ -371,3 +371,9 @@ platform.controlPlane.definitions -> platform.controlPlane.compiler "Compiles ea
         "decisions" "D47"
     }
 }
+
+platform.controlPlane.compiler -> platform.controlPlane.codeReader "Reads code nodes with" "JSON lines over standard input and output" {
+    properties {
+        "decisions" "D68"
+    }
+}

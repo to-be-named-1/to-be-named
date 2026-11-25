@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: signature.variadic
+  path: node.py
+  line: 13
+  column: 11
+  node: many
+  field: null

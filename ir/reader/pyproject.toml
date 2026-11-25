@@ -1,0 +1,24 @@
+[project]
+name = "ir-reader"
+version = "0.0.0"
+description = "The reader of Python node code, which reads node types and code nodes into their contracts without executing them."
+requires-python = ">=3.14"
+dependencies = []
+
+[tool.uv.build-backend]
+module-name = "ir.reader"
+
+[tool.ruff]
+extend = "../../pyproject.toml"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"units".msg = "ir.reader never imports units: the runtime depends on the reader through the sdk."
+"sdk".msg = "ir.reader never imports sdk: it reads the sdk's interface from source text only."
+"nodes".msg = "ir.reader never imports nodes: it reads node code and never imports it."
+"connectors".msg = "ir.reader never imports connectors: plugins depend on the sdk."
+"families".msg = "ir.reader never imports families: plugins depend on the sdk."
+"ir.schema".msg = "ir.reader never imports ir.schema: the control plane installs the reader alone."
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14"]
+build-backend = "uv_build"

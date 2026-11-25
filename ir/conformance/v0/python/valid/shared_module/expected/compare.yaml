@@ -1,0 +1,34 @@
+# The document that pkg.compare:compare produces.
+ir_version: 0
+kind: node_type
+name: compare
+version: 1
+language: python
+plan: ibis
+image: platform-base
+entry_point: pkg.compare:compare
+modes:
+- batch
+inputs:
+  data:
+    type: tabular
+outputs:
+  data:
+    type: tabular
+    schema: derived
+params:
+  operator:
+    type: string
+    enum:
+    - lt
+    - gt
+    default: lt
+  strict:
+    type: string
+    enum:
+    - lt
+    - gt
+    default: gt
+values:
+  matched:
+    type: integer

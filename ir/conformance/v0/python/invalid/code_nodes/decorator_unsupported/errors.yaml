@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: decorator.unsupported
+  path: node.py
+  line: 13
+  column: 2
+  node: cached
+  field: null

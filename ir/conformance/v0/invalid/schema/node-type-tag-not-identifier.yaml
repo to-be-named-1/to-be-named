@@ -1,0 +1,10 @@
+# Invalid: every tag is an identifier.
+ir_version: 0
+kind: node_type
+name: example
+version: 1
+language: python
+image: platform-base
+entry_point: example:example
+modes: [batch]
+tags: [Running-Total]

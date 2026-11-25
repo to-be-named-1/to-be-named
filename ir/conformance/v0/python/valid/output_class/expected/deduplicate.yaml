@@ -1,0 +1,47 @@
+# The document that deduplicate:deduplicate produces.
+ir_version: 0
+kind: node_type
+name: deduplicate
+version: 1
+description: Keep one row for each combination of keys.
+tags:
+- distinct
+- quality
+language: python
+plan: ibis
+image: platform-base
+entry_point: deduplicate:deduplicate
+dialects:
+- snowflake
+modes:
+- batch
+inputs:
+  data:
+    type: tabular
+outputs:
+  data:
+    type: tabular
+    schema: derived
+  removed:
+    type: tabular
+    schema: derived
+params:
+  keys:
+    type: array
+    format: column_selector
+    of: data
+values:
+  removed_rows:
+    type: integer
+  removed_share:
+    type: number
+    minimum: 0
+    maximum: 1
+  duplicated_keys:
+    type: array
+    items:
+      type: string
+  rows_by_key:
+    type: object
+    additionalProperties:
+      type: integer

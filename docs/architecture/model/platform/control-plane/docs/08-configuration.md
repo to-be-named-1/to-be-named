@@ -26,3 +26,7 @@ Tenant Admins set project quotas, fair-share weights and per-unit ceilings on po
 
 The heartbeat, the lease, the grace period after a restart and the hard limit for attempts that have stopped renewing have defaults set in [D43]({workspace}/decisions/Platform#43), and all are configurable.
 
+
+### Node-code reader
+
+The number of reader workers, the time a request may take, the memory of each worker, and the size of one file and of one request are settings, with defaults of one worker, 5 seconds, 256 MiB, 1 MiB and 10 MiB ([D68]({workspace}/decisions/Platform#68)).

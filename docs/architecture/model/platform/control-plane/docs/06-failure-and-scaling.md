@@ -16,6 +16,10 @@ An outage of the whole control plane stops new dispatch and commits, but not run
 
 Every action triggered by an event has a level-triggered sweep behind it, which finds runs whose task runs have all ended, completed map groups, attempts offered but never claimed and expired holds, so a lost or poisoned event delays work rather than stalling it ([D47]({workspace}/decisions/Platform#47)). Outbox rows and work rows are retried with back-off and jitter; a row that exhausts its attempts becomes a dead letter, which raises an alert and can be re-driven. Delivery lag, the age of the oldest undelivered row and dead letters are exported as metrics ([D48]({workspace}/decisions/Platform#48)). Between processes, a wake-up is a NOTIFY hint sent after commit, and polling is the guarantee ([D48]({workspace}/decisions/Platform#48)).
 
+### Node-code reader
+
+A worker of the node-code reader that exceeds a request's time or its memory is ended and started again, and the compile that sent the request reports the limit as an error; other compiles wait only for a free worker ([D68]({workspace}/decisions/Platform#68)).
+
 ### Routing to roles
 
 Which processes run the `api` role is fixed at deployment, so API traffic reaches them by membership: on Kubernetes, a Service selects the pods whose template carries the role; elsewhere, only `api` processes are registered with the load balancer. The process holding the `leader` role changes at every failover, so agent traffic reaches it by detection. The leader opens the agent port only while it holds leadership. On Kubernetes, it labels its own pod with the `leader` role and an agent Service selects that label; behind other load balancers, a health check on the agent endpoint that only the leader passes routes agents to it. An agent call that reaches another process fails and is retried, so retries remain the fallback in every deployment ([D47]({workspace}/decisions/Platform#47)).

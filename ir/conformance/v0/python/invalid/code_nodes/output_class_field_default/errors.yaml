@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: output_class.field_default
+  path: node.py
+  line: 15
+  column: 25
+  node: defaulted
+  field: count

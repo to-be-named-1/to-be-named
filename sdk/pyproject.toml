@@ -3,10 +3,15 @@ name = "sdk"
 version = "0.0.0"
 description = "The Python SDK: the interfaces node code follows and the generation of node-type documents and IR."
 requires-python = ">=3.14"
-dependencies = ["ir"]
+dependencies = ["ir-schema", "ir-reader"]
 
 [tool.uv.sources]
-ir = { workspace = true }
+ir-schema = { workspace = true }
+ir-reader = { workspace = true }
+
+[project.optional-dependencies]
+ibis = ["ibis-framework>=12.0.0,<13"]
+polars = ["polars>=2.1.0,<3"]
 
 [tool.ruff]
 extend = "../pyproject.toml"

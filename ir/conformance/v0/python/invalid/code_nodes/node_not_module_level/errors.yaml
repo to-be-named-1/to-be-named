@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: node.not_module_level
+  path: node.py
+  line: 14
+  column: 5
+  node: inner
+  field: null

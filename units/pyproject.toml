@@ -12,7 +12,8 @@ sdk = { workspace = true }
 extend = "../pyproject.toml"
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
-"ir".msg = "units never imports ir: it reaches the IR schema only through the sdk."
+"ir.schema".msg = "units never imports ir.schema: it reaches the IR schema only through the sdk."
+"ir.reader".msg = "units never imports ir.reader: it reaches the reader only through the sdk."
 "nodes".msg = "units never imports nodes: it loads node code through node-type entry points."
 "connectors".msg = "units never imports connectors: it reaches them only through the sdk's interfaces."
 "families".msg = "units never imports families: it reaches them only through the sdk's interfaces."

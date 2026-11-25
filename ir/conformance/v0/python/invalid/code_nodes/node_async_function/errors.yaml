@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: node.async_function
+  path: node.py
+  line: 13
+  column: 1
+  node: waits
+  field: null
