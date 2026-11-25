@@ -1,0 +1,24 @@
+# The document that rollup:rollup produces.
+ir_version: 0
+kind: node_type
+name: rollup
+version: 1
+language: python
+image: platform-base
+entry_point: rollup:rollup
+modes:
+- batch
+inputs:
+  data:
+    type: tabular
+outputs:
+  data:
+    type: tabular
+    schema: dynamic
+params:
+  unit:
+    type: string
+    enum:
+    - day
+    - week
+    default: day

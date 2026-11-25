@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: decorator.invalid_value
+  path: node.py
+  line: 12
+  column: 12
+  node: spark
+  field: null

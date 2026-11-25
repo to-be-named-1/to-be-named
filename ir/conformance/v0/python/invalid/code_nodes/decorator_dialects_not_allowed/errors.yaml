@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: decorator.dialects_not_allowed
+  path: node.py
+  line: 12
+  column: 22
+  node: lazy
+  field: null

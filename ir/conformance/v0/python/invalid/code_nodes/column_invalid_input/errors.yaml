@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: column.invalid_input
+  path: node.py
+  line: 13
+  column: 71
+  node: optional
+  field: key

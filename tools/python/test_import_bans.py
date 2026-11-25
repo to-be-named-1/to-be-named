@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tomllib
 from pathlib import Path
+from typing import Any
 
 import pytest
 from packaging.requirements import Requirement
@@ -20,10 +21,21 @@ MEMBERS: list[str] = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding=
 FORMS = ["import {0}", "from {0}.module import name", "from {0} import name"]
 
 
+def pyproject(member: str) -> dict[str, Any]:
+    return tomllib.loads((ROOT / member / "pyproject.toml").read_text(encoding="utf-8"))
+
+
+def module(member: str) -> str:
+    # A member whose module sits in a shared namespace, such as ir.schema, names it apart from its distribution.
+    config = pyproject(member)
+    return config.get("tool", {}).get("uv", {}).get("build-backend", {}).get("module-name", config["project"]["name"])
+
+
 def allowed(member: str) -> set[str]:
-    project = tomllib.loads((ROOT / member / "pyproject.toml").read_text(encoding="utf-8"))["project"]
-    names = {canonicalize_name(Requirement(requirement).name) for requirement in project["dependencies"]}
-    return {other for other in MEMBERS if canonicalize_name(other) in names}
+    names = {
+        canonicalize_name(Requirement(requirement).name) for requirement in pyproject(member)["project"]["dependencies"]
+    }
+    return {other for other in MEMBERS if canonicalize_name(pyproject(other)["project"]["name"]) in names}
 
 
 def banned(member: str) -> list[str]:
@@ -32,7 +44,7 @@ def banned(member: str) -> list[str]:
 
 def ban_messages(member: str, source: str) -> list[str]:
     # Linting stdin under a path inside the member applies the member's own configuration.
-    probe = f"{member}/src/{member}/probe.py"
+    probe = f"{member}/src/{module(member).replace('.', '/')}/probe.py"
     result = subprocess.run(
         [sys.executable, "-m", "ruff", "check", "--output-format", "json", "--stdin-filename", probe, "-"],
         input=source,
@@ -49,9 +61,9 @@ def ban_messages(member: str, source: str) -> list[str]:
     [(member, name, form) for member in MEMBERS for name in banned(member) for form in FORMS],
 )
 def test_rejects_banned_import(member: str, name: str, form: str) -> None:
-    assert ban_messages(member, form.format(name) + "\n")
+    assert ban_messages(member, form.format(module(name)) + "\n")
 
 
 @pytest.mark.parametrize(("member", "name"), [(member, name) for member in MEMBERS for name in allowed(member)])
 def test_allows_dependency(member: str, name: str) -> None:
-    assert ban_messages(member, f"import {name}\n") == []
+    assert ban_messages(member, f"import {module(name)}\n") == []

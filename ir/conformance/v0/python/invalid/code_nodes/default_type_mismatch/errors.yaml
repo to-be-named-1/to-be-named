@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: default.type_mismatch
+  path: node.py
+  line: 13
+  column: 47
+  node: typed
+  field: limit

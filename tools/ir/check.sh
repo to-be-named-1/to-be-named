@@ -16,7 +16,7 @@ if ! go install "github.com/santhosh-tekuri/jsonschema/cmd/jv@${JV_VERSION}" >/t
 fi
 
 failures=0
-for schema_dir in "$IR"/src/ir/schema/v*/; do
+for schema_dir in "$IR"/schema/src/ir/schema/v*/; do
 	version=$(basename "$schema_dir")
 	document="$schema_dir/document.schema.json"
 	corpus="$IR/conformance/$version"

@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: default.not_literal
+  path: node.py
+  line: 17
+  column: 50
+  node: computed
+  field: limit

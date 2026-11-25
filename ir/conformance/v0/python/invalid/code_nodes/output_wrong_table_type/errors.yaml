@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: output.wrong_table_type
+  path: node.py
+  line: 13
+  column: 37
+  node: converts
+  field: null

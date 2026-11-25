@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: parameter.table_type
+  path: node.py
+  line: 13
+  column: 19
+  node: late
+  field: data

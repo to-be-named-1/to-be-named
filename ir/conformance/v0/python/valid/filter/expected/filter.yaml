@@ -1,0 +1,43 @@
+# The document that nodes.filter:filter produces.
+ir_version: 0
+kind: node_type
+name: filter
+version: 1
+title: Filter rows
+description: Keep the rows whose column compares to the threshold.
+tags:
+- filter
+language: python
+plan: ibis
+image: platform-base
+entry_point: nodes.filter:filter
+modes:
+- batch
+inputs:
+  data:
+    type: tabular
+outputs:
+  data:
+    type: tabular
+    schema: derived
+params:
+  column:
+    type: string
+    format: column
+    of: data
+    description: The column to compare.
+  operator:
+    type: string
+    enum:
+    - eq
+    - ne
+    - lt
+    - le
+    - gt
+    - ge
+    default: ge
+    description: How the column compares to the threshold.
+  threshold:
+    type: number
+    default: 0
+    description: The value the column is compared to.

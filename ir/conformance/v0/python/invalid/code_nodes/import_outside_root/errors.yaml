@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: import.outside_root
+  path: node.py
+  line: 16
+  column: 42
+  node: outside
+  field: mode

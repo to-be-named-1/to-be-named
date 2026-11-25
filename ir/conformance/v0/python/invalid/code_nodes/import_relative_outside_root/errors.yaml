@@ -1,0 +1,13 @@
+# The errors that this case's files produce, by code and location.
+- code: import.outside_root
+  path: pkg/climbs.py
+  line: 1
+  column: 1
+  node: null
+  field: null
+- code: import.outside_root
+  path: top.py
+  line: 1
+  column: 1
+  node: null
+  field: null

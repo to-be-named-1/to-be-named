@@ -1,0 +1,27 @@
+# The document that flag:flag produces.
+ir_version: 0
+kind: node_type
+name: flag
+version: 1
+language: python
+plan: polars
+image: platform-base
+entry_point: flag:flag
+modes:
+- batch
+inputs:
+  rows:
+    type: tabular
+outputs:
+  data:
+    type: tabular
+    schema: derived
+params:
+  column:
+    type: string
+    format: column
+    of: rows
+  horizon:
+    type: string
+    format: duration
+    default: PT1H30M

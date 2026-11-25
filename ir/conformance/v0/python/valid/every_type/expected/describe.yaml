@@ -1,0 +1,79 @@
+# The document that describe:describe produces.
+ir_version: 0
+kind: node_type
+name: describe
+version: 1
+description: Describe the rows in a window.
+language: python
+image: platform-base
+entry_point: describe:describe
+modes:
+- batch
+inputs:
+  data:
+    type: tabular
+outputs:
+  data:
+    type: tabular
+    schema: dynamic
+params:
+  label:
+    type: string
+    default: all
+    description: A label for the description, continued on a second line.
+  limit:
+    type: integer
+    default: 10
+  ratio:
+    type: number
+    default: 1
+  exact:
+    type: boolean
+    default: true
+  since:
+    type: string
+    format: date-time
+  window:
+    type: string
+    format: duration
+    default: P7DT12H
+  first:
+    type: string
+    format: date
+    default: '2026-01-01'
+  last:
+    type: string
+    format: date
+  mode:
+    type: string
+    enum:
+    - fast
+    - full
+    default: fast
+  level:
+    type: integer
+    enum:
+    - 1
+    - 2
+    - 3
+    default: 2
+  sizes:
+    type: array
+    items:
+      type: integer
+      minimum: 0
+    default:
+    - 1
+    - 2
+  weights:
+    type: object
+    additionalProperties:
+      type: number
+    default: {}
+  labels:
+    type: array
+    items:
+      type: object
+      additionalProperties:
+        type: string
+    default: []
