@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: annotation.string
+  path: node.py
+  line: 13
+  column: 18
+  node: quoted
+  field: data

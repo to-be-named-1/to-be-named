@@ -1,0 +1,10 @@
+# Invalid: memory_class is streaming, blocking_spilling or blocking_non_spilling.
+ir_version: 0
+kind: node_type
+name: example
+version: 1
+language: python
+image: platform-base
+entry_point: example:example
+modes: [batch]
+memory_class: huge

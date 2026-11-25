@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: role.duplicate
+  path: node.py
+  line: 14
+  column: 86
+  node: seeds
+  field: second

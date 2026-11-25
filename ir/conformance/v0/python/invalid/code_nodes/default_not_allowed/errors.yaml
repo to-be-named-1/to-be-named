@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: default.not_allowed
+  path: node.py
+  line: 13
+  column: 52
+  node: dated
+  field: since

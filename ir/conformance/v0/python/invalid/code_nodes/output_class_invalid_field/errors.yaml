@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: output_class.invalid_field
+  path: node.py
+  line: 15
+  column: 11
+  node: noted
+  field: note

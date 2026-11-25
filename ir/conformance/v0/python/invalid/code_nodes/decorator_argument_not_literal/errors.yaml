@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: decorator.argument_not_literal
+  path: node.py
+  line: 15
+  column: 13
+  node: computed
+  field: null

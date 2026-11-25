@@ -1,0 +1,28 @@
+# The document that combine:combine produces.
+ir_version: 0
+kind: node_type
+name: combine
+version: 1
+description: Combine several inputs into one table.
+language: python
+image: platform-base
+entry_point: combine:combine
+modes:
+- batch
+inputs:
+  main:
+    type: tabular
+  parts:
+    type: tabular
+    many: true
+  extra:
+    type: tabular
+    optional: true
+  more:
+    type: tabular
+    optional: true
+    many: true
+outputs:
+  data:
+    type: tabular
+    schema: dynamic

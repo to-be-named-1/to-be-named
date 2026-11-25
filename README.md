@@ -16,7 +16,7 @@ layout and tooling are recorded there.
 | `cli/` | Command-line interface | Go |
 | `internal/` | Go code shared between containers | Go |
 | `proto/` | Protobuf contracts | Protobuf |
-| `ir/` | IR schema and its conformance corpus | JSON Schema, Go, Python |
+| `ir/` | IR schema, reader of Python node code, and their conformance corpus | JSON Schema, Go, Python |
 | `units/` | Unit runtime and the units it runs | Python |
 | `sdk/` | Python SDK | Python |
 | `nodes/` | Node types the platform publishes | Python |

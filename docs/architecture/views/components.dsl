@@ -11,7 +11,7 @@ component platform.controlPlane "components-control-plane-execution" "How a run 
 
 component platform.controlPlane "components-control-plane-requests" "How people and automation reach the platform: the API layer and the components that serve its calls, with the clients, the identity provider and the git host." {
     include platform.controlPlane.apiLayer platform.controlPlane.identity platform.controlPlane.authorization platform.controlPlane.audit
-    include platform.controlPlane.definitions platform.controlPlane.compiler platform.controlPlane.gitSync platform.controlPlane.deployment platform.controlPlane.registry
+    include platform.controlPlane.definitions platform.controlPlane.compiler platform.controlPlane.codeReader platform.controlPlane.gitSync platform.controlPlane.deployment platform.controlPlane.registry
     include platform.controlPlane.catalog platform.controlPlane.adoption platform.controlPlane.provenance platform.controlPlane.runDriver
     include platform.webApp platform.cli ciSystem identityProvider gitHost
     autoLayout lr

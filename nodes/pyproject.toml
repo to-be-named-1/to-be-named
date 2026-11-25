@@ -11,8 +11,18 @@ sdk = { workspace = true }
 [tool.ruff]
 extend = "../pyproject.toml"
 
+# Node signatures default sequences and mappings to [] and {}, which is safe since the runtime passes every value.
+# Parameter descriptions come from Google-style Args sections, which must then name every argument.
+[tool.ruff.lint]
+extend-select = ["D417"]
+ignore = ["B006"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
-"ir".msg = "nodes never imports ir: it reaches the IR schema only through the sdk."
+"ir.schema".msg = "nodes never imports ir.schema: it reaches the IR schema only through the sdk."
+"ir.reader".msg = "nodes never imports ir.reader: it reaches the reader only through the sdk."
 "units".msg = "nodes never imports units: plugins reach the runtime only through the sdk."
 "connectors".msg = "nodes never imports connectors: each kind of plugin depends only on the sdk."
 "families".msg = "nodes never imports families: each kind of plugin depends only on the sdk."

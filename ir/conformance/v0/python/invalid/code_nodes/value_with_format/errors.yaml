@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: marker.not_allowed
+  path: node.py
+  line: 15
+  column: 31
+  node: formatted
+  field: key

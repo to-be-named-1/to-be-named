@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: decorator.unknown_argument
+  path: node.py
+  line: 12
+  column: 7
+  node: unknown
+  field: null

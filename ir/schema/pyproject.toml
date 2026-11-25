@@ -1,0 +1,24 @@
+[project]
+name = "ir-schema"
+version = "0.0.0"
+description = "The IR schema, one JSON Schema document per kind for each IR version."
+requires-python = ">=3.14"
+dependencies = []
+
+[tool.uv.build-backend]
+module-name = "ir.schema"
+
+[tool.ruff]
+extend = "../../pyproject.toml"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"units".msg = "ir.schema never imports units: it is a contract the others depend on."
+"sdk".msg = "ir.schema never imports sdk: it is a contract the others depend on."
+"nodes".msg = "ir.schema never imports nodes: it is a contract the others depend on."
+"connectors".msg = "ir.schema never imports connectors: it is a contract the others depend on."
+"families".msg = "ir.schema never imports families: it is a contract the others depend on."
+"ir.reader".msg = "ir.schema never imports ir.reader: the schema is data that the reader's documents follow."
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14"]
+build-backend = "uv_build"

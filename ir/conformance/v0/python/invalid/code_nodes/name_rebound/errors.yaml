@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: name.rebound
+  path: node.py
+  line: 12
+  column: 1
+  node: rebound
+  field: key

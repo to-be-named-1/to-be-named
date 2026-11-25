@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: input.not_table
+  path: node.py
+  line: 13
+  column: 39
+  node: scalar
+  field: limit

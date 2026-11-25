@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: literal.invalid
+  path: node.py
+  line: 13
+  column: 40
+  node: mixed
+  field: mode

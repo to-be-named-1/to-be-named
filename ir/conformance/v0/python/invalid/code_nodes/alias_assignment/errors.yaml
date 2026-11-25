@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: alias.assignment
+  path: node.py
+  line: 16
+  column: 43
+  node: assigned
+  field: mode

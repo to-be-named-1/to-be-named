@@ -1,0 +1,53 @@
+# The document that deliver:deliver produces.
+ir_version: 0
+kind: node_type
+name: deliver
+version: 2
+description: Send rows to an external system in batches.
+language: python
+image: platform-base
+entry_point: deliver:deliver
+modes:
+- batch
+inputs:
+  data:
+    type: tabular
+params:
+  key:
+    type: string
+    format: column
+    of: data
+  groups:
+    type: array
+    format: column_selector
+    of: data
+    default: []
+  target:
+    type: string
+    format: binding
+    title: Target system
+  token:
+    type: string
+    format: secret
+  batch:
+    type: integer
+    minimum: 1
+    maximum: 10000
+    default: 500
+  prefix:
+    type: string
+    pattern: ^[a-z]+$
+    default: run
+  seed:
+    type: integer
+    default: 0
+grouping:
+  parameter: groups
+order:
+  parameter: key
+seed: seed
+side_effects:
+  target: target
+gpu: none
+memory_floor: 512Mi
+memory_class: streaming

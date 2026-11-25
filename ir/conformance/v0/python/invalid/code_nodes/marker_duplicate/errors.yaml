@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: marker.duplicate
+  path: node.py
+  line: 13
+  column: 68
+  node: twice
+  field: limit

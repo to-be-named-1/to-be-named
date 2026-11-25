@@ -4,7 +4,7 @@ kind: node_type
 name: deduplicate
 version: 2
 title: Deduplicate rows
-category: transform
+tags: [distinct]
 language: python
 plan: ibis
 image: platform-base
@@ -19,6 +19,6 @@ params:
   keys:     { type: array, format: column_selector, of: data }
   order_by: { type: array, format: column_selector, of: data }
   keep:     { type: string, enum: [first, last], default: first }
-order: { parameter: order_by }
 values:
   removed_rows: { type: integer }
+order: { parameter: order_by }

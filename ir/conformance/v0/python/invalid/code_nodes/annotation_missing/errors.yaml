@@ -1,0 +1,7 @@
+# The errors that this case's files produce, by code and location.
+- code: annotation.missing
+  path: node.py
+  line: 13
+  column: 36
+  node: untyped
+  field: limit
